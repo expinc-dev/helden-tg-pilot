@@ -5,6 +5,9 @@ import { MicrolearningRenderer } from './Microlearning'
 
 export type Role = 'host' | 'central' | 'player'
 
+// Discriminate on phase.content (the real discriminated union). phase.type is a
+// plain enum, independent of content in the schema — switching on it does not
+// narrow content, so we switch on content.type and pass the narrowed content down.
 export function PhaseRouter({
   phase,
   role,
@@ -16,13 +19,15 @@ export function PhaseRouter({
   sessionId: string
   playerId?: string
 }) {
-  switch (phase.type) {
+  const content = phase.content
+  switch (content.type) {
     case 'idle':
-      return <IdleRenderer phase={phase} role={role} />
+      return <IdleRenderer content={content} role={role} phaseId={phase.id} />
     case 'microlearning':
       return (
         <MicrolearningRenderer
-          phase={phase}
+          content={content}
+          title={phase.title}
           role={role}
           sessionId={sessionId}
           playerId={playerId}
@@ -31,7 +36,7 @@ export function PhaseRouter({
     default:
       return (
         <div className="p-8 text-sm text-gray-500">
-          Phase type "{phase.type}" not renderable yet.
+          Phase type "{content.type}" not renderable yet.
         </div>
       )
   }

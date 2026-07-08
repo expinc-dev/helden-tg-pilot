@@ -7,7 +7,7 @@ const idle: Phase = {
   title: 'Waiting room',
   syncMode: 'lockstep',
   roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['presence'] } },
-  content: { type: 'idle', caption: 'Welcome' },
+  content: { type: 'idle', lottieMediaId: 'm-lottie-waiting', caption: 'Welcome' },
 }
 
 const intro: Phase = {

@@ -28,5 +28,8 @@ export function joinPresence(
   }
 
   onDisconnect(node).update({ connected: false, lastSeen: serverTimestamp() })
-  return () => update(node, { connected: false, lastSeen: serverTimestamp() })
+  // Cleanup must return void, not the update() Promise (useEffect Destructor type).
+  return () => {
+    void update(node, { connected: false, lastSeen: serverTimestamp() })
+  }
 }

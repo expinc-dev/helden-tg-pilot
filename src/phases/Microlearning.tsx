@@ -1,25 +1,25 @@
-import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
+import type { MicrolearningContent } from '@helden-inc/tg-schema'
 
 import { useMyStep, usePlayerBoard } from '@/sync/usePlayerStep'
 
 import type { Role } from './PhaseRouter'
 
 export function MicrolearningRenderer({
-  phase,
+  content,
+  title,
   role,
   sessionId,
   playerId,
 }: {
-  phase: Phase & { type: 'microlearning' }
+  content: MicrolearningContent
+  title: string
   role: Role
   sessionId: string
   playerId?: string
 }) {
-  const c = phase.content
-  if (c.type !== 'microlearning') return null
   if (role === 'player' && playerId)
-    return <PlayerPane content={c} sessionId={sessionId} playerId={playerId} />
-  return <MonitorPane content={c} title={phase.title} sessionId={sessionId} />
+    return <PlayerPane content={content} sessionId={sessionId} playerId={playerId} />
+  return <MonitorPane content={content} title={title} sessionId={sessionId} />
 }
 
 function PlayerPane({
