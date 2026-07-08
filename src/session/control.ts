@@ -1,11 +1,16 @@
-import { ref, serverTimestamp, update } from 'firebase/database'
 import type { PhasePointer } from '@helden-inc/tg-schema'
-import { rtdb } from '@/lib/firebase'
+import { ref, serverTimestamp, update } from 'firebase/database'
+
 import { demoBundle } from '@/lib/demoBundle'
+import { rtdb } from '@/lib/firebase'
 
 export async function startSession(sessionId: string, hostUid = 'anon-host') {
   const firstPhase = demoBundle.phaseOrder[0]
-  const pointer: PhasePointer = { activePhaseId: firstPhase, changedAt: Date.now(), changedBy: hostUid }
+  const pointer: PhasePointer = {
+    activePhaseId: firstPhase,
+    changedAt: Date.now(),
+    changedBy: hostUid,
+  }
   await update(ref(rtdb, `sessions/${sessionId}`), {
     'meta/status': 'live',
     phasePointer: pointer,
@@ -15,7 +20,11 @@ export async function startSession(sessionId: string, hostUid = 'anon-host') {
   void serverTimestamp
 }
 
-export async function nextPhase(sessionId: string, currentPhaseId: string | undefined, hostUid = 'anon-host') {
+export async function nextPhase(
+  sessionId: string,
+  currentPhaseId: string | undefined,
+  hostUid = 'anon-host'
+) {
   const order = demoBundle.phaseOrder
   const idx = currentPhaseId ? order.indexOf(currentPhaseId) : -1
   const next = order[idx + 1]

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { createSession } from '@/session/create'
 
 export function HostNew() {
@@ -8,7 +9,8 @@ export function HostNew() {
   const [err, setErr] = useState<string | null>(null)
 
   const create = async () => {
-    setBusy(true); setErr(null)
+    setBusy(true)
+    setErr(null)
     try {
       const { sessionId } = await createSession()
       nav(`/host/${sessionId}`, { replace: true })
@@ -19,12 +21,12 @@ export function HostNew() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
       <h1 className="text-xl font-semibold">New session</h1>
       <button
         onClick={create}
         disabled={busy}
-        className="px-4 py-2 rounded bg-black text-white disabled:opacity-50"
+        className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
       >
         {busy ? 'Creating…' : 'Create session'}
       </button>

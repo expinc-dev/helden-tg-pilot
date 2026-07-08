@@ -1,5 +1,6 @@
-import { ref, set } from 'firebase/database'
 import type { SessionConfig, SessionMeta } from '@helden-inc/tg-schema'
+import { ref, set } from 'firebase/database'
+
 import { rtdb } from '@/lib/firebase'
 import { newId, newJoinCode } from '@/lib/ids'
 

@@ -1,21 +1,32 @@
 import { onDisconnect, ref, serverTimestamp, set, update } from 'firebase/database'
+
 import { rtdb } from '@/lib/firebase'
 
 type Role = 'player' | 'central'
 
-// Caller owns the id (via useState initializer) so React StrictMode double-mount
-// reuses the same RTDB node instead of leaving a "connected:false" ghost per remount.
-export function joinPresence(sessionId: string, role: Role, id: string, name?: string) {
+// Caller owns a stable id (from localStorage) so refresh reuses the same RTDB node.
+// isNew=true → first join, establish node + joinedAt. isNew=false → rejoin, merge
+// presence fields only so selfStep/joinedAt survive (BLUEPRINT_runtime §7).
+export function joinPresence(
+  sessionId: string,
+  role: Role,
+  id: string,
+  opts: { isNew: boolean; name?: string }
+) {
   const path = `sessions/${sessionId}/${role === 'player' ? 'players' : 'centrals'}/${id}`
   const node = ref(rtdb, path)
 
-  const payload =
+  const base =
     role === 'player'
-      ? { name: name ?? 'Anon', connected: true, lastSeen: serverTimestamp(), joinedAt: serverTimestamp() }
+      ? { connected: true, lastSeen: serverTimestamp(), name: opts.name ?? 'Anon' }
       : { connected: true, lastSeen: serverTimestamp() }
 
-  set(node, payload)
-  onDisconnect(node).update({ connected: false, lastSeen: serverTimestamp() })
+  if (opts.isNew) {
+    set(node, role === 'player' ? { ...base, joinedAt: serverTimestamp() } : base)
+  } else {
+    update(node, base)
+  }
 
+  onDisconnect(node).update({ connected: false, lastSeen: serverTimestamp() })
   return () => update(node, { connected: false, lastSeen: serverTimestamp() })
 }

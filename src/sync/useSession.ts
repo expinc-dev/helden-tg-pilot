@@ -1,6 +1,8 @@
-import { onValue, ref } from 'firebase/database'
 import { useEffect, useState } from 'react'
+
 import type { SessionConfig, SessionMeta } from '@helden-inc/tg-schema'
+import { onValue, ref } from 'firebase/database'
+
 import { rtdb } from '@/lib/firebase'
 
 export function useSessionMeta(sessionId: string | undefined) {
@@ -28,15 +30,22 @@ export function usePresenceCounts(sessionId: string | undefined) {
     if (!sessionId) return
     const off1 = onValue(ref(rtdb, `sessions/${sessionId}/players`), (s) => {
       let n = 0
-      s.forEach((c) => { if (c.val()?.connected) n++ })
+      s.forEach((c) => {
+        if (c.val()?.connected) n++
+      })
       setPlayers(n)
     })
     const off2 = onValue(ref(rtdb, `sessions/${sessionId}/centrals`), (s) => {
       let n = 0
-      s.forEach((c) => { if (c.val()?.connected) n++ })
+      s.forEach((c) => {
+        if (c.val()?.connected) n++
+      })
       setCentrals(n)
     })
-    return () => { off1(); off2() }
+    return () => {
+      off1()
+      off2()
+    }
   }, [sessionId])
   return { players, centrals }
 }

@@ -1,20 +1,38 @@
 import type { Phase } from '@helden-inc/tg-schema'
+
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 
 export type Role = 'host' | 'central' | 'player'
 
-export function PhaseRouter({ phase, role }: { phase: Phase; role: Role }) {
+export function PhaseRouter({
+  phase,
+  role,
+  sessionId,
+  playerId,
+}: {
+  phase: Phase
+  role: Role
+  sessionId: string
+  playerId?: string
+}) {
   switch (phase.type) {
     case 'idle':
       return <IdleRenderer phase={phase} role={role} />
     case 'microlearning':
-      return <MicrolearningRenderer phase={phase} role={role} />
+      return (
+        <MicrolearningRenderer
+          phase={phase}
+          role={role}
+          sessionId={sessionId}
+          playerId={playerId}
+        />
+      )
     default:
-      return <Unsupported type={phase.type} />
+      return (
+        <div className="p-8 text-sm text-gray-500">
+          Phase type "{phase.type}" not renderable yet.
+        </div>
+      )
   }
-}
-
-function Unsupported({ type }: { type: string }) {
-  return <div className="p-8 text-sm text-gray-500">Phase type "{type}" not renderable yet — update the app.</div>
 }

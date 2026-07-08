@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { GoogleAuthProvider, getAuth } from 'firebase/auth'
 import { getDatabase } from 'firebase/database'
+import { getFirestore } from 'firebase/firestore'
 
 // tg-pilot is the runtime — Firestore (bundle + archive) + RTDB (live state).
 // The CMS never touches RTDB; this repo is where it comes in.

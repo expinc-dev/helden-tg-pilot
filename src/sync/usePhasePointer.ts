@@ -1,6 +1,8 @@
-import { onValue, ref } from 'firebase/database'
 import { useEffect, useState } from 'react'
+
 import type { PhasePointer } from '@helden-inc/tg-schema'
+import { onValue, ref } from 'firebase/database'
+
 import { rtdb } from '@/lib/firebase'
 
 export function usePhasePointer(sessionId: string | undefined) {

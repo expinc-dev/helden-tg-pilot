@@ -19,7 +19,15 @@ const intro: Phase = {
   content: {
     type: 'microlearning',
     mode: 'sequential',
-    steps: [{ id: 's1', blocks: [{ kind: 'text', markdown: '# Welcome' }] }],
+    steps: [
+      { id: 's1', blocks: [{ kind: 'text', markdown: '# Welcome\nYour first training.' }] },
+      { id: 's2', blocks: [{ kind: 'text', markdown: '## Rule 1\nRead each step, tap Next.' }] },
+      {
+        id: 's3',
+        blocks: [{ kind: 'text', markdown: '## Rule 2\nHost sees your progress live.' }],
+      },
+      { id: 's4', blocks: [{ kind: 'text', markdown: '## Done\nWait for the next phase.' }] },
+    ],
   },
 }
 

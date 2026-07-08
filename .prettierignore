@@ -1,0 +1,27 @@
+# Node & Build directories
+node_modules
+dist
+dist-ssr
+build
+coverage
+
+# Package lock files (dibuild otomatis oleh package manager)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# Environment files
+.env
+.env.*
+
+# Public assets & Minified files
+public
+*.min.css
+*.min.js
+
+# Vite specific
+vite.config.ts.timestamp-*
+
+# graphify artifacts
+graphify-out
