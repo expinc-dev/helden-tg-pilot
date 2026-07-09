@@ -9,7 +9,12 @@ import { newId, newJoinCode } from '@/lib/ids'
 // ponytail: retry-on-collision unimplemented; 31^6 ≈ 887M codes, collision is
 // astronomically unlikely at pilot scale. Add if we ever hit prod concurrency.
 export async function createSession(
-  opts: { allowTeams?: boolean; maxMembers?: number } = {}
+  opts: {
+    maxPlayers?: number
+    maxCentralScreens?: number
+    allowTeams?: boolean
+    maxMembers?: number
+  } = {}
 ): Promise<{ sessionId: string; joinCode: string }> {
   const sessionId = newId('sess')
   const joinCode = newJoinCode()
@@ -22,8 +27,9 @@ export async function createSession(
     createdAt: now,
   }
   const config: SessionConfig = {
-    maxPlayers: 30,
-    maxCentralScreens: 3,
+    maxPlayers: opts.maxPlayers && opts.maxPlayers > 0 ? opts.maxPlayers : 30,
+    maxCentralScreens:
+      opts.maxCentralScreens && opts.maxCentralScreens > 0 ? opts.maxCentralScreens : 3,
     joinCode,
     ...(opts.allowTeams ? { allowTeams: true } : {}),
     ...(opts.maxMembers ? { maxMembers: opts.maxMembers } : {}),

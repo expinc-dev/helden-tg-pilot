@@ -9,6 +9,8 @@ export function HostNew() {
   const [err, setErr] = useState<string | null>(null)
   const [allowTeams, setAllowTeams] = useState(false)
   const [maxMembers, setMaxMembers] = useState('')
+  const [maxPlayers, setMaxPlayers] = useState('30')
+  const [maxCentralScreens, setMaxCentralScreens] = useState('3')
 
   const create = async () => {
     setBusy(true)
@@ -16,6 +18,8 @@ export function HostNew() {
     try {
       const parsed = Number(maxMembers)
       const { sessionId } = await createSession({
+        maxPlayers: Number(maxPlayers) || undefined,
+        maxCentralScreens: Number(maxCentralScreens) || undefined,
         allowTeams,
         maxMembers: allowTeams && parsed > 0 ? parsed : undefined,
       })
@@ -29,6 +33,26 @@ export function HostNew() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
       <h1 className="text-xl font-semibold">New session</h1>
+      <label className="flex items-center gap-2 text-sm text-gray-600">
+        Max players
+        <input
+          type="number"
+          min={1}
+          value={maxPlayers}
+          onChange={(e) => setMaxPlayers(e.target.value)}
+          className="w-20 rounded border px-2 py-1"
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm text-gray-600">
+        Max central screens
+        <input
+          type="number"
+          min={1}
+          value={maxCentralScreens}
+          onChange={(e) => setMaxCentralScreens(e.target.value)}
+          className="w-20 rounded border px-2 py-1"
+        />
+      </label>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
