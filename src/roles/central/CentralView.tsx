@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
+import { TimerBar } from '@/phases/TimerBar'
 
 import { joinPresence } from '@/session/presence'
 
@@ -62,12 +63,15 @@ export function CentralView() {
         {sessionId} · {meta?.status ?? '—'} · {identity.id}
       </p>
       {phase && sessionId ? (
-        <PhaseRouter
-          phase={phase}
-          role="central"
-          sessionId={sessionId}
-          allowTeams={config?.allowTeams}
-        />
+        <>
+          <TimerBar sessionId={sessionId} phase={phase} role="central" />
+          <PhaseRouter
+            phase={phase}
+            role="central"
+            sessionId={sessionId}
+            allowTeams={config?.allowTeams}
+          />
+        </>
       ) : (
         <p className="text-sm text-gray-500">Waiting for host…</p>
       )}

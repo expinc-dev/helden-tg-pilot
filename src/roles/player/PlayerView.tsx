@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
+import { TimerBar } from '@/phases/TimerBar'
 
 import { joinPresence } from '@/session/presence'
 import { joinTeam } from '@/session/teams'
@@ -113,14 +114,17 @@ export function PlayerView() {
         {sessionId} · {meta?.status ?? '—'} · {identity.name ?? identity.id}
       </p>
       {phase && sessionId ? (
-        <PhaseRouter
-          phase={phase}
-          role="player"
-          sessionId={sessionId}
-          playerId={identity.id}
-          allowTeams={config?.allowTeams}
-          teamId={myTeamId}
-        />
+        <>
+          <TimerBar sessionId={sessionId} phase={phase} role="player" />
+          <PhaseRouter
+            phase={phase}
+            role="player"
+            sessionId={sessionId}
+            playerId={identity.id}
+            allowTeams={config?.allowTeams}
+            teamId={myTeamId}
+          />
+        </>
       ) : config?.allowTeams && myTeamId ? (
         <TeamLobby sessionId={sessionId!} playerId={identity.id} joinCode={config.joinCode} />
       ) : (

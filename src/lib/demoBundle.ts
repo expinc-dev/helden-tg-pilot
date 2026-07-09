@@ -39,6 +39,12 @@ const puzzle: Phase = {
   title: 'Team puzzle',
   syncMode: 'lockstep',
   roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['progress'] } },
+  timer: {
+    seconds: 120,
+    authority: 'server',
+    autoAdvanceOnExpire: false,
+    visibleTo: ['player', 'central'],
+  },
   content: {
     type: 'codeinput',
     expected: 'HELDEN',
