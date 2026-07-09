@@ -6,7 +6,7 @@ import { PhaseRouter } from '@/phases/PhaseRouter'
 import { joinPresence } from '@/session/presence'
 
 import { usePhasePointer } from '@/sync/usePhasePointer'
-import { useSessionMeta } from '@/sync/useSession'
+import { useSessionConfig, useSessionMeta } from '@/sync/useSession'
 
 import { demoBundle } from '@/lib/demoBundle'
 import { loadIdentity, saveIdentity } from '@/lib/identity'
@@ -17,6 +17,7 @@ type Identity = { id: string; isNew: boolean }
 export function CentralView() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const meta = useSessionMeta(sessionId)
+  const config = useSessionConfig(sessionId)
   const pointer = usePhasePointer(sessionId)
 
   const [identity] = useState<Identity>(() => {
@@ -27,12 +28,33 @@ export function CentralView() {
     return { id, isNew: true }
   })
 
+  const [full, setFull] = useState(false)
+
   useEffect(() => {
     if (!sessionId) return
-    return joinPresence(sessionId, 'central', identity.id, { isNew: identity.isNew })
+    let leave = () => {}
+    let cancelled = false
+    joinPresence(sessionId, 'central', identity.id, { isNew: identity.isNew }).then((r) => {
+      if (r.ok) {
+        if (cancelled) r.leave()
+        else leave = r.leave
+      } else if (!cancelled) setFull(true)
+    })
+    return () => {
+      cancelled = true
+      leave()
+    }
   }, [sessionId, identity])
 
   const phase = pointer ? demoBundle.phases[pointer.activePhaseId] : null
+
+  if (full) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8">
+        <p className="text-sm text-red-600">Session is full — no central-screen slots left.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col gap-4 p-8">
@@ -40,7 +62,12 @@ export function CentralView() {
         {sessionId} · {meta?.status ?? '—'} · {identity.id}
       </p>
       {phase && sessionId ? (
-        <PhaseRouter phase={phase} role="central" sessionId={sessionId} />
+        <PhaseRouter
+          phase={phase}
+          role="central"
+          sessionId={sessionId}
+          allowTeams={config?.allowTeams}
+        />
       ) : (
         <p className="text-sm text-gray-500">Waiting for host…</p>
       )}

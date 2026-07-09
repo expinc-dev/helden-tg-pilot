@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { resolveJoinCode } from './join'
 
@@ -7,7 +7,10 @@ import { resolveJoinCode } from './join'
 export function JoinGate() {
   const { role } = useParams<{ role: 'player' | 'central' }>()
   const nav = useNavigate()
-  const [code, setCode] = useState('')
+  const [sp] = useSearchParams()
+  // Prefill from a scanned team-invite QR: ?code=…&team=…
+  const teamParam = sp.get('team')
+  const [code, setCode] = useState(sp.get('code')?.toUpperCase() ?? '')
   const [name, setName] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -22,7 +25,10 @@ export function JoinGate() {
       setBusy(false)
       return
     }
-    const q = role === 'player' && name ? `?name=${encodeURIComponent(name)}` : ''
+    const params = new URLSearchParams()
+    if (role === 'player' && name) params.set('name', name)
+    if (role === 'player' && teamParam) params.set('team', teamParam)
+    const q = params.toString() ? `?${params}` : ''
     nav(`/${role}/${sid}${q}`, { replace: true })
   }
 

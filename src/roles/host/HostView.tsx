@@ -65,7 +65,12 @@ export function HostView() {
       {phase && (
         <div className="rounded border p-4">
           <p className="mb-2 text-xs text-gray-500">Now playing: {phase.id}</p>
-          <PhaseRouter phase={phase} role="host" sessionId={sessionId} />
+          <PhaseRouter
+            phase={phase}
+            role="host"
+            sessionId={sessionId}
+            allowTeams={config.allowTeams}
+          />
         </div>
       )}
     </div>

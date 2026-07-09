@@ -8,7 +8,9 @@ import { newId, newJoinCode } from '@/lib/ids'
 // resolution yet (bundle loading is T-runtime-02).
 // ponytail: retry-on-collision unimplemented; 31^6 ≈ 887M codes, collision is
 // astronomically unlikely at pilot scale. Add if we ever hit prod concurrency.
-export async function createSession(): Promise<{ sessionId: string; joinCode: string }> {
+export async function createSession(
+  opts: { allowTeams?: boolean; maxMembers?: number } = {}
+): Promise<{ sessionId: string; joinCode: string }> {
   const sessionId = newId('sess')
   const joinCode = newJoinCode()
   const now = Date.now()
@@ -19,7 +21,13 @@ export async function createSession(): Promise<{ sessionId: string; joinCode: st
     status: 'lobby',
     createdAt: now,
   }
-  const config: SessionConfig = { maxPlayers: 30, maxCentralScreens: 3, joinCode }
+  const config: SessionConfig = {
+    maxPlayers: 30,
+    maxCentralScreens: 3,
+    joinCode,
+    ...(opts.allowTeams ? { allowTeams: true } : {}),
+    ...(opts.maxMembers ? { maxMembers: opts.maxMembers } : {}),
+  }
 
   await Promise.all([
     set(ref(rtdb, `sessions/${sessionId}/meta`), meta),

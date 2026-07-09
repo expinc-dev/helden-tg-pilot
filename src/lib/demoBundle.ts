@@ -31,13 +31,30 @@ const intro: Phase = {
   },
 }
 
+// Team-mode physical puzzle: each team assembles a printed code and enters it.
+// Only renders as a team page when the session has allowTeams=true.
+const puzzle: Phase = {
+  id: 'p-puzzle',
+  type: 'codeinput',
+  title: 'Team puzzle',
+  syncMode: 'lockstep',
+  roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['progress'] } },
+  content: {
+    type: 'codeinput',
+    expected: 'HELDEN',
+    caseSensitive: false,
+    maxAttempts: 5,
+    onSuccess: { advance: false },
+  },
+}
+
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
-  schemaVersion: '1.0.0',
+  schemaVersion: '1.2.0',
   title: 'Pilot demo',
-  phaseOrder: [idle.id, intro.id],
-  phases: { [idle.id]: idle, [intro.id]: intro },
+  phaseOrder: [idle.id, intro.id, puzzle.id],
+  phases: { [idle.id]: idle, [intro.id]: intro, [puzzle.id]: puzzle },
   publishedAt: Date.now(),
   publishedBy: 'pilot',
 }

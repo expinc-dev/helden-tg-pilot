@@ -1,5 +1,6 @@
 import type { Phase } from '@helden-inc/tg-schema'
 
+import { TeamCodeInput } from './CodeInput'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 
@@ -13,16 +14,34 @@ export function PhaseRouter({
   role,
   sessionId,
   playerId,
+  allowTeams,
+  teamId,
 }: {
   phase: Phase
   role: Role
   sessionId: string
   playerId?: string
+  allowTeams?: boolean
+  teamId?: string
 }) {
   const content = phase.content
   switch (content.type) {
     case 'idle':
       return <IdleRenderer content={content} role={role} phaseId={phase.id} />
+    case 'codeinput':
+      // Team-aware page: only in team mode. Otherwise fall through to the
+      // "not renderable yet" default (single-player codeinput isn't built).
+      return allowTeams ? (
+        <TeamCodeInput
+          content={content}
+          phaseId={phase.id}
+          sessionId={sessionId}
+          role={role}
+          teamId={teamId}
+        />
+      ) : (
+        <div className="p-8 text-sm text-gray-500">Code input needs Team Mode enabled.</div>
+      )
     case 'microlearning':
       return (
         <MicrolearningRenderer

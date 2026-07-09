@@ -9,6 +9,12 @@ export function newJoinCode(): string {
   return out
 }
 
+// crypto.getRandomValues (not crypto.randomUUID) so ids also generate in a
+// non-secure context — e.g. a phone hitting the dev server over http://<LAN-ip>.
+// randomUUID is secure-context-only and throws there, crashing the join flow.
 export function newId(prefix: string): string {
-  return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
+  const buf = new Uint8Array(4)
+  crypto.getRandomValues(buf)
+  const hex = Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${prefix}_${hex}`
 }
