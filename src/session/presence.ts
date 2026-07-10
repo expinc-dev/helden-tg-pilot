@@ -15,6 +15,25 @@ import { type Member, reserveSlot } from './capacity'
 type Role = 'player' | 'central'
 export type JoinResult = { ok: true; leave: () => void } | { ok: false; reason: 'full' }
 
+// A device only remembers ONE player identity per session (lib/identity.ts's
+// single localStorage slot) — join as a second named player on the same device
+// and the first one's id is no longer remembered locally. The session's actual
+// player list in RTDB is the durable source of truth, so a same-code-same-name
+// rejoin falls back to it: find the existing player with this name and reuse
+// their id instead of minting a new (empty-progress) one.
+// Ambiguous if two players share a name — picks whichever the DB returns first,
+// a known pilot-scale limitation, not a guarantee of uniqueness.
+export async function findPlayerIdByName(sessionId: string, name: string): Promise<string | null> {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+  const snap = await get(ref(rtdb, `sessions/${sessionId}/players`))
+  const players = (snap.val() ?? {}) as Record<string, { name?: string } | null>
+  for (const [id, p] of Object.entries(players)) {
+    if (p?.name === trimmed) return id
+  }
+  return null
+}
+
 // Caller owns a stable id (from localStorage) so refresh reuses the same RTDB node.
 // isNew=true → first join, establish node + joinedAt. isNew=false → rejoin, merge
 // presence fields only so selfStep/joinedAt survive (BLUEPRINT_runtime §7).
