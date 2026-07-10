@@ -15,6 +15,9 @@ const intro: Phase = {
   type: 'microlearning',
   title: 'Onboarding',
   syncMode: 'self_paced',
+  // Demo-only: exercises the team_leader_only path (useTeamRole + resolveStepTarget)
+  // so it's actually clickable in Team Mode — otherwise nothing in this bundle did.
+  teamMode: 'team_leader_only',
   roles: { player: { enabled: true }, host: { monitor: ['progress'] } },
   content: {
     type: 'microlearning',

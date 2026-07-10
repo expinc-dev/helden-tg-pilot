@@ -50,6 +50,7 @@ export function PhaseRouter({
           role={role}
           sessionId={sessionId}
           playerId={playerId}
+          phase={phase}
         />
       )
     default:

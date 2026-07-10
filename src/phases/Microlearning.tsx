@@ -1,6 +1,9 @@
-import type { MicrolearningContent } from '@helden-inc/tg-schema'
+import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
 
-import { useMyStep, usePlayerBoard } from '@/sync/usePlayerStep'
+import { resolveStepTarget } from '@/sync/teamStep'
+import { usePlayerBoard, usePlayerStep } from '@/sync/usePlayerStep'
+import { useTeamOwner, useTeamRole } from '@/sync/useTeamRole'
+import { useMyTeamId } from '@/sync/useTeams'
 
 import type { Role } from './PhaseRouter'
 
@@ -10,15 +13,17 @@ export function MicrolearningRenderer({
   role,
   sessionId,
   playerId,
+  phase,
 }: {
   content: MicrolearningContent
   title: string
   role: Role
   sessionId: string
   playerId?: string
+  phase: Phase
 }) {
   if (role === 'player' && playerId)
-    return <PlayerPane content={content} sessionId={sessionId} playerId={playerId} />
+    return <PlayerPane content={content} sessionId={sessionId} playerId={playerId} phase={phase} />
   return <MonitorPane content={content} title={title} sessionId={sessionId} />
 }
 
@@ -26,12 +31,27 @@ function PlayerPane({
   content,
   sessionId,
   playerId,
+  phase,
 }: {
   content: MicrolearningContent
   sessionId: string
   playerId: string
+  phase: Phase
 }) {
-  const [step, setStep] = useMyStep(sessionId, playerId)
+  // Team Mode: a team_leader_only member has no selfStep of their own — they
+  // mirror the leader's. Resolved once, here, via the shared useTeamRole helper
+  // (not re-derived per phase renderer) + the pure resolveStepTarget rule.
+  const teamRole = useTeamRole(sessionId, playerId, phase)
+  const teamId = useMyTeamId(sessionId, playerId)
+  const leaderId = useTeamOwner(sessionId, teamId)
+  const { targetPlayerId, canWrite } = resolveStepTarget(
+    playerId,
+    teamRole,
+    leaderId,
+    phase.teamMode
+  )
+
+  const [step, setStep] = usePlayerStep(sessionId, targetPlayerId, phase.syncMode)
   const bounded = Math.min(step, content.steps.length - 1)
   const current = content.steps[bounded]
   const isLast = bounded === content.steps.length - 1
@@ -41,15 +61,20 @@ function PlayerPane({
     <div className="flex max-w-lg flex-col gap-4 p-6">
       <p className="text-xs text-gray-400">
         Step {bounded + 1}/{content.steps.length}
+        {teamRole === 'member' && ' · following your team leader'}
       </p>
       <pre className="font-sans text-base whitespace-pre-wrap">{text}</pre>
-      <button
-        onClick={() => setStep(bounded + 1)}
-        disabled={isLast}
-        className="self-start rounded bg-black px-4 py-2 text-white disabled:opacity-40"
-      >
-        {isLast ? 'Done' : 'Next'}
-      </button>
+      {canWrite ? (
+        <button
+          onClick={() => setStep(bounded + 1)}
+          disabled={isLast}
+          className="self-start rounded bg-black px-4 py-2 text-white disabled:opacity-40"
+        >
+          {isLast ? 'Done' : 'Next'}
+        </button>
+      ) : (
+        <p className="text-xs text-gray-400">Your team leader controls Next.</p>
+      )}
     </div>
   )
 }
