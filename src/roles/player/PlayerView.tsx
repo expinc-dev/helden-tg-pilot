@@ -12,12 +12,10 @@ import { useSessionConfig, useSessionMeta } from '@/sync/useSession'
 import { useMyTeamId } from '@/sync/useTeams'
 
 import { demoBundle } from '@/lib/demoBundle'
-import { loadIdentity, saveIdentity } from '@/lib/identity'
-import { newId } from '@/lib/ids'
+import { saveLastSession } from '@/lib/identity'
 
 import { TeamLobby } from './TeamLobby'
-
-type Identity = { id: string; name?: string; isNew: boolean }
+import { useResolvedIdentity } from './useIdentity'
 
 export function PlayerView() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -26,27 +24,25 @@ export function PlayerView() {
   const config = useSessionConfig(sessionId)
   const pointer = usePhasePointer(sessionId)
 
-  // Save-on-generate in the initializer keeps the id stable across refresh AND
-  // StrictMode remount (a saved id is read back identically). isNew is best-effort.
-  const [identity] = useState<Identity>(() => {
-    const stored = sessionId ? loadIdentity(sessionId, 'player') : null
-    if (stored) return { id: stored.id, name: stored.name, isNew: false }
-    const id = newId('p')
-    const name = sp.get('name') ?? undefined
-    if (sessionId) saveIdentity(sessionId, 'player', { id, name })
-    return { id, name, isNew: true }
-  })
+  const typedName = sp.get('name') ?? undefined
+  const identity = useResolvedIdentity(sessionId, typedName)
+
+  // Remember "this is the session I'm in" so JoinGate can offer Rejoin instantly,
+  // before anyone types a code — separate from the identity itself.
+  useEffect(() => {
+    if (sessionId) saveLastSession('player', sessionId)
+  }, [sessionId])
 
   const [full, setFull] = useState(false)
   const [teamJoinFailed, setTeamJoinFailed] = useState(false)
-  const myTeamId = useMyTeamId(sessionId, identity.id)
+  const myTeamId = useMyTeamId(sessionId, identity?.id ?? '')
   const teamParam = sp.get('team') ?? undefined
   // Arrived via an invite QR and the join hasn't resolved yet → block the picker
   // so the ~1-2s async window can't be used to tap a different team.
   const joiningViaInvite = !!teamParam && !myTeamId && !teamJoinFailed
 
   useEffect(() => {
-    if (!sessionId) return
+    if (!sessionId || !identity) return
     let leave = () => {}
     let cancelled = false
     joinPresence(sessionId, 'player', identity.id, {
@@ -76,6 +72,14 @@ export function PlayerView() {
   }, [sessionId, teamParam, identity])
 
   const phase = pointer ? demoBundle.phases[pointer.activePhaseId] : null
+
+  if (!identity) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8">
+        <p className="text-sm text-gray-500">Joining…</p>
+      </div>
+    )
+  }
 
   if (full) {
     return (

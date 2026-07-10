@@ -10,7 +10,7 @@ import { usePhasePointer } from '@/sync/usePhasePointer'
 import { useSessionConfig, useSessionMeta } from '@/sync/useSession'
 
 import { demoBundle } from '@/lib/demoBundle'
-import { loadIdentity, saveIdentity } from '@/lib/identity'
+import { loadIdentity, saveIdentity, saveLastSession } from '@/lib/identity'
 import { newId } from '@/lib/ids'
 
 type Identity = { id: string; isNew: boolean }
@@ -28,6 +28,12 @@ export function CentralView() {
     if (sessionId) saveIdentity(sessionId, 'central', { id })
     return { id, isNew: true }
   })
+
+  // Remember "this is the session I'm in" so JoinGate can offer Rejoin instantly,
+  // before anyone types a code — separate from the identity itself.
+  useEffect(() => {
+    if (sessionId) saveLastSession('central', sessionId)
+  }, [sessionId])
 
   const [full, setFull] = useState(false)
 
