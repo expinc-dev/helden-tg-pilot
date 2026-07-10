@@ -66,13 +66,49 @@ const puzzle: Phase = {
   },
 }
 
+// Mini-game phase (BLUEPRINT_runtime §9). team_leader_only so only the leader
+// drags; members see TeamFocusLeader (routed at PhaseRouter, plus the template
+// itself gates team_collaborative + member the same way).
+const sortGame: Phase = {
+  id: 'p-sort',
+  type: 'minigame',
+  title: 'Order the steps',
+  syncMode: 'lockstep',
+  teamMode: 'team_leader_only',
+  roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['scores'] } },
+  timer: {
+    seconds: 45,
+    authority: 'server',
+    autoAdvanceOnExpire: false,
+    visibleTo: ['player', 'central'],
+  },
+  scoring: {
+    mode: 'correctness_and_speed',
+    maxPoints: 100,
+    speedBonus: { maxBonus: 50, decaySeconds: 45 },
+  },
+  content: {
+    type: 'minigame',
+    templateId: 'sort_order',
+    config: {
+      items: [
+        { id: 'i1', label: 'Set the goal & context' },
+        { id: 'i2', label: 'Give an example of the desired format' },
+        { id: 'i3', label: 'Ask the AI to generate a draft' },
+        { id: 'i4', label: 'Review & refine the result' },
+      ],
+      correctOrder: ['i1', 'i2', 'i3', 'i4'],
+    },
+  },
+}
+
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
   schemaVersion: '1.2.0',
   title: 'Pilot demo',
-  phaseOrder: [idle.id, intro.id, puzzle.id],
-  phases: { [idle.id]: idle, [intro.id]: intro, [puzzle.id]: puzzle },
+  phaseOrder: [idle.id, intro.id, puzzle.id, sortGame.id],
+  phases: { [idle.id]: idle, [intro.id]: intro, [puzzle.id]: puzzle, [sortGame.id]: sortGame },
   publishedAt: Date.now(),
   publishedBy: 'pilot',
 }

@@ -2,6 +2,8 @@ import { scorePhase } from '@/scoring/score'
 import type { Phase } from '@helden-inc/tg-schema'
 import { get, ref, serverTimestamp, update } from 'firebase/database'
 
+import { minigameRegistry } from '@/phases/minigames/registry'
+
 import { rtdb } from '@/lib/firebase'
 
 import { type Contribution, aggregateForPhase } from './flushAggregate'
@@ -63,6 +65,22 @@ function resolveCorrectness(
         answered: (st.attempts ?? 0) > 0,
         elapsedMs,
       }
+    }
+    case 'minigame': {
+      // Delegate to the template's own scorer (registry lookup by templateId).
+      // Unknown/invalid → null → participant scores 0. Same fallback path the
+      // renderer uses when it hits UnknownTemplate.
+      const template = minigameRegistry.get(phase.content.templateId)
+      if (!template) return null
+      const parsed = template.configSchema.safeParse(phase.content.config)
+      if (!parsed.success) return null
+      const ans = ctx.player.answers?.[phase.id]
+      return template.scorer({
+        config: parsed.data,
+        answer: ans?.value,
+        answerSubmittedAt: ans?.submittedAt,
+        phaseStartMs: ctx.phaseStartMs,
+      })
     }
     // Quiz / other scored types: read from ctx.player.answers[qId] and compare
     // against the phase content's answer key when the resolver ships.

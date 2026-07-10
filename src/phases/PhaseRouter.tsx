@@ -1,11 +1,13 @@
 import type { Phase } from '@helden-inc/tg-schema'
 
-import { useTeamRole } from '@/sync/useTeamRole'
+import { type TeamRole, useTeamRole } from '@/sync/useTeamRole'
 
 import { TeamCodeInput } from './CodeInput'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { TeamFocusLeader } from './TeamFocusLeader'
+import { UnknownTemplate } from './minigames/UnknownTemplate'
+import { minigameRegistry } from './minigames/registry'
 
 export type Role = 'host' | 'central' | 'player'
 
@@ -29,7 +31,7 @@ export function PhaseRouter(props: RouterProps) {
   if (props.role === 'player' && props.playerId) {
     return <PlayerPhaseGate {...props} playerId={props.playerId} />
   }
-  return <PhaseContentSwitch {...props} />
+  return <PhaseContentSwitch {...props} teamRole="solo" />
 }
 
 function PlayerPhaseGate(props: RouterProps & { playerId: string }) {
@@ -37,7 +39,7 @@ function PlayerPhaseGate(props: RouterProps & { playerId: string }) {
   if (props.phase.teamMode === 'team_leader_only' && teamRole === 'member') {
     return <TeamFocusLeader phaseId={props.phase.id} />
   }
-  return <PhaseContentSwitch {...props} />
+  return <PhaseContentSwitch {...props} teamRole={teamRole} />
 }
 
 // Discriminate on phase.content (the real discriminated union). phase.type is a
@@ -51,7 +53,8 @@ function PhaseContentSwitch({
   playerId,
   allowTeams,
   teamId,
-}: RouterProps) {
+  teamRole,
+}: RouterProps & { teamRole: TeamRole }) {
   const content = phase.content
   switch (content.type) {
     case 'idle':
@@ -81,6 +84,30 @@ function PhaseContentSwitch({
           phase={phase}
         />
       )
+    case 'minigame': {
+      // Registry lookup (BLUEPRINT_runtime §9). Unknown templateId OR invalid
+      // config → safe fallback. The template's Zod schema validates the loose
+      // `config: Record<string, unknown>` that tg-schema keeps intentionally open.
+      const template = minigameRegistry.get(content.templateId)
+      if (!template) {
+        return <UnknownTemplate templateId={content.templateId} reason="not registered" />
+      }
+      const parsed = template.configSchema.safeParse(content.config)
+      if (!parsed.success) {
+        return <UnknownTemplate templateId={content.templateId} reason="invalid config" />
+      }
+      const Renderer = template.Renderer
+      return (
+        <Renderer
+          config={parsed.data}
+          phase={phase}
+          sessionId={sessionId}
+          playerId={playerId}
+          role={role}
+          teamRole={teamRole}
+        />
+      )
+    }
     default:
       return (
         <div className="p-8 text-sm text-gray-500">
