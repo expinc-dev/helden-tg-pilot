@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 
+import { EndScreen } from '@/session/EndScreen'
 import { joinPresence } from '@/session/presence'
 
 import { usePhasePointer } from '@/sync/usePhasePointer'
@@ -37,8 +38,11 @@ export function CentralView() {
     let cancelled = false
     joinPresence(sessionId, 'central', identity.id, { isNew: identity.isNew }).then((r) => {
       if (r.ok) {
-        if (cancelled) r.leave()
-        else leave = r.leave
+        // StrictMode remount: skip leave() when cancelled — mount2 has already
+        // written connected:true, and firing update({connected:false}) here would
+        // race-overwrite it, stranding the host at 0/N. onDisconnect handles the
+        // real tab-close case.
+        if (!cancelled) leave = r.leave
       } else if (!cancelled) setFull(true)
     })
     return () => {
@@ -62,11 +66,14 @@ export function CentralView() {
       <p className="text-xs text-gray-500">
         {sessionId} · {meta?.status ?? '—'} · {identity.id}
       </p>
-      {phase && sessionId ? (
+      {meta?.status === 'ended' && sessionId ? (
+        <EndScreen sessionId={sessionId} />
+      ) : phase && sessionId ? (
         <>
           <TimerBar sessionId={sessionId} phase={phase} role="central" />
           <PhaseRouter
             phase={phase}
+            phaseStartMs={pointer?.changedAt}
             role="central"
             sessionId={sessionId}
             allowTeams={config?.allowTeams}

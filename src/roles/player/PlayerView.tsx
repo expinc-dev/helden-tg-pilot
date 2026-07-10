@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 
+import { EndScreen } from '@/session/EndScreen'
 import { joinPresence } from '@/session/presence'
 import { joinTeam } from '@/session/teams'
 
@@ -58,7 +59,10 @@ export function PlayerView() {
         return
       }
       if (cancelled) {
-        r.leave()
+        // StrictMode remount: mount2 has already re-joined against the same
+        // presence node. Firing r.leave() here would racily overwrite mount2's
+        // connected:true with connected:false, leaving the host permanently at
+        // 0/N. Firebase onDisconnect handles real tab-close; skip manual leave.
         return
       }
       leave = r.leave
@@ -113,11 +117,14 @@ export function PlayerView() {
       <p className="text-xs text-gray-500">
         {sessionId} · {meta?.status ?? '—'} · {identity.name ?? identity.id}
       </p>
-      {phase && sessionId ? (
+      {meta?.status === 'ended' && sessionId ? (
+        <EndScreen sessionId={sessionId} />
+      ) : phase && sessionId ? (
         <>
           <TimerBar sessionId={sessionId} phase={phase} role="player" />
           <PhaseRouter
             phase={phase}
+            phaseStartMs={pointer?.changedAt}
             role="player"
             sessionId={sessionId}
             playerId={identity.id}

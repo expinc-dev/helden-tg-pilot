@@ -4,6 +4,8 @@ import { onValue, ref, remove, set, update } from 'firebase/database'
 import { demoBundle } from '@/lib/demoBundle'
 import { rtdb } from '@/lib/firebase'
 
+import { flushPhaseResults } from './flush'
+
 // .info/serverTimeOffset is listener-only — get() throws "Invalid token in path".
 // Grab it with a one-shot onValue (serverTime − localTime, ms; 0 if unresolved).
 // The callback can fire SYNCHRONOUSLY during onValue(), before its return value is
@@ -59,7 +61,29 @@ export async function nextPhase(
   const order = demoBundle.phaseOrder
   const idx = currentPhaseId ? order.indexOf(currentPhaseId) : -1
   const next = order[idx + 1]
-  if (!next) return { done: true as const }
+  // Flush durable results for the outgoing phase BEFORE the pointer moves —
+  // once phasePointer flips, clients navigate away and live/* may be reused.
+  // Errors are logged but do not block advance: a failed flush is recoverable
+  // (RTDB live/* still intact), a stuck host is not (BLUEPRINT_runtime §11).
+  // ponytail: single host writes results; if host crashes mid-flush, a rejoined
+  // host can re-flush from live/*. Upgrade path = Cloud Function on phasePointer.
+  const outgoing = currentPhaseId ? demoBundle.phases[currentPhaseId] : undefined
+  if (outgoing) {
+    try {
+      await flushPhaseResults(sessionId, outgoing)
+    } catch (e) {
+      console.error('flushPhaseResults failed for', outgoing.id, e)
+    }
+  }
+  if (!next) {
+    // Last phase done → end the session. Flush already ran above; timer cleared
+    // so useTimer doesn't show a stale phase deadline on the end screen.
+    await Promise.all([
+      update(ref(rtdb, `sessions/${sessionId}/meta`), { status: 'ended' }),
+      remove(ref(rtdb, `sessions/${sessionId}/timer`)),
+    ])
+    return { done: true as const }
+  }
   const pointer: PhasePointer = { activePhaseId: next, changedAt: Date.now(), changedBy: hostUid }
   await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
   await openPhaseTimer(sessionId, demoBundle.phases[next])

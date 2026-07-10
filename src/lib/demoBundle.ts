@@ -41,12 +41,21 @@ const puzzle: Phase = {
   type: 'codeinput',
   title: 'Team puzzle',
   syncMode: 'lockstep',
+  // Codeinput state lives at teams/{teamId}/codeinput — inherently team-scoped.
+  // team_leader_only attributes the shared solve to the team once (not once per
+  // member), so durable results land in teamResults/{teamId} with the full 146.
+  teamMode: 'team_leader_only',
   roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['progress'] } },
   timer: {
     seconds: 120,
     authority: 'server',
     autoAdvanceOnExpire: false,
     visibleTo: ['player', 'central'],
+  },
+  scoring: {
+    mode: 'correctness_and_speed',
+    maxPoints: 100,
+    speedBonus: { maxBonus: 50, decaySeconds: 120 },
   },
   content: {
     type: 'codeinput',

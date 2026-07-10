@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 
-import type { CodeInputContent } from '@helden-inc/tg-schema'
+import { scorePhase } from '@/scoring/score'
+import type { CodeInputContent, Phase } from '@helden-inc/tg-schema'
 import { onValue, ref, runTransaction } from 'firebase/database'
 
+import { useTeamLiveScore } from '@/sync/useTeamLiveScore'
 import { useTeams } from '@/sync/useTeams'
 
 import { rtdb } from '@/lib/firebase'
@@ -54,38 +56,50 @@ async function submitCode(
 // Player + teamId → interactive puzzle for that team. Host/central (no teamId) →
 // read-only monitor of every team's progress.
 export function TeamCodeInput({
-  content,
-  phaseId,
+  phase,
+  phaseStartMs,
   sessionId,
   role,
   teamId,
 }: {
-  content: CodeInputContent
-  phaseId: string
+  phase: Phase
+  phaseStartMs?: number
   sessionId: string
   role: Role
   teamId?: string
 }) {
+  if (phase.content.type !== 'codeinput') return null
+  const content = phase.content
   if (role !== 'player' || !teamId) {
-    return <CodeInputMonitor sessionId={sessionId} phaseId={phaseId} />
+    return <CodeInputMonitor sessionId={sessionId} phase={phase} phaseStartMs={phaseStartMs} />
   }
   return (
-    <CodeInputPlayer content={content} phaseId={phaseId} sessionId={sessionId} teamId={teamId} />
+    <CodeInputPlayer
+      content={content}
+      phase={phase}
+      phaseStartMs={phaseStartMs}
+      sessionId={sessionId}
+      teamId={teamId}
+    />
   )
 }
 
 function CodeInputPlayer({
   content,
-  phaseId,
+  phase,
+  phaseStartMs,
   sessionId,
   teamId,
 }: {
   content: CodeInputContent
-  phaseId: string
+  phase: Phase
+  phaseStartMs?: number
   sessionId: string
   teamId: string
 }) {
+  const phaseId = phase.id
   const state = useCodeInputState(sessionId, teamId, phaseId)
+  const score = useTeamLiveScore(sessionId, teamId, phase, phaseStartMs)
   const [input, setInput] = useState('')
   const [wrong, setWrong] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -108,6 +122,7 @@ function CodeInputPlayer({
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 p-8">
         <p className="text-2xl font-semibold text-green-600">Solved! ✓</p>
         <p className="text-sm text-gray-500">Your team cracked the code.</p>
+        <p className="mt-2 text-3xl font-bold tabular-nums">{Math.round(score)} pts</p>
       </div>
     )
   }
@@ -137,23 +152,49 @@ function CodeInputPlayer({
   )
 }
 
-function CodeInputMonitor({ sessionId, phaseId }: { sessionId: string; phaseId: string }) {
-  const teams = useTeams(sessionId)
+function CodeInputMonitor({
+  sessionId: _sessionId,
+  phase,
+  phaseStartMs,
+}: {
+  sessionId: string
+  phase: Phase
+  phaseStartMs?: number
+}) {
+  const phaseId = phase.id
+  const teams = useTeams(_sessionId)
+  const rows = teams
+    .map((t) => {
+      const st = t.codeinput?.[phaseId]
+      const solvedAt = st?.solvedAt
+      const elapsedMs = st?.solved && solvedAt && phaseStartMs ? solvedAt - phaseStartMs : 0
+      const score = scorePhase(phase, {
+        correct: !!st?.solved,
+        answered: (st?.attempts ?? 0) > 0,
+        elapsedMs,
+        phaseDurationMs: (phase.timer?.seconds ?? 0) * 1000,
+      })
+      return { team: t, st, score }
+    })
+    .sort((a, b) => b.score - a.score)
   return (
     <div className="flex flex-col gap-2 p-8">
-      <p className="text-sm text-gray-500">Team progress</p>
-      {teams.length === 0 && <p className="text-sm text-gray-400">No teams yet.</p>}
-      {teams.map((t) => {
-        const st = t.codeinput?.[phaseId]
-        return (
-          <div key={t.id} className="flex justify-between rounded border px-3 py-2 text-sm">
-            <span>{t.teamName ?? 'Team'}</span>
+      <p className="text-sm text-gray-500">Team scores</p>
+      {rows.length === 0 && <p className="text-sm text-gray-400">No teams yet.</p>}
+      {rows.map(({ team, st, score }) => (
+        <div
+          key={team.id}
+          className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+        >
+          <span>{team.teamName ?? 'Team'}</span>
+          <span className="flex items-center gap-3">
             <span className={st?.solved ? 'text-green-600' : 'text-gray-500'}>
               {st?.solved ? 'Solved ✓' : `${st?.attempts ?? 0} attempt(s)`}
             </span>
-          </div>
-        )
-      })}
+            <span className="w-16 text-right font-mono tabular-nums">{Math.round(score)} pts</span>
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

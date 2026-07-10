@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 
+import { EndScreen } from '@/session/EndScreen'
 import { nextPhase, startSession } from '@/session/control'
 
 import { usePhasePointer } from '@/sync/usePhasePointer'
@@ -73,17 +74,25 @@ export function HostView() {
             Start session
           </button>
         )}
-        {meta.status === 'live' && (
-          <button
-            onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
-            className="rounded border px-4 py-2"
-          >
-            Next phase
-          </button>
-        )}
+        {meta.status === 'live' &&
+          (() => {
+            const order = demoBundle.phaseOrder
+            const isLast =
+              !!pointer?.activePhaseId && order.indexOf(pointer.activePhaseId) === order.length - 1
+            return (
+              <button
+                onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
+                className="rounded border px-4 py-2"
+              >
+                {isLast ? 'End session' : 'Next phase'}
+              </button>
+            )
+          })()}
       </div>
 
-      {phase && (
+      {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
+
+      {meta.status === 'live' && phase && (
         <div className="rounded border p-4">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-gray-500">Now playing: {phase.id}</p>
@@ -91,6 +100,7 @@ export function HostView() {
           </div>
           <PhaseRouter
             phase={phase}
+            phaseStartMs={pointer?.changedAt}
             role="host"
             sessionId={sessionId}
             allowTeams={config.allowTeams}

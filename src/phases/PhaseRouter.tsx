@@ -11,6 +11,7 @@ export type Role = 'host' | 'central' | 'player'
 // narrow content, so we switch on content.type and pass the narrowed content down.
 export function PhaseRouter({
   phase,
+  phaseStartMs,
   role,
   sessionId,
   playerId,
@@ -18,6 +19,7 @@ export function PhaseRouter({
   teamId,
 }: {
   phase: Phase
+  phaseStartMs?: number
   role: Role
   sessionId: string
   playerId?: string
@@ -33,8 +35,8 @@ export function PhaseRouter({
       // "not renderable yet" default (single-player codeinput isn't built).
       return allowTeams ? (
         <TeamCodeInput
-          content={content}
-          phaseId={phase.id}
+          phase={phase}
+          phaseStartMs={phaseStartMs}
           sessionId={sessionId}
           role={role}
           teamId={teamId}
