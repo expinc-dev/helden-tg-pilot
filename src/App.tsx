@@ -1,5 +1,6 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
+import { useAuthUid } from './lib/useAuthUid'
 import { CentralView } from './roles/central/CentralView'
 import { HostNew } from './roles/host/HostNew'
 import { HostView } from './roles/host/HostView'
@@ -7,6 +8,30 @@ import { PlayerView } from './roles/player/PlayerView'
 import { JoinGate } from './session/JoinGate'
 
 export function App() {
+  // Every route below eventually writes to RTDB, and every write is now gated
+  // by database.rules.json on auth.uid — block routing until that resolves so
+  // no view races ahead and gets a permission-denied from rules instead of a
+  // clear "signing in" state.
+  const { uid, error } = useAuthUid()
+  if (error) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-8 text-center">
+        <p className="text-sm text-red-600">Couldn't sign in: {error}</p>
+        <p className="max-w-md text-xs text-gray-500">
+          Most likely cause: Anonymous sign-in isn't enabled for this Firebase project. Firebase
+          Console → Authentication → Sign-in method → Anonymous → Enable, then reload this page.
+        </p>
+      </div>
+    )
+  }
+  if (!uid) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8">
+        <p className="text-sm text-gray-500">Signing in…</p>
+      </div>
+    )
+  }
+
   return (
     <Routes>
       <Route path="/" element={<Landing />} />

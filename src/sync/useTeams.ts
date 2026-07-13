@@ -7,8 +7,8 @@ import { rtdb } from '@/lib/firebase'
 
 export type TeamRow = Team & { id: string; memberCount: number }
 
-// Teams keyed by id. Roster size is the authoritative memberIds length (owner
-// included) — the same count the maxMembers transaction enforces.
+// Teams keyed by id. Roster size is the authoritative memberIds key count
+// (owner included) — the same count the maxMembers transaction enforces.
 export function useTeams(sessionId: string | undefined): TeamRow[] {
   const [teams, setTeams] = useState<Record<string, Team>>({})
 
@@ -20,7 +20,7 @@ export function useTeams(sessionId: string | undefined): TeamRow[] {
   return Object.entries(teams).map(([id, t]) => ({
     ...t,
     id,
-    memberCount: t.memberIds?.length ?? 0,
+    memberCount: Object.keys(t.memberIds ?? {}).length,
   }))
 }
 

@@ -1,0 +1,290 @@
+{
+  // RTDB security rules for helden-tg-pilot. NOT deployed by writing this file —
+  // deploy explicitly with `firebase deploy --only database`, and test against
+  // the Rules Playground / emulator first. Misconfigured rules can lock out an
+  // entire live session, so this is deliberately not something written to
+  // production automatically.
+  //
+  // Every write below requires `auth != null` — real Firebase Anonymous Auth
+  // (see lib/useAuthUid.ts), not the app-level playerId a device makes up for
+  // itself. Ownership of an app-level id (player/central/team) is recorded
+  // against the real auth.uid the FIRST time it's claimed (playerOwners/
+  // centralOwners, or teams/{id}.ownerPlayerId chained through playerOwners),
+  // and only a request carrying that SAME uid may touch that id's data again.
+  //
+  // IMPORTANT model correction, learned from a real permission_denied against
+  // this exact file: `update()` with a keyed patch object (e.g. claimOwnership's
+  // update(ref('playerOwners'), {[id]: uid})) is checked per AFFECTED LEAF — the
+  // nested rule at that leaf is enough, no rule needed at the parent. But
+  // `set()` and `runTransaction()` targeting a parent ref DIRECTLY (e.g. the
+  // capacity transaction on the whole `players` collection, or createTeam's
+  // set() on the whole team node) need `.write` permission AT THAT EXACT PATH —
+  // nested child rules are never consulted, because nothing grants permission
+  // to reach them at all. Where that's true, the parent gets a broad
+  // `.write: "auth != null"`, and the REAL ownership restriction moves into (or
+  // is duplicated into) a `.validate` at the child — `.validate` keeps applying
+  // to every touched leaf no matter which ancestor granted `.write`, so it can't
+  // be bypassed by the broader parent grant the way a nested `.write` can.
+  //
+  // One spot is marked BEST-EFFORT below: per-key legitimacy for
+  // answeredCount/answeredBy (which keyId is legitimate). Structurally sound
+  // (write-once markers, delta-capped count) but verifying "is this $keyId
+  // really the requester's own playerId/teamId" would need a reverse uid index
+  // that doesn't exist — session/sync/submitAnswer.ts's transaction enforces the
+  // same invariant optimistically underneath; this has no live caller yet.
+
+  "rules": {
+    "joinCodes": {
+      "$code": {
+        // Public: a code is meaningless without knowing it, and resolving it
+        // (session/join.ts) must work for anyone before they've joined anything.
+        ".read": true,
+        // Anyone signed in may claim an UNUSED code. Never overwritable once set
+        // — a session's code can't be hijacked to redirect joiners elsewhere.
+        ".write": "auth != null && !data.exists()"
+      }
+    },
+
+    "sessions": {
+      "$sessionId": {
+        "meta": {
+          ".read": true,
+          // Initial creation only, as one set() (session/create.ts). hostUid is
+          // the real auth.uid of whoever creates the session — every host-only
+          // rule below is checking THIS field, so it can never be overwritten.
+          ".write": "auth != null && !data.exists()",
+          "hostUid": { ".write": "auth != null && !data.exists()" },
+          "status": {
+            // Later transitions (lobby→live→ended) go through this leaf alone,
+            // via update() with a keyed patch (session/control.ts) — evaluated
+            // per-leaf, so this nested rule alone is sufficient. Host-only.
+            ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+          }
+        },
+
+        "config": {
+          ".read": true,
+          // Written once at creation; never modified afterward in this app.
+          ".write": "auth != null && !data.exists()"
+        },
+
+        // Which auth.uid currently controls each app-level id. Reclaim-friendly
+        // for the SAME uid (supports rejoin-by-name across a locally-switched
+        // identity, same device) — but a DIFFERENT uid can never take over an
+        // id someone else already claimed. See session/presence.ts#claimOwnership.
+        // Written via update() with a keyed patch at the PARENT — evaluated
+        // per-leaf, so no parent-level `.write` is needed here.
+        "playerOwners": {
+          ".read": "auth != null",
+          "$playerId": {
+            ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+          }
+        },
+        "centralOwners": {
+          ".read": "auth != null",
+          "$centralId": {
+            ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+          }
+        },
+
+        // Presence + live per-player state. joinPresence() always claims
+        // ownership (above) BEFORE writing here. TWO different operations touch
+        // this collection: (1) the capacity-reserving runTransaction() on the
+        // WHOLE `players` node (session/capacity.ts#reserveSlot) — targets the
+        // parent directly, needs the broad `.write` below; (2) the later
+        // set()/update() on `players/{id}` itself once a slot is secured —
+        // targets that exact child, so its own nested rule below matters too.
+        // `.validate` at $playerId is what actually stops the broad parent
+        // grant from being a real ownership bypass: even though ANY signed-in
+        // device may attempt operation (1), the only leaf reserveSlot's own
+        // pure logic ever changes is the CALLER's own key, and if it tried to
+        // touch anyone else's, `.validate` rejects that leaf specifically.
+        "players": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$playerId": {
+            ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + $playerId).val()",
+            ".validate": "auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + $playerId).val()"
+          }
+        },
+        "centrals": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$centralId": {
+            ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/centralOwners/' + $centralId).val()",
+            ".validate": "auth.uid === root.child('sessions/' + $sessionId + '/centralOwners/' + $centralId).val()"
+          }
+        },
+
+        "teams": {
+          ".read": "auth != null",
+          "$teamId": {
+            // Fresh creation is now TWO sequential writes, not one set() of the
+            // whole node (session/teams.ts#createTeam) — a rule that inspected
+            // a sibling field via `newData.child('ownerPlayerId')` while
+            // evaluating the top-level $teamId write proved unreliable in
+            // practice. ownerPlayerId is written ALONE first, targeting this
+            // exact leaf — simple rule, no cross-field introspection: you can
+            // only claim yourself as the owner of a brand-new team. Every
+            // other field's rule (below) then reads this via root.child(),
+            // which is ALREADY-persisted data by the time they run, not a
+            // value being introspected mid-write.
+            "ownerPlayerId": {
+              ".write": "auth != null && !data.exists() && auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + newData.val()).val()"
+            },
+            "createdAt": { ".write": "auth != null && !data.exists()" },
+            "teamName": {
+              ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + root.child('sessions/' + $sessionId + '/teams/' + $teamId + '/ownerPlayerId').val()).val()"
+            },
+            // memberIds is a map (playerId -> true, tg-schema 2.0.0) — RTDB
+            // rules have no numChildren()/.length/indexing for list-shaped
+            // values, so per-key writes are the only enforceable shape here,
+            // same pattern as playerOwners/answeredBy. session/teams.ts#joinTeam
+            // runs its transaction on the WHOLE `memberIds` map (the parent),
+            // so — same lesson as `players` above — that needs a broad
+            // `.write` here, with the real per-key ownership check moved to
+            // `.validate` so it still applies to whichever single leaf the
+            // transaction actually changes.
+            "memberIds": {
+              ".write": "auth != null",
+              "$memberPlayerId": {
+                ".write": "auth != null && (auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + root.child('sessions/' + $sessionId + '/teams/' + $teamId + '/ownerPlayerId').val()).val() || auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + $memberPlayerId).val())",
+                // Only ever `true`, AND only the owner or that exact player —
+                // this is what actually stops the parent's broad `.write` from
+                // letting anyone touch anyone else's membership key.
+                ".validate": "newData.val() === true && (auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + root.child('sessions/' + $sessionId + '/teams/' + $teamId + '/ownerPlayerId').val()).val() || auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + $memberPlayerId).val())"
+              }
+            },
+            "codeinput": {
+              "$phaseId": {
+                // submitCode's transaction targets `codeinput/{phaseId}`
+                // directly — this IS the exact operation target, so this
+                // nested `.write` is sufficient, no parent-level grant needed.
+                // Any signed-in device may bump attempts / record a guess — the
+                // secret comparison below is the real gate, so a non-teammate
+                // reading a teamId out of a QR link can grief attempts but can
+                // never forge a solve.
+                ".write": "auth != null",
+                "solved": {
+                  // Already solved (idempotent re-assert) OR the just-written
+                  // guess matches the host-seeded secret this device can't read.
+                  ".validate": "newData.val() !== true || data.val() === true || newData.parent().child('lastGuessNormalized').val() === root.child('sessions/' + $sessionId + '/secrets/' + $phaseId).val()"
+                }
+              }
+            }
+          }
+        },
+
+        // The answer key itself. Written via set() targeting this exact leaf
+        // (control.ts#openPhaseSecrets) — host-write-only, no parent grant
+        // needed. Seeded from the SAME demoBundle every client already has —
+        // the secret was never hidden from the JS bundle, only from this
+        // database path. .read:false for EVERYONE, including the host's own
+        // later reads — the only consumer that needs it is the `solved`
+        // .validate rule above, which can read it via `root.child(...)`
+        // regardless of this .read:false (validate-time root references are
+        // not subject to .read ACLs).
+        "secrets": {
+          "$phaseId": {
+            ".read": false,
+            ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+          }
+        },
+
+        // Host-only pointers, each written via update() with a keyed patch at
+        // the session level (or set() targeting the exact leaf) — both
+        // resolve to THIS exact path, so the nested rule alone is sufficient.
+        // Visible to everyone (players/central need to read them to know
+        // where they are); only the host may move them.
+        "phasePointer": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+        },
+        "timer": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+        },
+        "centralStep": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+        },
+        "playerSharedStep": {
+          ".read": true,
+          ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+        },
+
+        // sync/submitAnswer.ts runs its transaction on the WHOLE `aggregates`
+        // node (the parent) — same lesson as `players`/`memberIds` above,
+        // needs a broad `.write` here. scores/teamScores are host-only in
+        // REAL enforcement terms only because their ownership check now lives
+        // in `.validate` too (not just `.write`) — without that, this parent
+        // grant would have silently reopened "a player can forge their own
+        // score" for a raw set()/update() aimed directly at scores/$playerId.
+        "aggregates": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "answeredCount": {
+            "$qId": {
+              // CORRECTED: `numChildren()` doesn't exist in the RTDB rules
+              // expression language (it's a client-SDK-only DataSnapshot
+              // method) — Console rejected the original rule outright. Falls
+              // back to the weaker, but real, invariant: at most +1 per write,
+              // never decreasing. This does NOT verify the increment is backed
+              // by a genuine new answeredBy marker (that would need a Cloud
+              // Function trigger to check post-write, which is out of scope —
+              // no Functions infra exists in this pilot). Client-side, the
+              // bumpAnswered() transaction still only ever moves both fields
+              // together; this rule just can't cross-check that from here.
+              ".validate": "newData.val() === (data.exists() ? data.val() : 0) + 1"
+            }
+          },
+          "answeredBy": {
+            "$qId": {
+              "$keyId": {
+                // Write-once per (qId, keyId) — matches bumpAnswered()'s
+                // idempotency exactly, so a dup bump is simply never re-written.
+                ".validate": "newData.val() === true && !data.exists()"
+              }
+            }
+          },
+          // Only the host ever writes these (session/flush.ts, invoked from
+          // control.ts#nextPhase, via update() with a keyed patch — evaluated
+          // per-leaf against THIS rule). `.validate` duplicates the `.write`
+          // check so the broad `aggregates`-level grant above can never be
+          // used to forge a score via a direct write to this exact leaf.
+          "scores": {
+            "$playerId": {
+              ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()",
+              ".validate": "auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+            }
+          },
+          "teamScores": {
+            "$teamId": {
+              ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()",
+              ".validate": "auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+            }
+          }
+        },
+
+        // Durable results. Written via update() with a keyed patch at the
+        // SESSION level (flush.ts) — evaluated per-leaf, so no parent-level
+        // grant is needed on `results`/`teamResults` themselves. Host-write-only;
+        // readable by the host or by the specific player/team it belongs to
+        // (for "my results" UI / post-session reporting) — never by other
+        // players.
+        "results": {
+          "$playerId": {
+            ".read": "auth != null && (auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val() || auth.uid === root.child('sessions/' + $sessionId + '/playerOwners/' + $playerId).val())",
+            ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+          }
+        },
+        "teamResults": {
+          "$teamId": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === root.child('sessions/' + $sessionId + '/meta/hostUid').val()"
+          }
+        }
+      }
+    }
+  }
+}

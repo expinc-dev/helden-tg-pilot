@@ -1,11 +1,14 @@
 import type { SessionConfig, SessionMeta } from '@helden-inc/tg-schema'
 import { ref, set } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { auth, rtdb } from '@/lib/firebase'
 import { newId, newJoinCode } from '@/lib/ids'
 
-// T-runtime-01 scope: no auth yet, hostUid is a placeholder; no gameVersionId
-// resolution yet (bundle loading is T-runtime-02).
+// hostUid is now the REAL auth.uid of whoever creates the session — App.tsx
+// gates all routes on auth resolving first, so auth.currentUser is always
+// populated by the time this runs. database.rules.json checks phasePointer/
+// timer/meta.status writes against this exact field; a placeholder here would
+// make every host-only rule unenforceable (equivalent to no rule at all).
 // ponytail: retry-on-collision unimplemented; 31^6 ≈ 887M codes, collision is
 // astronomically unlikely at pilot scale. Add if we ever hit prod concurrency.
 export async function createSession(
@@ -16,13 +19,16 @@ export async function createSession(
     maxMembers?: number
   } = {}
 ): Promise<{ sessionId: string; joinCode: string }> {
+  const hostUid = auth.currentUser?.uid
+  if (!hostUid) throw new Error('createSession called before anonymous sign-in resolved')
+
   const sessionId = newId('sess')
   const joinCode = newJoinCode()
   const now = Date.now()
 
   const meta: SessionMeta = {
     gameVersionId: 'pilot-demo',
-    hostUid: 'anon-host',
+    hostUid,
     status: 'lobby',
     createdAt: now,
   }

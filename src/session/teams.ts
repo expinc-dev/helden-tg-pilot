@@ -7,9 +7,10 @@ import { newId } from '@/lib/ids'
 import { addMember } from './teamroster'
 
 // Team Mode helpers. FLAT structure: every device stays a normal players/{id}.
-// A team's roster is the authoritative memberIds[] on the team node; player.teamId
-// points back to it. maxMembers is enforced by a transaction on memberIds[],
-// exactly like maxPlayers is enforced on the players collection.
+// A team's roster is the authoritative memberIds map on the team node (playerId
+// -> true, tg-schema 2.0.0); player.teamId points back to it. maxMembers is
+// enforced by a transaction on memberIds, exactly like maxPlayers is enforced
+// on the players collection.
 
 export type JoinTeamResult = { ok: true } | { ok: false; reason: 'full' }
 
@@ -19,13 +20,23 @@ export async function createTeam(
   teamName: string
 ): Promise<string> {
   const teamId = newId('t')
-  const team: Omit<Team, 'codeinput'> = {
-    ownerPlayerId,
-    memberIds: [ownerPlayerId], // owner is member #1; always fits
+
+  // Two sequential writes, not one set() of the whole node — a rules engine
+  // check against `newData.child('ownerPlayerId')` while evaluating a single
+  // combined write proved unreliable in practice. Write ownerPlayerId ALONE
+  // first, targeting that exact leaf directly (simple, already-confident rule:
+  // "!data.exists() && you own the playerId you're naming as owner"). Once
+  // that's committed, every other field's rule can check it via root.child(),
+  // reading ALREADY-persisted data instead of introspecting a value mid-write.
+  await set(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/ownerPlayerId`), ownerPlayerId)
+
+  const rest: Omit<Team, 'codeinput' | 'ownerPlayerId'> = {
+    memberIds: { [ownerPlayerId]: true }, // owner is member #1; always fits
     createdAt: Date.now(),
     ...(teamName.trim() ? { teamName: teamName.trim() } : {}),
   }
-  await set(ref(rtdb, `sessions/${sessionId}/teams/${teamId}`), team)
+  await update(ref(rtdb, `sessions/${sessionId}/teams/${teamId}`), rest)
+
   await update(ref(rtdb, `sessions/${sessionId}/players/${ownerPlayerId}`), {
     teamId,
     lastSeen: serverTimestamp(),
@@ -44,7 +55,7 @@ export async function joinTeam(
 
   const tx = await runTransaction(
     ref(rtdb, `sessions/${sessionId}/teams/${teamId}/memberIds`),
-    (members: string[] | null) => addMember(members, playerId, max)
+    (members: Record<string, true> | null) => addMember(members, playerId, max)
   )
   if (!tx.committed) return { ok: false, reason: 'full' }
 

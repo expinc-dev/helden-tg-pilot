@@ -1,8 +1,10 @@
 import type { Phase, PhasePointer, SessionTimer } from '@helden-inc/tg-schema'
 import { onValue, ref, remove, set, update } from 'firebase/database'
 
+import { normalizeCode } from '@/phases/codecheck'
+
 import { demoBundle } from '@/lib/demoBundle'
-import { rtdb } from '@/lib/firebase'
+import { auth, rtdb } from '@/lib/firebase'
 
 import { flushPhaseResults } from './flush'
 
@@ -39,7 +41,30 @@ async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
   await set(node, timer)
 }
 
-export async function startSession(sessionId: string, hostUid = 'anon-host') {
+// Host-only. Seeds sessions/{id}/secrets/{phaseId} for graded phase types whose
+// answer key must never reach a player's client (BLUEPRINT_schema §7 — the
+// Kahoot-style "answer is in the payload" leak). Written ONCE per phase-open,
+// here on the host's device, from the SAME demoBundle every client already has
+// — the secret itself was never hidden, but after this it's only ever compared
+// server-side, inside a database.rules.json .validate rule the player's device
+// has no read access to. See phases/CodeInput.tsx for the guess-side of this.
+async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
+  if (!phase || phase.content.type !== 'codeinput') return
+  const { expected, caseSensitive } = phase.content
+  await set(
+    ref(rtdb, `sessions/${sessionId}/secrets/${phase.id}`),
+    normalizeCode(expected, caseSensitive)
+  )
+}
+
+function requireHostUid(): string {
+  const uid = auth.currentUser?.uid
+  if (!uid) throw new Error('control.ts called before anonymous sign-in resolved')
+  return uid
+}
+
+export async function startSession(sessionId: string) {
+  const hostUid = requireHostUid()
   const firstPhase = demoBundle.phaseOrder[0]
   const pointer: PhasePointer = {
     activePhaseId: firstPhase,
@@ -50,14 +75,14 @@ export async function startSession(sessionId: string, hostUid = 'anon-host') {
     'meta/status': 'live',
     phasePointer: pointer,
   })
-  await openPhaseTimer(sessionId, demoBundle.phases[firstPhase])
+  await Promise.all([
+    openPhaseTimer(sessionId, demoBundle.phases[firstPhase]),
+    openPhaseSecrets(sessionId, demoBundle.phases[firstPhase]),
+  ])
 }
 
-export async function nextPhase(
-  sessionId: string,
-  currentPhaseId: string | undefined,
-  hostUid = 'anon-host'
-) {
+export async function nextPhase(sessionId: string, currentPhaseId: string | undefined) {
+  const hostUid = requireHostUid()
   const order = demoBundle.phaseOrder
   const idx = currentPhaseId ? order.indexOf(currentPhaseId) : -1
   const next = order[idx + 1]
@@ -86,6 +111,9 @@ export async function nextPhase(
   }
   const pointer: PhasePointer = { activePhaseId: next, changedAt: Date.now(), changedBy: hostUid }
   await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
-  await openPhaseTimer(sessionId, demoBundle.phases[next])
+  await Promise.all([
+    openPhaseTimer(sessionId, demoBundle.phases[next]),
+    openPhaseSecrets(sessionId, demoBundle.phases[next]),
+  ])
   return { done: false as const, activePhaseId: next }
 }

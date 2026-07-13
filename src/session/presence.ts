@@ -8,12 +8,33 @@ import {
   update,
 } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { auth, rtdb } from '@/lib/firebase'
 
 import { type Member, reserveSlot } from './capacity'
 
 type Role = 'player' | 'central'
 export type JoinResult = { ok: true; leave: () => void } | { ok: false; reason: 'full' }
+
+const ownersPath = (sessionId: string, role: Role) =>
+  `sessions/${sessionId}/${role === 'player' ? 'playerOwners' : 'centralOwners'}`
+
+// Claims (or re-confirms) that THIS auth.uid controls `id` for the rest of the
+// session — the fact database.rules.json checks before allowing any write to
+// players/{id} or centrals/{id}. Must land before the presence write below;
+// rules for the ownership map itself only allow claiming an id that's unclaimed
+// or already yours (see rules comments), so a stranger can never steal an id
+// out from under an existing owner just by writing to it.
+//
+// This is deliberately reclaim-friendly for the SAME uid: it's what makes the
+// rejoin-by-name fallback (findPlayerIdByName) keep working under rules — the
+// common case (same browser, no sign-out) always presents the same anon uid,
+// so re-claiming your own past identity, under a different locally-remembered
+// name, still passes.
+async function claimOwnership(sessionId: string, role: Role, id: string): Promise<void> {
+  const uid = auth.currentUser?.uid
+  if (!uid) throw new Error('claimOwnership called before anonymous sign-in resolved')
+  await update(ref(rtdb, ownersPath(sessionId, role)), { [id]: uid })
+}
 
 // A device only remembers ONE player identity per session (lib/identity.ts's
 // single localStorage slot) — join as a second named player on the same device
@@ -49,6 +70,10 @@ export async function joinPresence(
 ): Promise<JoinResult> {
   const collPath = `sessions/${sessionId}/${role === 'player' ? 'players' : 'centrals'}`
   const node = ref(rtdb, `${collPath}/${id}`)
+
+  // Must land before anything below — rules for players/{id} and centrals/{id}
+  // check this ownership map, so an unclaimed id can't be written at all yet.
+  await claimOwnership(sessionId, role, id)
 
   // Read the cap; missing config → no cap to enforce (fail-open, nothing authored).
   const maxField = role === 'player' ? 'maxPlayers' : 'maxCentralScreens'
