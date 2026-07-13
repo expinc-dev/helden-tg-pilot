@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import { useAuthUid } from './lib/useAuthUid'
+import { CentralJoin } from './roles/central/CentralJoin'
 import { CentralView } from './roles/central/CentralView'
 import { HostNew } from './roles/host/HostNew'
 import { HostView } from './roles/host/HostView'
@@ -39,6 +40,7 @@ export function App() {
       <Route path="/host/:sessionId" element={<HostView />} />
       <Route path="/central/:sessionId" element={<CentralView />} />
       <Route path="/player/:sessionId" element={<PlayerView />} />
+      <Route path="/join/central" element={<CentralJoin />} />
       <Route path="/join/:role" element={<JoinGate />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

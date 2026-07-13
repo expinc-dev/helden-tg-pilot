@@ -14,6 +14,8 @@ import { demoBundle } from '@/lib/demoBundle'
 import { loadIdentity, saveIdentity, saveLastSession } from '@/lib/identity'
 import { newId } from '@/lib/ids'
 
+import { CentralWaitingScreen } from './CentralWaitingScreen'
+
 type Identity = { id: string; isNew: boolean }
 
 export function CentralView() {
@@ -67,27 +69,34 @@ export function CentralView() {
     )
   }
 
-  return (
-    <div className="flex min-h-screen flex-col gap-4 p-8">
-      <p className="text-xs text-gray-500">
-        {sessionId} · {meta?.status ?? '—'} · {identity.id}
-      </p>
-      {meta?.status === 'ended' && sessionId ? (
+  if (meta?.status === 'ended' && sessionId) {
+    return (
+      <div className="flex min-h-screen flex-col gap-4 p-8">
+        <p className="text-xs text-gray-500">
+          {sessionId} · {meta.status} · {identity.id}
+        </p>
         <EndScreen sessionId={sessionId} />
-      ) : phase && sessionId ? (
-        <>
-          <TimerBar sessionId={sessionId} phase={phase} role="central" />
-          <PhaseRouter
-            phase={phase}
-            phaseStartMs={pointer?.changedAt}
-            role="central"
-            sessionId={sessionId}
-            allowTeams={config?.allowTeams}
-          />
-        </>
-      ) : (
-        <p className="text-sm text-gray-500">Waiting for host…</p>
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
+
+  if (phase && sessionId) {
+    return (
+      <div className="flex min-h-screen flex-col gap-4 p-8">
+        <p className="text-xs text-gray-500">
+          {sessionId} · {meta?.status ?? '—'} · {identity.id}
+        </p>
+        <TimerBar sessionId={sessionId} phase={phase} role="central" />
+        <PhaseRouter
+          phase={phase}
+          phaseStartMs={pointer?.changedAt}
+          role="central"
+          sessionId={sessionId}
+          allowTeams={config?.allowTeams}
+        />
+      </div>
+    )
+  }
+
+  return <CentralWaitingScreen />
 }
