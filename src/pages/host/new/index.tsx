@@ -36,9 +36,9 @@ export function HostNew() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-black bg-cover bg-center p-3 sm:p-6">
+    <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
       <div
-        className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-md flex-col rounded-none p-4 sm:min-h-[calc(100vh-3rem)] sm:max-w-2xl sm:rounded-[32px] sm:p-6"
+        className="flex min-h-[calc(100dvh-2rem)] w-full flex-col justify-between gap-6 overflow-y-auto p-3 sm:p-8"
         style={{
           backgroundImage: `url(${assets.images.background.auth})`,
           backgroundSize: '100% 100%',
@@ -86,17 +86,17 @@ export function HostNew() {
               inputMode="numeric"
             />
           )}
-        </div>
 
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
-          className="w-full rounded-2xl bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:opacity-50 sm:rounded-3xl sm:py-[18px] sm:text-lg"
-        >
-          {busy ? 'Memulai…' : 'Mulai Permainan'}
-        </button>
-        {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={busy}
+            className="w-full rounded-2xl bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:opacity-50 sm:rounded-3xl sm:py-[18px] sm:text-lg"
+          >
+            {busy ? 'Memulai…' : 'Mulai Permainan'}
+          </button>
+          {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
+        </div>
       </div>
     </div>
   )
