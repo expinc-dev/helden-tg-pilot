@@ -1,6 +1,6 @@
 import type { Phase } from '@helden-inc/tg-schema'
 
-import { type TeamRole, useTeamRole } from '@/sync/useTeamRole'
+import { type TeamRole, useTeamRole } from '@/lib/sync/useTeamRole'
 
 import { TeamCodeInput } from './CodeInput'
 import { IdleRenderer } from './Idle'

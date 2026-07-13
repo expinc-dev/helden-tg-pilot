@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 
-import { scorePhase } from '@/scoring/score'
 import type { CodeInputContent, Phase } from '@helden-inc/tg-schema'
 import { onValue, ref, runTransaction, update } from 'firebase/database'
 
-import { useTeamLiveScore } from '@/sync/useTeamLiveScore'
-import { useTeams } from '@/sync/useTeams'
-
 import { rtdb } from '@/lib/firebase'
+import { scorePhase } from '@/lib/scoring/score'
+import { useTeamLiveScore } from '@/lib/sync/useTeamLiveScore'
+import { useTeams } from '@/lib/sync/useTeams'
 
 import type { Role } from './PhaseRouter'
 import { normalizeCode } from './codecheck'

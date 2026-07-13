@@ -1,7 +1,7 @@
 import type { Phase } from '@helden-inc/tg-schema'
 import type { z } from 'zod'
 
-import type { TeamRole } from '@/sync/useTeamRole'
+import type { TeamRole } from '@/lib/sync/useTeamRole'
 
 import type { Role } from '../PhaseRouter'
 
@@ -10,7 +10,7 @@ import type { Role } from '../PhaseRouter'
 //
 // The scorer returns the SAME CorrectnessSignal used elsewhere in the runtime
 // (session/flush.ts::resolveCorrectness) — templates only decide "did the
-// player get it right and when", scorePhase() in @/scoring/score.ts still does
+// player get it right and when", scorePhase() in @/lib/scoring/score.ts still does
 // the maxPoints/speedBonus math. So `phase.scoring` from the CMS keeps working
 // uniformly across templates.
 

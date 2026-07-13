@@ -1,11 +1,11 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import { useAuthUid } from './lib/useAuthUid'
-import { CentralView } from './roles/central/CentralView'
-import { HostNew } from './roles/host/HostNew'
-import { HostView } from './roles/host/HostView'
-import { PlayerView } from './roles/player/PlayerView'
-import { JoinGate } from './session/JoinGate'
+import { CentralView } from './pages/central/CentralView'
+import { HostNew } from './pages/host/HostNew'
+import { HostView } from './pages/host/HostView'
+import { JoinGate } from './pages/join/JoinGate'
+import { PlayerView } from './pages/player/PlayerView'
 
 export function App() {
   // Every route below eventually writes to RTDB, and every write is now gated

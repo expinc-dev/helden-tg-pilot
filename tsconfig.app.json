@@ -19,6 +19,5 @@
     "noFallthroughCasesInSwitch": true,
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.selfcheck.ts"]
+  "include": ["src"]
 }

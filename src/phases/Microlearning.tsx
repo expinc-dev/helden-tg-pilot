@@ -1,9 +1,9 @@
 import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
 
-import { resolveStepTarget } from '@/sync/teamStep'
-import { usePlayerBoard, usePlayerStep } from '@/sync/usePlayerStep'
-import { useTeamOwner, useTeamRole } from '@/sync/useTeamRole'
-import { useMyTeamId } from '@/sync/useTeams'
+import { resolveStepTarget } from '@/lib/sync/teamStep'
+import { usePlayerBoard, usePlayerStep } from '@/lib/sync/usePlayerStep'
+import { useTeamOwner, useTeamRole } from '@/lib/sync/useTeamRole'
+import { useMyTeamId } from '@/lib/sync/useTeams'
 
 import type { Role } from './PhaseRouter'
 

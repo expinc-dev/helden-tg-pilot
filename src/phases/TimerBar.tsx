@@ -1,6 +1,6 @@
 import type { Phase } from '@helden-inc/tg-schema'
 
-import { useTimer } from '@/sync/useTimer'
+import { useTimer } from '@/lib/sync/useTimer'
 
 import type { Role } from './PhaseRouter'
 
