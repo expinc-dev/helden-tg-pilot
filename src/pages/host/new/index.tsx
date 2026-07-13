@@ -5,6 +5,8 @@ import { assets } from '@/assets'
 
 import { createSession } from '@/lib/session/create'
 
+import { Header } from './components/header'
+
 export function HostNew() {
   const nav = useNavigate()
   const [busy, setBusy] = useState(false)
@@ -36,7 +38,7 @@ export function HostNew() {
   return (
     <div className="min-h-screen w-full bg-black bg-cover bg-center p-3 sm:p-6">
       <div
-        className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-md flex-col rounded-3xl p-4 sm:min-h-[calc(100vh-3rem)] sm:max-w-2xl sm:rounded-[32px] sm:p-6"
+        className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-md flex-col rounded-none p-4 sm:min-h-[calc(100vh-3rem)] sm:max-w-2xl sm:rounded-[32px] sm:p-6"
         style={{
           backgroundImage: `url(${assets.images.background.auth})`,
           backgroundSize: '100% 100%',
@@ -44,14 +46,7 @@ export function HostNew() {
           backgroundRepeat: 'no-repeat',
         }}
       >
-        <header className="mb-8 flex items-center justify-between rounded-full bg-black/60 px-4 py-3 sm:mb-10 sm:px-5 sm:py-4">
-          <span className="text-xl font-bold text-[#FFB800] sm:text-2xl">Helden Inc.</span>
-          <button
-            type="button"
-            aria-label="Expand"
-            className="h-10 w-10 rounded-full bg-[#FFB800] text-black"
-          />
-        </header>
+        <Header />
 
         <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-white/5 bg-[#121212] p-4 sm:mb-10 sm:gap-5 sm:rounded-3xl sm:p-6">
           <Field label="Nama Sesi" placeholder="Nama Sesi" value={name} onChange={setName} />

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
-import { EndScreen } from '@/pages/_shared/EndScreen'
+import { EndScreen } from '@/pages/extra/end-screen'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'

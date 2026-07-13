@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 
-import { EndScreen } from '@/pages/_shared/EndScreen'
+import { EndScreen } from '@/pages/extra/end-screen'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
@@ -14,8 +14,8 @@ import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
 import { useMyTeamId } from '@/lib/sync/useTeams'
 
-import { TeamLobby } from './TeamLobby'
-import { useResolvedIdentity } from './useIdentity'
+import { TeamLobby } from './components/TeamLobby'
+import { useResolvedIdentity } from './logic/useIdentity'
 
 export function PlayerView() {
   const { sessionId } = useParams<{ sessionId: string }>()

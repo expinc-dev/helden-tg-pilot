@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
-import { EndScreen } from '@/pages/_shared/EndScreen'
+import { EndScreen } from '@/pages/extra/end-screen'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'

@@ -1,11 +1,12 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
+import { TabletFrame } from './components/TabletFrame'
 import { useAuthUid } from './lib/useAuthUid'
-import { CentralView } from './pages/central/CentralView'
-import { HostNew } from './pages/host/HostNew'
-import { HostView } from './pages/host/HostView'
-import { JoinGate } from './pages/join/JoinGate'
-import { PlayerView } from './pages/player/PlayerView'
+import { CentralView } from './pages/central/screen'
+import { JoinGate } from './pages/extra/join'
+import { HostView } from './pages/host/lobby'
+import { HostNew } from './pages/host/new'
+import { PlayerView } from './pages/player/play'
 
 export function App() {
   // Every route below eventually writes to RTDB, and every write is now gated
@@ -35,11 +36,39 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/host/new" element={<HostNew />} />
-      <Route path="/host/:sessionId" element={<HostView />} />
+      <Route
+        path="/host/new"
+        element={
+          <TabletFrame>
+            <HostNew />
+          </TabletFrame>
+        }
+      />
+      <Route
+        path="/host/:sessionId"
+        element={
+          <TabletFrame>
+            <HostView />
+          </TabletFrame>
+        }
+      />
       <Route path="/central/:sessionId" element={<CentralView />} />
-      <Route path="/player/:sessionId" element={<PlayerView />} />
-      <Route path="/join/:role" element={<JoinGate />} />
+      <Route
+        path="/player/:sessionId"
+        element={
+          <TabletFrame>
+            <PlayerView />
+          </TabletFrame>
+        }
+      />
+      <Route
+        path="/join/:role"
+        element={
+          <TabletFrame>
+            <JoinGate />
+          </TabletFrame>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
