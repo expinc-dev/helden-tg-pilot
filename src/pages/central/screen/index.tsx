@@ -97,5 +97,5 @@ export function CentralView() {
     )
   }
 
-  return <WaitingScreen />
+  return <WaitingScreen sessionId={sessionId} joinCode={config?.joinCode} />
 }
