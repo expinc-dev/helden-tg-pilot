@@ -48,7 +48,7 @@ export function CentralJoin() {
 
       <form
         onSubmit={joinByCode}
-        className="flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-white/10 bg-black/40 p-8 backdrop-blur-sm"
+        className="flex w-full max-w-sm flex-col items-center gap-6 rounded-[16px] border border-white/10 bg-black/40 p-8 backdrop-blur-sm"
       >
         <img src={assets.images.logos.companyLogo} alt="Helden Inc." className="h-10 w-auto" />
 
@@ -63,13 +63,13 @@ export function CentralJoin() {
             placeholder="Nama Sesi"
             maxLength={6}
             autoFocus
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-center font-mono tracking-widest text-white uppercase placeholder:font-sans placeholder:tracking-normal placeholder:text-white/30 placeholder:normal-case"
+            className="w-full rounded-[8px] border border-white/10 bg-white/5 px-4 py-3 text-center font-mono tracking-widest text-white uppercase placeholder:font-sans placeholder:tracking-normal placeholder:text-white/30 placeholder:normal-case"
           />
         </div>
 
         <button
           disabled={busy || code.length !== 6}
-          className="w-full rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 py-3 font-semibold text-black transition disabled:opacity-50"
+          className="w-full rounded-[8px] bg-gradient-to-r from-yellow-400 to-orange-500 py-3 font-semibold text-black transition disabled:opacity-50"
         >
           {busy ? 'Bergabung…' : 'Bergabung'}
         </button>
