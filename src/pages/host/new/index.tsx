@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { assets } from '@/assets'
+import { Header } from '@/pages/host/_shared/Header'
 
 import { createSession } from '@/lib/session/create'
-
-import { Header } from './components/header'
 
 export function HostNew() {
   const nav = useNavigate()

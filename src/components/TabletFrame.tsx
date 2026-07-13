@@ -5,7 +5,7 @@
 // Central is the big-screen role and is intentionally never wrapped in this.
 export function TabletFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="lg:flex lg:min-h-screen lg:items-center lg:justify-center lg:bg-neutral-900 lg:p-4">
+    <div className="lg:flex lg:min-h-screen lg:items-center lg:justify-center lg:bg-neutral-100 lg:p-4">
       <div className="lg:h-[1024px] lg:max-h-[calc(100vh-2rem)] lg:w-[768px] lg:max-w-full lg:overflow-y-auto lg:rounded-[2.5rem] lg:shadow-2xl lg:ring-1 lg:ring-white/10">
         {children}
       </div>

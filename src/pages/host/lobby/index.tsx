@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
 import { EndScreen } from '@/pages/extra/end-screen'
+import { Header } from '@/pages/host/_shared/Header'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
+import { Icon } from '@iconify/react'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
@@ -52,45 +54,83 @@ export function HostView() {
 
   if (meta.status === 'lobby') {
     return (
-      <LobbyShell>
-        <div className="mb-5 text-center sm:mb-6">
-          <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Panel Kontrol Hosting</h1>
-          <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-            Permainan dapat dimulai setelah Pemain dan Perangkat Utama bergabung menggunakan kode
-            room sesuai perannya.
-          </p>
-        </div>
-
-        <RoleCard
-          label="Perangkat Utama"
-          joinCode={config.joinCode}
-          role="central"
-          count={connectedCentrals}
-        />
-        <div className="h-4" />
-        <RoleCard
-          label="Pemain"
-          joinCode={config.joinCode}
-          role="player"
-          count={connectedPlayers}
-        />
-
-        <button
-          type="button"
-          onClick={() => startSession(sessionId)}
-          className="mt-6 w-full rounded-2xl bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:mt-8 sm:rounded-3xl sm:py-[18px] sm:text-lg"
+      <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
+        <div
+          className="flex min-h-[calc(100dvh-2rem)] w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+          style={{
+            backgroundImage: `url(${assets.images.background.auth})`,
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'top',
+            backgroundRepeat: 'no-repeat',
+          }}
         >
-          Mulai Permainan
-        </button>
+          <Header />
 
-        <Advanced
-          allowTeams={!!config.allowTeams}
-          maxMembers={config.maxMembers}
-          players={playerEntries}
-          centrals={centralEntries}
-          teams={teams}
-        />
-      </LobbyShell>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Panel Kontrol Hosting</h1>
+            <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
+              Permainan dapat dimulai setelah Pemain dan Perangkat Utama bergabung menggunakan kode
+              room sesuai perannya.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-[#121212] p-4 sm:gap-5 sm:rounded-3xl sm:p-6">
+            <RoleCard
+              label="Perangkat Utama"
+              joinCode={config.joinCode}
+              role="central"
+              count={connectedCentrals}
+            >
+              {centralEntries.length === 0 ? (
+                <p className="text-xs text-white/50">Belum ada Perangkat Utama yang bergabung.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {centralEntries.map(([id, c]) => (
+                    <li
+                      key={id}
+                      className="flex items-center justify-between rounded-md bg-[#0a0a0a] px-3 py-2 text-sm text-white/90"
+                    >
+                      <span className="font-mono text-xs text-white/60">{id}</span>
+                      <StatusDot connected={c.connected} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </RoleCard>
+            <RoleCard
+              label="Pemain"
+              joinCode={config.joinCode}
+              role="player"
+              count={connectedPlayers}
+            >
+              {playerEntries.length === 0 ? (
+                <p className="text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+              ) : config.allowTeams ? (
+                <PlayersByTeam players={playerEntries} teams={teams} />
+              ) : (
+                <PlayerRows players={playerEntries} />
+              )}
+            </RoleCard>
+
+            {config.allowTeams && (
+              <div className="rounded-xl border border-white/5 bg-[#1C1C1E] p-3 text-sm text-white/80">
+                <span className="font-semibold text-[#FFB800]">Mode Tim aktif</span>
+                {config.maxMembers
+                  ? ` · maks. ${config.maxMembers} anggota per tim`
+                  : ' · tanpa batas anggota'}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => startSession(sessionId)}
+              className="w-full rounded-2xl bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-3xl sm:py-[18px] sm:text-lg"
+            >
+              Mulai Permainan
+            </button>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -140,142 +180,62 @@ export function HostView() {
   )
 }
 
-function LobbyShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen w-full bg-black bg-cover bg-center p-3 sm:p-6">
-      <div
-        className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full max-w-md flex-col rounded-3xl p-4 sm:min-h-[calc(100vh-3rem)] sm:max-w-2xl sm:rounded-[32px] sm:p-6"
-        style={{
-          backgroundImage: `url(${assets.images.background.auth})`,
-          backgroundSize: '100% 100%',
-          backgroundPosition: 'top',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <header className="mb-6 flex items-center justify-between rounded-full bg-black/60 px-4 py-3 sm:mb-8 sm:px-5 sm:py-4">
-          <span className="text-xl font-bold text-[#FFB800] sm:text-2xl">Helden Inc.</span>
-          <button
-            type="button"
-            aria-label="Expand"
-            className="h-10 w-10 rounded-full bg-[#FFB800] text-black"
-          />
-        </header>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 function RoleCard({
   label,
   joinCode,
   role,
   count,
+  children,
 }: {
   label: string
   joinCode: string
   role: 'central' | 'player'
   count: number
+  children?: React.ReactNode
 }) {
+  const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#121212] p-3 sm:rounded-3xl sm:p-4">
-      <div className="mb-3 rounded-lg border border-[#FFB800] bg-black/40 px-3 py-2 sm:rounded-xl sm:px-4">
+    <div className="rounded-xl border border-white/5 bg-[#1C1C1E] p-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#FFB800] bg-black/40 px-3 py-2 text-left"
+      >
         <span className="text-sm font-semibold text-[#FFB800] sm:text-base">{label}</span>
-      </div>
-      {/* ponytail: image placeholder — swap when asset lands */}
-      <div className="mb-4 h-28 rounded-lg bg-[#0a0a0a] sm:h-40 sm:rounded-xl" aria-hidden />
-      <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
-        <span>Kode Ruangan</span>
-        <span className="flex items-center gap-2">
-          <span className="font-semibold text-white">{joinCode}</span>
-          <button
-            type="button"
-            aria-label={`Copy ${role} code`}
-            onClick={() => {
-              const url = `${window.location.origin}/join/${role}?code=${joinCode}`
-              void navigator.clipboard?.writeText(url)
-            }}
-            className="min-h-9 rounded bg-[#FFB800] px-3 py-1.5 text-xs font-bold text-black"
-          >
-            copy
-          </button>
-        </span>
-      </div>
-      <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
-        <span>Perangkat</span>
-        <span className="font-semibold text-white">{count} Perangkat</span>
-      </div>
-    </div>
-  )
-}
-
-function Advanced({
-  allowTeams,
-  maxMembers,
-  players,
-  centrals,
-  teams,
-}: {
-  allowTeams: boolean
-  maxMembers?: number
-  players: [string, PlayerPresence][]
-  centrals: [string, { connected: boolean }][]
-  teams: { id: string; teamName?: string; memberCount: number }[]
-}) {
-  return (
-    <div className="mt-6 flex flex-col gap-4">
-      {allowTeams && (
-        <div className="rounded-2xl border border-white/5 bg-[#121212] p-4 text-sm text-white/80">
-          <span className="font-semibold text-[#FFB800]">Mode Tim aktif</span>
-          {maxMembers ? ` · maks. ${maxMembers} anggota per tim` : ' · tanpa batas anggota'}
+        <Icon
+          icon="mdi:chevron-down"
+          className={`size-5 text-[#FFB800] transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && (
+        <div className="mt-3 flex flex-col gap-3">
+          {/* ponytail: image placeholder — swap when asset lands */}
+          <div className="h-28 rounded-lg bg-[#0a0a0a] sm:h-40" aria-hidden />
+          <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
+            <span>Kode Ruangan</span>
+            <span className="flex items-center gap-2">
+              <span className="font-semibold text-white">{joinCode}</span>
+              <button
+                type="button"
+                aria-label={`Copy ${role} code`}
+                onClick={() => {
+                  const url = `${window.location.origin}/join/${role}?code=${joinCode}`
+                  void navigator.clipboard?.writeText(url)
+                }}
+                className="min-h-9 rounded bg-[#FFB800] px-3 py-1.5 text-xs font-bold text-black"
+              >
+                copy
+              </button>
+            </span>
+          </div>
+          <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
+            <span>Perangkat</span>
+            <span className="font-semibold text-white">{count} Perangkat</span>
+          </div>
+          {children && <div className="border-t border-white/5 pt-3">{children}</div>}
         </div>
       )}
-
-      <DeviceList title={`Pemain (${players.length})`} empty="Belum ada pemain yang bergabung.">
-        {players.length > 0 &&
-          (allowTeams ? (
-            <PlayersByTeam players={players} teams={teams} />
-          ) : (
-            <PlayerRows players={players} />
-          ))}
-      </DeviceList>
-
-      <DeviceList
-        title={`Perangkat Utama (${centrals.length})`}
-        empty="Belum ada Perangkat Utama yang bergabung."
-      >
-        {centrals.length > 0 && (
-          <ul className="space-y-1">
-            {centrals.map(([id, c]) => (
-              <li
-                key={id}
-                className="flex items-center justify-between rounded-md bg-[#1C1C1E] px-3 py-2 text-sm text-white/90"
-              >
-                <span className="font-mono text-xs text-white/60">{id}</span>
-                <StatusDot connected={c.connected} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </DeviceList>
-    </div>
-  )
-}
-
-function DeviceList({
-  title,
-  empty,
-  children,
-}: {
-  title: string
-  empty: string
-  children: React.ReactNode
-}) {
-  const isEmpty = !children || (Array.isArray(children) && children.every((c) => !c))
-  return (
-    <div className="rounded-2xl border border-white/5 bg-[#121212] p-4">
-      <p className="mb-3 text-sm font-semibold text-white/90">{title}</p>
-      {isEmpty ? <p className="text-xs text-white/50">{empty}</p> : children}
     </div>
   )
 }
@@ -284,8 +244,11 @@ function PlayerRows({ players }: { players: [string, PlayerPresence][] }) {
   return (
     <ul className="space-y-1">
       {players.map(([id, p]) => (
-        <li key={id} className="flex items-center justify-between">
-          <span className="text-white">{p.name}</span>
+        <li
+          key={id}
+          className="flex items-center justify-between rounded-md bg-[#1C1C1E] px-3 py-2 text-sm text-white/90"
+        >
+          <span>{p.name}</span>
           <StatusDot connected={p.connected} />
         </li>
       ))}
