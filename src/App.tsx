@@ -2,6 +2,7 @@ import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import { TabletFrame } from './components/TabletFrame'
 import { useAuthUid } from './lib/useAuthUid'
+import { CentralJoin } from './pages/central/join'
 import { CentralView } from './pages/central/screen'
 import { JoinGate } from './pages/extra/join'
 import { HostView } from './pages/host/lobby'
@@ -61,6 +62,7 @@ export function App() {
           </TabletFrame>
         }
       />
+      <Route path="/join/central" element={<CentralJoin />} />
       <Route
         path="/join/:role"
         element={
