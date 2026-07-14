@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import { TabletFrame } from './components/TabletFrame'
+import { Toaster } from './components/ui/sonner'
 import { useAuthUid } from './lib/useAuthUid'
 import { CentralJoin } from './pages/central/join'
 import { CentralView } from './pages/central/screen'
@@ -35,44 +36,47 @@ export function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route
-        path="/host/new"
-        element={
-          <TabletFrame>
-            <HostNew />
-          </TabletFrame>
-        }
-      />
-      <Route
-        path="/host/:sessionId"
-        element={
-          <TabletFrame>
-            <HostView />
-          </TabletFrame>
-        }
-      />
-      <Route path="/central/:sessionId" element={<CentralView />} />
-      <Route
-        path="/player/:sessionId"
-        element={
-          <TabletFrame>
-            <PlayerView />
-          </TabletFrame>
-        }
-      />
-      <Route path="/join/central" element={<CentralJoin />} />
-      <Route
-        path="/join/:role"
-        element={
-          <TabletFrame>
-            <JoinGate />
-          </TabletFrame>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Toaster />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route
+          path="/host/new"
+          element={
+            <TabletFrame>
+              <HostNew />
+            </TabletFrame>
+          }
+        />
+        <Route
+          path="/host/:sessionId"
+          element={
+            <TabletFrame>
+              <HostView />
+            </TabletFrame>
+          }
+        />
+        <Route path="/central/:sessionId" element={<CentralView />} />
+        <Route
+          path="/player/:sessionId"
+          element={
+            <TabletFrame>
+              <PlayerView />
+            </TabletFrame>
+          }
+        />
+        <Route path="/join/central" element={<CentralJoin />} />
+        <Route
+          path="/join/:role"
+          element={
+            <TabletFrame>
+              <JoinGate />
+            </TabletFrame>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   )
 }
 

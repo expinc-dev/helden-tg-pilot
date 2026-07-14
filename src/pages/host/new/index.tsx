@@ -90,7 +90,7 @@ export function HostNew() {
             type="button"
             onClick={submit}
             disabled={busy}
-            className="w-full rounded-2xl bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:opacity-50 sm:rounded-3xl sm:py-[18px] sm:text-lg"
+            className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:opacity-50 sm:rounded-lg sm:py-[18px] sm:text-lg"
           >
             {busy ? 'Memulai…' : 'Mulai Permainan'}
           </button>
@@ -142,7 +142,9 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         inputMode={inputMode}
-        className="rounded-xl bg-[#1C1C1E] p-4 text-white placeholder:text-[#555]"
+        type={inputMode === 'numeric' ? 'number' : 'text'}
+        className="rounded-lg bg-[#1C1C1E] p-4 text-white placeholder:text-[#555]"
+        min={inputMode === 'numeric' ? 0 : undefined}
       />
     </label>
   )

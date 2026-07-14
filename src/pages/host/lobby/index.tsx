@@ -6,6 +6,7 @@ import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
+import { toast } from 'sonner'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
@@ -124,7 +125,7 @@ export function HostView() {
             <button
               type="button"
               onClick={() => startSession(sessionId)}
-              className="w-full rounded-2xl bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-3xl sm:py-[18px] sm:text-lg"
+              className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
             >
               Mulai Permainan
             </button>
@@ -216,17 +217,15 @@ function RoleCard({
             <span>Kode Ruangan</span>
             <span className="flex items-center gap-2">
               <span className="font-semibold text-white">{joinCode}</span>
-              <button
-                type="button"
-                aria-label={`Copy ${role} code`}
+              <Icon
                 onClick={() => {
                   const url = `${window.location.origin}/join/${role}?code=${joinCode}`
                   void navigator.clipboard?.writeText(url)
+                  toast.success('Link disalin')
                 }}
-                className="min-h-9 rounded bg-[#FFB800] px-3 py-1.5 text-xs font-bold text-black"
-              >
-                copy
-              </button>
+                icon="mdi:content-copy"
+                className="size-4 cursor-pointer text-yellow-300 hover:text-yellow-400"
+              />
             </span>
           </div>
           <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
