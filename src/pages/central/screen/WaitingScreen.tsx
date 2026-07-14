@@ -15,12 +15,12 @@ export function WaitingScreen({ sessionId, joinCode }: { sessionId?: string; joi
   return (
     <div
       className="flex min-h-screen flex-col items-center bg-neutral-950 bg-cover bg-center p-8"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.lobbyBg})` }}
+      style={{ backgroundImage: `url(${assets.images.backgrounds.central})` }}
     >
       <FullscreenToggle />
 
       <div className="flex flex-1 items-center justify-center gap-8">
-        <img src={assets.images.logos.companyLogo} alt="Helden Inc." className="h-20 w-auto" />
+        <img src={assets.images.logos.helden.lg} alt="Helden Inc." className="h-20 w-auto" />
 
         {joinUrl && (
           <>

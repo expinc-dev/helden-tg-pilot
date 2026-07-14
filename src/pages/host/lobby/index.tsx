@@ -58,7 +58,7 @@ export function HostView() {
         <div
           className="flex min-h-[calc(100dvh-2rem)] w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
           style={{
-            backgroundImage: `url(${assets.images.background.auth})`,
+            backgroundImage: `url(${assets.images.backgrounds.auth})`,
             backgroundSize: '100% 100%',
             backgroundPosition: 'top',
             backgroundRepeat: 'no-repeat',

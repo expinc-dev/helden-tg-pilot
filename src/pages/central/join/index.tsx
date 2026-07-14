@@ -42,7 +42,7 @@ export function CentralJoin() {
   return (
     <div
       className="flex min-h-screen items-center justify-center bg-neutral-950 bg-cover bg-center p-8"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.lobbyBg})` }}
+      style={{ backgroundImage: `url(${assets.images.backgrounds.central})` }}
     >
       <FullscreenToggle />
 
@@ -50,7 +50,7 @@ export function CentralJoin() {
         onSubmit={joinByCode}
         className="flex w-full max-w-sm flex-col items-center gap-6 rounded-[16px] border border-white/10 bg-black/40 p-8 backdrop-blur-sm"
       >
-        <img src={assets.images.logos.companyLogo} alt="Helden Inc." className="h-10 w-auto" />
+        <img src={assets.images.logos.helden.lg} alt="Helden Inc." className="h-10 w-auto" />
 
         <div className="flex w-full flex-col gap-2">
           <label htmlFor="join-code" className="text-sm text-white/70">

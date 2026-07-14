@@ -1,27 +1,19 @@
-import authBackground from './images/background/auth.png'
-import lobbyBg from './images/backgrounds/lobby_bg.png'
-import fullscreenIcon from './images/icons/fullscreen.png'
-import notFullscreenIcon from './images/icons/not_fullscreen.png'
-import companyLogo from './images/logos/company_img.png'
-import heldenLogo from './images/misc/heldenLogo.png'
+import authBackground from './images/backgrounds/auth.png'
+import centralLobbyBackground from './images/backgrounds/centralLobby.png'
+import heldenLogoLg from './images/logos/heldenLogoLg.png'
+import heldenLogoSm from './images/logos/heldenLogoSm.png'
 
 export const assets = {
   images: {
-    background: {
-      auth: authBackground,
-    },
     backgrounds: {
-      lobbyBg,
+      auth: authBackground,
+      central: centralLobbyBackground,
     },
     logos: {
-      companyLogo,
-    },
-    icons: {
-      fullscreenIcon,
-      notFullscreenIcon,
-    },
-    misc: {
-      heldenLogo,
+      helden: {
+        sm: heldenLogoSm,
+        lg: heldenLogoLg,
+      },
     },
   },
 }

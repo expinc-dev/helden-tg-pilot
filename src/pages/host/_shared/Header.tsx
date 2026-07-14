@@ -8,7 +8,7 @@ export const Header = () => {
   return (
     <header className="to 70% mb-8 flex items-center justify-between rounded-3xl border border-white/30 bg-gradient-to-bl from-neutral-600 to-black p-5">
       <span className="text-xl font-bold text-[#FFB800] sm:text-2xl">
-        <img src={assets.images.misc.heldenLogo} alt="Helden Inc." className="h-5" />
+        <img src={assets.images.logos.helden.sm} alt="Helden Inc." className="h-5" />
       </span>
       <button
         type="button"
