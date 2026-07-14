@@ -50,88 +50,68 @@ export function HostView() {
 
   const playerEntries = Object.entries(players) as [string, PlayerPresence][]
   const centralEntries = Object.entries(centrals) as [string, { connected: boolean }][]
-  const connectedPlayers = playerEntries.filter(([, p]) => p.connected).length
   const connectedCentrals = centralEntries.filter(([, c]) => c.connected).length
 
   if (meta.status === 'lobby') {
+    const copyJoinLink = (role: 'central' | 'player') => {
+      const url = `${window.location.origin}/join/${role}?code=${config.joinCode}`
+      void navigator.clipboard?.writeText(url)
+      toast.success('Link disalin')
+    }
     return (
-      <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
-        <div
-          className="flex min-h-[calc(100dvh-2rem)] w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
-          style={{
-            backgroundImage: `url(${assets.images.backgrounds.auth})`,
-            backgroundSize: '100% 100%',
-            backgroundPosition: 'top',
-            backgroundRepeat: 'no-repeat',
-          }}
-        >
-          <Header />
+      // <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
+      <div
+        className="flex min-h-[calc(100dvh-2rem)] w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+        style={{
+          backgroundImage: `url(${assets.images.backgrounds.auth})`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'top',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <Header />
 
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Panel Kontrol Hosting</h1>
-            <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-              Permainan dapat dimulai setelah Pemain dan Perangkat Utama bergabung menggunakan kode
-              room sesuai perannya.
-            </p>
-          </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Panel Kontrol HostLevel</h1>
+          <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
+            Permainan dapat dimulai setelah Pemain dan Perangkat Utama bergabung
+          </p>
+        </div>
 
-          <div className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-[#121212] p-4 sm:gap-5 sm:rounded-3xl sm:p-6">
-            <RoleCard
-              label="Perangkat Utama"
-              joinCode={config.joinCode}
-              role="central"
-              count={connectedCentrals}
-            >
-              {centralEntries.length === 0 ? (
-                <p className="text-xs text-white/50">Belum ada Perangkat Utama yang bergabung.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {centralEntries.map(([id, c]) => (
-                    <li
-                      key={id}
-                      className="flex items-center justify-between rounded-md bg-[#0a0a0a] px-3 py-2 text-sm text-white/90"
-                    >
-                      <span className="font-mono text-xs text-white/60">{id}</span>
-                      <StatusDot connected={c.connected} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </RoleCard>
-            <RoleCard
-              label="Pemain"
-              joinCode={config.joinCode}
-              role="player"
-              count={connectedPlayers}
-            >
-              {playerEntries.length === 0 ? (
-                <p className="text-xs text-white/50">Belum ada pemain yang bergabung.</p>
-              ) : config.allowTeams ? (
-                <PlayersByTeam players={playerEntries} teams={teams} />
-              ) : (
-                <PlayerRows players={playerEntries} />
-              )}
-            </RoleCard>
+        <div className="flex flex-col gap-4">
+          <SectionCard title="Layar Utama">
+            <InfoRow label="Kode Ruangan" onCopy={() => copyJoinLink('central')}>
+              <span className="font-semibold text-white">{config.joinCode}</span>
+            </InfoRow>
+            <InfoRow label="Perangkat">
+              <span className="font-semibold text-white">{connectedCentrals} Perangkat</span>
+            </InfoRow>
+          </SectionCard>
 
-            {config.allowTeams && (
-              <div className="rounded-xl border border-white/5 bg-[#1C1C1E] p-3 text-sm text-white/80">
-                <span className="font-semibold text-[#FFB800]">Mode Tim aktif</span>
-                {config.maxMembers
-                  ? ` · maks. ${config.maxMembers} anggota per tim`
-                  : ' · tanpa batas anggota'}
-              </div>
+          <SectionCard title={`Pemain ${config.allowTeams ? '(Multiplayer)' : '(Single Player)'}`}>
+            <InfoRow label="Kode Ruangan" onCopy={() => copyJoinLink('player')}>
+              <span className="font-semibold text-white">{config.joinCode}</span>
+            </InfoRow>
+
+            {config.allowTeams ? (
+              <TeamList players={playerEntries} teams={teams} />
+            ) : playerEntries.length === 0 ? (
+              <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+            ) : (
+              <PlayerRows players={playerEntries} />
             )}
+          </SectionCard>
 
-            <button
-              type="button"
-              onClick={() => startSession(sessionId)}
-              className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
-            >
-              Mulai Permainan
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => startSession(sessionId)}
+            className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
+          >
+            Mulai Permainan
+          </button>
         </div>
       </div>
+      // </div>
     )
   }
 
@@ -181,59 +161,116 @@ export function HostView() {
   )
 }
 
-function RoleCard({
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-[#121212] p-4 sm:rounded-3xl sm:p-6">
+      <div className="mb-3 rounded-lg bg-[#1C1C1E] px-4 py-2 text-sm font-semibold text-[#FFB800] sm:text-base">
+        {title}
+      </div>
+      <div className="flex flex-col gap-2">{children}</div>
+    </div>
+  )
+}
+
+function InfoRow({
   label,
-  joinCode,
-  role,
-  count,
+  onCopy,
   children,
 }: {
   label: string
-  joinCode: string
-  role: 'central' | 'player'
-  count: number
-  children?: React.ReactNode
+  onCopy?: () => void
+  children: React.ReactNode
 }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-[#1C1C1E] px-4 py-3 text-sm text-white/80 sm:text-base">
+      <span className="flex items-center gap-2">
+        {onCopy && <Icon icon="mdi:key-outline" className="size-4 text-white/60" />}
+        {label}
+      </span>
+      <span className="flex items-center gap-2">
+        {children}
+        {onCopy && (
+          <Icon
+            onClick={onCopy}
+            icon="mdi:content-copy"
+            className="size-4 cursor-pointer text-yellow-300 hover:text-yellow-400"
+          />
+        )}
+      </span>
+    </div>
+  )
+}
+
+function TeamList({
+  players,
+  teams,
+}: {
+  players: [string, PlayerPresence][]
+  teams: { id: string; teamName?: string; memberCount: number }[]
+}) {
+  const teamName = new Map(teams.map((t) => [t.id, t.teamName]))
+  const grouped = new Map<string, [string, PlayerPresence][]>()
+  for (const entry of players) {
+    const key = entry[1].teamId ?? '__unassigned__'
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key)!.push(entry)
+  }
+  const sections = [...grouped.entries()].sort(([a], [b]) =>
+    a === '__unassigned__' ? 1 : b === '__unassigned__' ? -1 : a.localeCompare(b)
+  )
+  if (sections.length === 0) {
+    return <p className="px-1 text-xs text-white/50">Belum ada tim.</p>
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {sections.map(([teamId, rows]) => (
+        <TeamRow
+          key={teamId}
+          name={teamId === '__unassigned__' ? 'Unassigned' : (teamName.get(teamId) ?? teamId)}
+          rows={rows}
+        />
+      ))}
+    </div>
+  )
+}
+
+function TeamRow({ name, rows }: { name: string; rows: [string, PlayerPresence][] }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-xl border border-white/5 bg-[#1C1C1E] p-3">
+    <div className="rounded-xl bg-[#1C1C1E]">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#FFB800] bg-black/40 px-3 py-2 text-left"
+        className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left text-sm text-white/90 sm:text-base"
       >
-        <span className="text-sm font-semibold text-[#FFB800] sm:text-base">{label}</span>
-        <Icon
-          icon="mdi:chevron-down"
-          className={`size-5 text-[#FFB800] transition-transform ${open ? 'rotate-180' : ''}`}
-        />
+        <span className="flex items-center gap-2">
+          <Icon icon="mdi:account-group" className="size-4 text-white/60" />
+          {name}
+        </span>
+        <span className="flex items-center gap-2 text-white/60">
+          <span>{rows.length} Pemain</span>
+          <Icon
+            icon="mdi:chevron-right"
+            className={`size-4 transition-transform ${open ? 'rotate-90' : ''}`}
+          />
+        </span>
       </button>
       {open && (
-        <div className="mt-3 flex flex-col gap-3">
-          {/* ponytail: image placeholder — swap when asset lands */}
-          <div className="h-28 rounded-lg bg-[#0a0a0a] sm:h-40" aria-hidden />
-          <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
-            <span>Kode Ruangan</span>
-            <span className="flex items-center gap-2">
-              <span className="font-semibold text-white">{joinCode}</span>
-              <Icon
-                onClick={() => {
-                  const url = `${window.location.origin}/join/${role}?code=${joinCode}`
-                  void navigator.clipboard?.writeText(url)
-                  toast.success('Link disalin')
-                }}
-                icon="mdi:content-copy"
-                className="size-4 cursor-pointer text-yellow-300 hover:text-yellow-400"
-              />
-            </span>
-          </div>
-          <div className="flex items-center justify-between px-1 py-1 text-xs text-white/80 sm:text-sm">
-            <span>Perangkat</span>
-            <span className="font-semibold text-white">{count} Perangkat</span>
-          </div>
-          {children && <div className="border-t border-white/5 pt-3">{children}</div>}
-        </div>
+        <ul className="flex flex-col gap-1 border-t border-white/5 px-2 py-2">
+          {rows.map(([id, p]) => (
+            <li
+              key={id}
+              className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-white/90"
+            >
+              <span className="flex items-center gap-2">
+                <Icon icon="mdi:account-circle-outline" className="size-4 text-white/60" />
+                {p.name}
+              </span>
+              <StatusDot connected={p.connected} />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
@@ -252,38 +289,6 @@ function PlayerRows({ players }: { players: [string, PlayerPresence][] }) {
         </li>
       ))}
     </ul>
-  )
-}
-
-function PlayersByTeam({
-  players,
-  teams,
-}: {
-  players: [string, PlayerPresence][]
-  teams: { id: string; teamName?: string; memberCount: number }[]
-}) {
-  const teamName = new Map(teams.map((t) => [t.id, t.teamName]))
-  const grouped = new Map<string, [string, PlayerPresence][]>()
-  for (const entry of players) {
-    const key = entry[1].teamId ?? '__unassigned__'
-    if (!grouped.has(key)) grouped.set(key, [])
-    grouped.get(key)!.push(entry)
-  }
-  const sections = [...grouped.entries()].sort(([a], [b]) =>
-    a === '__unassigned__' ? 1 : b === '__unassigned__' ? -1 : a.localeCompare(b)
-  )
-  return (
-    <div className="space-y-3">
-      {sections.map(([teamId, rows]) => (
-        <div key={teamId}>
-          <p className="mb-1 text-xs font-semibold text-white/60">
-            {teamId === '__unassigned__' ? 'Unassigned' : (teamName.get(teamId) ?? teamId)} (
-            {rows.length})
-          </p>
-          <PlayerRows players={rows} />
-        </div>
-      ))}
-    </div>
   )
 }
 
