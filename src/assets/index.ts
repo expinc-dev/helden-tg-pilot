@@ -1,7 +1,8 @@
 import authBackground from './images/backgrounds/auth.png'
 import centralLobbyBackground from './images/backgrounds/centralLobby.png'
-import heldenLogoLg from './images/logos/heldenLogoLg.png'
 import heldenLogoSm from './images/logos/heldenLogoSm.png'
+// Lotties
+import HeldenLogoLotties from './lotties/HeldenLogoLotties.json'
 
 export const assets = {
   images: {
@@ -12,8 +13,10 @@ export const assets = {
     logos: {
       helden: {
         sm: heldenLogoSm,
-        lg: heldenLogoLg,
       },
     },
+  },
+  lotties: {
+    heldenLogo: HeldenLogoLotties,
   },
 }

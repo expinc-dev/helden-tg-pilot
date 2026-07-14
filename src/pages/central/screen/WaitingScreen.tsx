@@ -2,6 +2,7 @@ import QRCode from 'react-qr-code'
 
 import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
+import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 
 import { usePresenceCounts } from '@/lib/sync/useSession'
 
@@ -15,16 +16,21 @@ export function WaitingScreen({ sessionId, joinCode }: { sessionId?: string; joi
   return (
     <div
       className="flex min-h-screen flex-col items-center bg-neutral-950 bg-cover bg-center p-8"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.central})` }}
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.central})`,
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+      }}
     >
       <FullscreenToggle />
 
-      <div className="flex flex-1 items-center justify-center gap-8">
-        <img src={assets.images.logos.helden.lg} alt="Helden Inc." className="h-20 w-auto" />
+      <div className="flex flex-1 items-center justify-center gap-10">
+        <HeldenLogoLotties className="h-32 w-auto" />
 
         {joinUrl && (
           <>
-            <div className="h-24 w-px bg-white/15" />
+            <div className="h-40 w-px bg-white/30" />
 
             <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4">
               <QRCode value={joinUrl} size={128} />

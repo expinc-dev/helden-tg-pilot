@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
+import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 
 import { loadIdentity, loadLastSession } from '@/lib/identity'
 import { resolveJoinCode } from '@/lib/session/join'
@@ -41,49 +42,57 @@ export function CentralJoin() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-neutral-950 bg-cover bg-center p-8"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.central})` }}
+      className="flex min-h-screen w-full items-center justify-center bg-neutral-950 bg-cover bg-center p-8"
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.central})`,
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+      }}
     >
       <FullscreenToggle />
 
       <form
         onSubmit={joinByCode}
-        className="flex w-full max-w-sm flex-col items-center gap-6 rounded-[16px] border border-white/10 bg-black/40 p-8 backdrop-blur-sm"
+        className="flex w-full max-w-lg flex-col items-center gap-6 rounded-[16px] border border-white/10 bg-black/40 p-8 backdrop-blur-sm sm:p-10"
       >
-        <img src={assets.images.logos.helden.lg} alt="Helden Inc." className="h-10 w-auto" />
+        <HeldenLogoLotties className="h-32 w-auto" />
 
-        <div className="flex w-full flex-col gap-2">
-          <label htmlFor="join-code" className="text-sm text-white/70">
-            Kode Ruangan
-          </label>
-          <input
-            id="join-code"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="Nama Sesi"
-            maxLength={6}
-            autoFocus
-            className="w-full rounded-[8px] border border-white/10 bg-white/5 px-4 py-3 text-center font-mono tracking-widest text-white uppercase placeholder:font-sans placeholder:tracking-normal placeholder:text-white/30 placeholder:normal-case"
-          />
-        </div>
+        <div className="flex w-full flex-col gap-3">
+          <div className="flex w-full flex-col gap-2">
+            <label htmlFor="join-code" className="text-sm text-white/70">
+              Kode Ruangan
+            </label>
+            <input
+              id="join-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="Nama Sesi"
+              maxLength={6}
+              autoFocus
+              className="w-full rounded-[8px] border border-white/10 bg-white/5 px-4 py-3 text-center font-mono tracking-widest text-white uppercase placeholder:font-sans placeholder:tracking-normal placeholder:text-white/30 placeholder:normal-case"
+            />
+          </div>
 
-        <button
-          disabled={busy || code.length !== 6}
-          className="w-full rounded-[8px] bg-gradient-to-r from-yellow-400 to-orange-500 py-3 font-semibold text-black transition disabled:opacity-50"
-        >
-          {busy ? 'Bergabung…' : 'Bergabung'}
-        </button>
-
-        {existing && (
           <button
-            type="button"
-            disabled={busy}
-            onClick={rejoin}
-            className="text-sm text-white/60 underline disabled:opacity-50"
+            disabled={busy || code.length !== 6}
+            className="w-full rounded-[8px] py-3 font-semibold text-black transition disabled:opacity-50"
+            style={{ background: 'linear-gradient(120deg, #FDDB00 14.62%, #FDA400 68.41%)' }}
           >
-            {`Rejoin as ${existing.name ?? 'yourself'}`}
+            {busy ? 'Bergabung…' : 'Bergabung'}
           </button>
-        )}
+
+          {existing && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={rejoin}
+              className="text-sm text-white/60 underline disabled:opacity-50"
+            >
+              {`Rejoin as ${existing.name ?? 'yourself'}`}
+            </button>
+          )}
+        </div>
       </form>
 
       {err && (
