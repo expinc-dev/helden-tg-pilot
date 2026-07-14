@@ -1,54 +1,36 @@
 import { useState } from 'react'
-import QRCode from 'react-qr-code'
+import { useNavigate } from 'react-router-dom'
 
-import { createTeam, joinTeam, teamInviteUrl } from '@/lib/session/teams'
-import { useMyTeamId, useTeams } from '@/lib/sync/useTeams'
+import { assets } from '@/assets'
+import { FullscreenToggle } from '@/components/FullscreenToggle'
+import { GradientButton } from '@/components/GradientButton'
+import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
+import { MessageModal } from '@/components/MessageModal'
+
+import { createTeam, joinTeam } from '@/lib/session/teams'
+import { useTeams } from '@/lib/sync/useTeams'
 
 // Shown after a player joins a session with allowTeams=true, while the host
-// hasn't started yet. Create or join a team; once in a team, show the team room
-// with an invite QR teammates scan with their phone camera.
+// hasn't started yet and before the player has picked a team. Once a team is
+// assigned, PlayerView renders PlayerWaitingScreen instead of this.
 export function TeamLobby({
   sessionId,
   playerId,
-  joinCode,
   notice,
 }: {
   sessionId: string
   playerId: string
-  joinCode: string
   notice?: string
 }) {
+  const nav = useNavigate()
   const teams = useTeams(sessionId)
-  const myTeamId = useMyTeamId(sessionId, playerId)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(notice ?? null)
 
-  const myTeam = teams.find((t) => t.id === myTeamId)
-  const label = (t?: { teamName?: string }) => t?.teamName ?? 'Your team'
+  const backToLanding = () => nav('/')
+  const dismissErr = () => setErr(null)
 
-  // Team room — already in a team. Show roster + invite QR, wait for host.
-  if (myTeamId) {
-    const url = teamInviteUrl(joinCode, myTeamId)
-    const isOwner = myTeam?.ownerPlayerId === playerId
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-        <h1 className="text-xl font-semibold">{label(myTeam)}</h1>
-        <p className="text-sm text-gray-500">
-          {myTeam?.memberCount ?? 1} member(s){isOwner ? ' · you own this team' : ''}
-        </p>
-        <div className="rounded-lg bg-white p-4">
-          <QRCode value={url} size={180} />
-        </div>
-        <p className="max-w-xs text-center text-xs text-gray-500">
-          Teammates: scan this with your phone camera to join {label(myTeam)}.
-        </p>
-        <p className="text-sm text-gray-400">Waiting for host to start…</p>
-      </div>
-    )
-  }
-
-  // No team yet — create or join.
   const create = async () => {
     setBusy(true)
     setErr(null)
@@ -65,42 +47,73 @@ export function TeamLobby({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <h1 className="text-xl font-semibold">Pick a team</h1>
+    <div
+      className="relative flex min-h-screen w-full flex-col bg-neutral-950 bg-cover bg-center p-6"
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.player})`,
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+      }}
+    >
+      <FullscreenToggle position="absolute" />
 
-      <div className="flex w-72 flex-col gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New team name"
-          className="rounded border px-3 py-2"
-        />
-        <button
-          onClick={create}
-          disabled={busy || !name.trim()}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+      <HeldenLogoLotties className="h-6 w-auto self-start" />
+
+      <div className="mt-auto flex w-full flex-col gap-4">
+        <h1 className="text-center text-lg font-semibold text-white">Pick a team</h1>
+
+        <div
+          className="flex w-full flex-col gap-4 rounded-[16px] border p-4"
+          style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
         >
-          Create team
-        </button>
+          <div className="flex w-full flex-col gap-2">
+            <label htmlFor="team-name" className="text-sm text-white/70">
+              New team name
+            </label>
+            <input
+              id="team-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="New team name"
+              className="w-full rounded-[8px] border px-4 py-3 text-white placeholder:text-white/30"
+              style={{ borderColor: '#353535', background: '#1B1B1B' }}
+            />
+          </div>
+
+          <GradientButton onClick={create} disabled={busy || !name.trim()} className="w-full py-3">
+            Create team
+          </GradientButton>
+
+          {teams.length > 0 && (
+            <div className="flex flex-col gap-2 border-t pt-4" style={{ borderColor: '#353535' }}>
+              <p className="text-sm text-white/50">or join an existing team</p>
+              {teams.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => join(t.id)}
+                  disabled={busy}
+                  className="flex items-center justify-between rounded-[8px] border px-4 py-3 text-left text-white disabled:opacity-50"
+                  style={{ borderColor: '#353535', background: '#1B1B1B' }}
+                >
+                  <span>{t.teamName ?? 'Team'}</span>
+                  <span className="text-white/40">{t.memberCount}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {teams.length > 0 && (
-        <div className="flex w-72 flex-col gap-2">
-          <p className="text-sm text-gray-500">or join an existing team</p>
-          {teams.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => join(t.id)}
-              disabled={busy}
-              className="flex justify-between rounded border px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50"
-            >
-              <span>{t.teamName ?? 'Team'}</span>
-              <span className="text-gray-400">{t.memberCount}</span>
-            </button>
-          ))}
-        </div>
+      {err && (
+        <MessageModal
+          title="Ups! Tim Penuh"
+          message={err}
+          onBack={backToLanding}
+          onDismiss={dismissErr}
+        />
       )}
-      {err && <p className="text-sm text-red-600">{err}</p>}
     </div>
   )
 }

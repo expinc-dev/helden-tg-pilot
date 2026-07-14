@@ -8,6 +8,7 @@ import { CentralView } from './pages/central/screen'
 import { JoinGate } from './pages/extra/join'
 import { HostView } from './pages/host/lobby'
 import { HostNew } from './pages/host/new'
+import { PlayerJoin } from './pages/player/join'
 import { PlayerView } from './pages/player/play'
 
 export function App() {
@@ -66,6 +67,14 @@ export function App() {
           }
         />
         <Route path="/join/central" element={<CentralJoin />} />
+        <Route
+          path="/join/player"
+          element={
+            <TabletFrame>
+              <PlayerJoin />
+            </TabletFrame>
+          }
+        />
         <Route
           path="/join/:role"
           element={

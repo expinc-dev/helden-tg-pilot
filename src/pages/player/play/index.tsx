@@ -12,8 +12,10 @@ import { joinPresence } from '@/lib/session/presence'
 import { joinTeam } from '@/lib/session/teams'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
-import { useMyTeamId } from '@/lib/sync/useTeams'
+import { useMyTeamId, useTeams } from '@/lib/sync/useTeams'
 
+import { PlayerWaitingScreen } from './components/PlayerWaitingScreen'
+import { TeamLeaderWaitingScreen } from './components/TeamLeaderWaitingScreen'
 import { TeamLobby } from './components/TeamLobby'
 import { useResolvedIdentity } from './logic/useIdentity'
 
@@ -36,6 +38,8 @@ export function PlayerView() {
   const [full, setFull] = useState(false)
   const [teamJoinFailed, setTeamJoinFailed] = useState(false)
   const myTeamId = useMyTeamId(sessionId, identity?.id ?? '')
+  const teams = useTeams(sessionId)
+  const myTeam = teams.find((t) => t.id === myTeamId)
   const teamParam = sp.get('team') ?? undefined
   // Arrived via an invite QR and the join hasn't resolved yet → block the picker
   // so the ~1-2s async window can't be used to tap a different team.
@@ -109,37 +113,56 @@ export function PlayerView() {
       <TeamLobby
         sessionId={sessionId}
         playerId={identity.id}
-        joinCode={config.joinCode}
         notice={teamJoinFailed ? 'That team is full — pick another.' : undefined}
       />
     )
   }
 
-  return (
-    <div className="flex min-h-screen flex-col gap-4 p-8">
-      <p className="text-xs text-gray-500">
-        {sessionId} · {meta?.status ?? '—'} · {identity.name ?? identity.id}
-      </p>
-      {meta?.status === 'ended' && sessionId ? (
+  if (meta?.status === 'ended' && sessionId) {
+    return (
+      <div className="flex min-h-screen flex-col gap-4 p-8">
+        <p className="text-xs text-gray-500">
+          {sessionId} · {meta.status} · {identity.name ?? identity.id}
+        </p>
         <EndScreen sessionId={sessionId} />
-      ) : phase && sessionId ? (
-        <>
-          <TimerBar sessionId={sessionId} phase={phase} role="player" />
-          <PhaseRouter
-            phase={phase}
-            phaseStartMs={pointer?.changedAt}
-            role="player"
-            sessionId={sessionId}
-            playerId={identity.id}
-            allowTeams={config?.allowTeams}
-            teamId={myTeamId}
-          />
-        </>
-      ) : config?.allowTeams && myTeamId ? (
-        <TeamLobby sessionId={sessionId!} playerId={identity.id} joinCode={config.joinCode} />
-      ) : (
-        <p className="text-sm text-gray-500">Waiting for host…</p>
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
+
+  if (phase && sessionId) {
+    return (
+      <div className="flex min-h-screen flex-col gap-4 p-8">
+        <p className="text-xs text-gray-500">
+          {sessionId} · {meta?.status ?? '—'} · {identity.name ?? identity.id}
+        </p>
+        <TimerBar sessionId={sessionId} phase={phase} role="player" />
+        <PhaseRouter
+          phase={phase}
+          phaseStartMs={pointer?.changedAt}
+          role="player"
+          sessionId={sessionId}
+          playerId={identity.id}
+          allowTeams={config?.allowTeams}
+          teamId={myTeamId}
+        />
+      </div>
+    )
+  }
+
+  const isTeamLeader =
+    config?.allowTeams && myTeamId && myTeam && myTeam.ownerPlayerId === identity.id
+  if (isTeamLeader && sessionId && config?.joinCode) {
+    return (
+      <TeamLeaderWaitingScreen
+        sessionId={sessionId}
+        joinCode={config.joinCode}
+        teamId={myTeamId}
+        teamName={myTeam.teamName ?? 'Anda'}
+        memberIds={Object.keys(myTeam.memberIds)}
+      />
+    )
+  }
+
+  const teamName = config?.allowTeams && myTeamId ? (myTeam?.teamName ?? 'Anda') : undefined
+  return <PlayerWaitingScreen teamName={teamName} />
 }

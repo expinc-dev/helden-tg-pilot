@@ -3,7 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
+import { GradientButton } from '@/components/GradientButton'
 import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
+import { InvalidCodeModal } from '@/components/InvalidCodeModal'
 
 import { loadIdentity, loadLastSession } from '@/lib/identity'
 import { resolveJoinCode } from '@/lib/session/join'
@@ -74,13 +76,9 @@ export function CentralJoin() {
             />
           </div>
 
-          <button
-            disabled={busy || code.length !== 6}
-            className="w-full rounded-[8px] py-3 font-semibold text-black transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(120deg, #FDDB00 14.62%, #FDA400 68.41%)' }}
-          >
+          <GradientButton disabled={busy || code.length !== 6} className="w-full py-3">
             {busy ? 'Bergabung…' : 'Bergabung'}
-          </button>
+          </GradientButton>
 
           {existing && (
             <button
@@ -95,50 +93,7 @@ export function CentralJoin() {
         </div>
       </form>
 
-      {err && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 p-8 backdrop-blur-md">
-          <div
-            className="w-full max-w-sm overflow-hidden rounded-lg border"
-            style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
-          >
-            <div
-              className="flex items-center justify-between gap-4 border-b px-5 py-4"
-              style={{ borderColor: '#353535', background: '#181818' }}
-            >
-              <h2 className="font-semibold text-yellow-400">Ups! Kode Ruangan Salah</h2>
-              <button
-                type="button"
-                onClick={dismissErr}
-                aria-label="Close"
-                className="text-white/70 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-5">
-              <p className="text-sm text-white/80">{err}</p>
-              <div className="mt-5 flex gap-3">
-                <button
-                  type="button"
-                  onClick={backToLanding}
-                  className="flex-1 rounded-lg border py-2.5 text-sm text-white"
-                  style={{ borderColor: '#353535', background: '#1B1B1B' }}
-                >
-                  Kembali
-                </button>
-                <button
-                  type="button"
-                  onClick={dismissErr}
-                  className="flex-1 rounded-lg py-2.5 text-sm font-semibold text-black"
-                  style={{ background: 'linear-gradient(120deg, #FDDB00 14.62%, #FDA400 68.41%)' }}
-                >
-                  Lanjut
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {err && <InvalidCodeModal message={err} onBack={backToLanding} onDismiss={dismissErr} />}
     </div>
   )
 }
