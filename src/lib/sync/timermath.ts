@@ -5,3 +5,8 @@
 export function remainingMs(endsAt: number, nowLocal: number, serverOffset: number): number {
   return endsAt - (nowLocal + serverOffset)
 }
+
+// Formats whole seconds as m:ss (e.g. 65 -> "1:05").
+export function mmss(sec: number): string {
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`
+}

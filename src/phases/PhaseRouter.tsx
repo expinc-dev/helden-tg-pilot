@@ -5,6 +5,7 @@ import { type TeamRole, useTeamRole } from '@/lib/sync/useTeamRole'
 import { TeamCodeInput } from './CodeInput'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
+import { PresentationRenderer } from './Presentation'
 import { TeamFocusLeader } from './TeamFocusLeader'
 import { VideoRenderer } from './Video'
 import { UnknownTemplate } from './minigames/UnknownTemplate'
@@ -83,6 +84,15 @@ function PhaseContentSwitch({
           title={phase.title}
           playerId={playerId}
           allowTeams={allowTeams}
+        />
+      )
+    case 'presentation':
+      return (
+        <PresentationRenderer
+          content={content}
+          role={role}
+          sessionId={sessionId}
+          phaseId={phase.id}
         />
       )
     case 'microlearning':

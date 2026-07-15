@@ -1,4 +1,7 @@
+import { assets } from '@/assets'
 import type { Phase, PublishedGame } from '@helden-inc/tg-schema'
+
+import type { SlideTimerConfig } from './sync/useCentralStepTimer'
 
 // ponytail: in-memory bundle. Move to Firestore load when CMS publish exists (T-cms-publish).
 const idle: Phase = {
@@ -8,6 +11,63 @@ const idle: Phase = {
   syncMode: 'lockstep',
   roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['presence'] } },
   content: { type: 'idle', lottieMediaId: 'm-lottie-waiting', caption: 'Welcome' },
+}
+
+// Host-controlled slide deck, shown before onboarding (level 1). Slide images
+// stay in `blocks`; per-slide display extras (title/details/timer/style) live
+// outside the schema in `presentationSlideExtras` below — see that export.
+const presentation: Phase = {
+  id: 'p-presentation',
+  type: 'presentation',
+  title: 'Welcome presentation',
+  syncMode: 'lockstep',
+  roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: [] } },
+  content: {
+    type: 'presentation',
+    controlledBy: 'host',
+    slides: [
+      {
+        id: 'slide-1',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+      },
+      {
+        id: 'slide-2',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+      },
+      {
+        id: 'slide-3',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+      },
+      {
+        id: 'slide-4',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+      },
+      {
+        id: 'slide-5',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+      },
+      {
+        id: 'slide-6',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+      },
+      {
+        id: 'slide-7',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+      },
+      {
+        id: 'slide-8',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+      },
+      {
+        id: 'slide-9',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+      },
+      {
+        id: 'slide-10',
+        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+      },
+    ],
+  },
 }
 
 const intro: Phase = {
@@ -133,9 +193,10 @@ export const demoBundle: PublishedGame = {
   // 'modular-progressive' locks all cards except the next unplayed one; swap
   // to 'modular-open' to let the trainer jump anywhere at any time.
   flowMode: 'modular-progressive',
-  phaseOrder: [idle.id, intro.id, video.id, puzzle.id, sortGame.id],
+  phaseOrder: [idle.id, presentation.id, intro.id, video.id, puzzle.id, sortGame.id],
   phases: {
     [idle.id]: idle,
+    [presentation.id]: presentation,
     [intro.id]: intro,
     [video.id]: video,
     [puzzle.id]: puzzle,
@@ -143,4 +204,75 @@ export const demoBundle: PublishedGame = {
   },
   publishedAt: Date.now(),
   publishedBy: 'pilot',
+}
+
+// Presentation-only slide extras, keyed by slide id — outside the schema so the
+// visual layout (title/details/timer/style) can change without a schema field.
+// See src/phases/Presentation/README.md for the supported combinations.
+export type PresentationSlideExtras = {
+  title?: string
+  details?: { heading: string; body: string }
+  timer?: SlideTimerConfig
+  style?: 'timer-emphasis' | 'detail-emphasis'
+}
+
+export const presentationSlideExtras: Record<string, PresentationSlideExtras> = {
+  'slide-1': {},
+  'slide-2': {
+    title: 'Selamat Datang',
+  },
+  'slide-3': {
+    details: {
+      heading: 'Kenapa Sesi Ini Penting',
+      body: 'Pelatihan ini membantu tim memahami alur kerja baru sebelum onboarding dimulai.',
+    },
+  },
+  'slide-4': {
+    title: 'Aturan Sesi',
+    details: {
+      heading: 'Ikuti Instruksi Host',
+      body: 'Perhatikan layar utama dan ikuti arahan host di setiap fase.',
+    },
+    timer: { seconds: 30, direction: 'down' },
+  },
+  'slide-5': {
+    timer: { seconds: 15, direction: 'up' },
+  },
+  'slide-6': {
+    title: 'Bersiap',
+    timer: { seconds: 20, direction: 'down' },
+  },
+  'slide-7': {
+    title: 'Tim & Kolaborasi',
+    details: {
+      heading: 'Kerja Sama Tim',
+      body: 'Beberapa fase membutuhkan kerja sama dengan anggota tim lain.',
+    },
+    timer: { seconds: 25, direction: 'down' },
+    style: 'detail-emphasis',
+  },
+  'slide-8': {
+    details: {
+      heading: 'Waktu Terbatas',
+      body: 'Beberapa fase memiliki batas waktu, perhatikan timer di layar.',
+    },
+    timer: { seconds: 20, direction: 'down' },
+  },
+  'slide-9': {
+    title: 'Skor & Penilaian',
+    details: {
+      heading: 'Cara Penilaian',
+      body: 'Skor dihitung dari ketepatan dan kecepatan menjawab.',
+    },
+    timer: { seconds: 20, direction: 'down' },
+  },
+  'slide-10': {
+    title: 'Siap Memulai?',
+    details: {
+      heading: 'Mari Mulai',
+      body: 'Tekan lanjut untuk memulai fase onboarding.',
+    },
+    timer: { seconds: 15, direction: 'down' },
+    style: 'detail-emphasis',
+  },
 }

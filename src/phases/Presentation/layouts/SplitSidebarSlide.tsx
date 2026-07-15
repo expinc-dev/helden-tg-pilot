@@ -24,7 +24,8 @@ export function SplitSidebarSlide({
         style={{
           ...boxStyle,
           backgroundImage: image ? `url(${image})` : undefined,
-          backgroundSize: '100% 100%',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}
       />
