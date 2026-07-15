@@ -5,7 +5,7 @@ import type {
   SessionTimer,
   VideoPlayback,
 } from '@helden-inc/tg-schema'
-import { get, onValue, ref, remove, set, update } from 'firebase/database'
+import { get, ref, remove, set, update } from 'firebase/database'
 
 import { normalizeCode } from '@/phases/codecheck'
 
