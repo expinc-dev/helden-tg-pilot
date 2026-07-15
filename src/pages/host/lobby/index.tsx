@@ -62,65 +62,15 @@ export function HostView() {
   const connectedCentrals = centralEntries.filter(([, c]) => c.connected).length
 
   if (meta.status === 'lobby') {
-    const copyJoinLink = (role: 'central' | 'player') => {
-      const url = `${window.location.origin}/join/${role}?code=${config.joinCode}`
-      void navigator.clipboard?.writeText(url)
-      toast.success('Link disalin')
-    }
     return (
-      // <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
-      <div
-        className="flex min-h-dvh w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
-        style={{
-          backgroundImage: `url(${assets.images.backgrounds.auth})`,
-          backgroundSize: '100% 100%',
-          backgroundPosition: 'top',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <Header />
-
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Panel Kontrol HostLevel</h1>
-          <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-            Permainan dapat dimulai setelah Pemain dan Perangkat Utama bergabung
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <SectionCard title="Layar Utama">
-            <InfoRow label="Kode Ruangan" onCopy={() => copyJoinLink('central')}>
-              <span className="font-semibold text-white">{config.joinCode}</span>
-            </InfoRow>
-            <InfoRow label="Perangkat">
-              <span className="font-semibold text-white">{connectedCentrals} Perangkat</span>
-            </InfoRow>
-          </SectionCard>
-
-          <SectionCard title={`Pemain ${config.allowTeams ? '(Multiplayer)' : '(Single Player)'}`}>
-            <InfoRow label="Kode Ruangan" onCopy={() => copyJoinLink('player')}>
-              <span className="font-semibold text-white">{config.joinCode}</span>
-            </InfoRow>
-
-            {config.allowTeams ? (
-              <TeamList players={playerEntries} teams={teams} />
-            ) : playerEntries.length === 0 ? (
-              <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
-            ) : (
-              <PlayerRows players={playerEntries} />
-            )}
-          </SectionCard>
-
-          <button
-            type="button"
-            onClick={() => startSession(sessionId)}
-            className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
-          >
-            Mulai Permainan
-          </button>
-        </div>
-      </div>
-      // </div>
+      <LobbyView
+        sessionId={sessionId}
+        joinCode={config.joinCode}
+        allowTeams={!!config.allowTeams}
+        connectedCentrals={connectedCentrals}
+        teams={teams}
+        players={playerEntries}
+      />
     )
   }
 
@@ -206,42 +156,155 @@ export function HostView() {
   )
 }
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+// Pre-live host lobby view: "Host" pill, title, three-stat row (screens / teams
+// / code), teams-or-players list, big Start button. Copy button on the code
+// tile opens a modal offering the two join-role links (central vs player),
+// since the underlying code is the SAME string used by both routes.
+function LobbyView({
+  sessionId,
+  joinCode,
+  allowTeams,
+  connectedCentrals,
+  teams,
+  players,
+}: {
+  sessionId: string
+  joinCode: string
+  allowTeams: boolean
+  connectedCentrals: number
+  teams: { id: string; teamName?: string; memberCount: number }[]
+  players: [string, PlayerPresence][]
+}) {
+  const [copyOpen, setCopyOpen] = useState(false)
+
+  const copyJoinLink = (role: 'central' | 'player') => {
+    const url = `${window.location.origin}/join/${role}?code=${joinCode}`
+    void navigator.clipboard?.writeText(url)
+    toast.success(role === 'central' ? 'Link Central disalin' : 'Link Player disalin')
+    setCopyOpen(false)
+  }
+
+  const totalUnits = allowTeams ? teams.length : players.length
+  const unitsLabel = allowTeams ? 'Total Tim' : 'Total Pemain'
+
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#121212] p-4 sm:rounded-3xl sm:p-6">
-      <div className="mb-3 rounded-lg bg-[#1C1C1E] px-4 py-2 text-sm font-semibold text-[#FFB800] sm:text-base">
-        {title}
+    <div
+      className="flex min-h-dvh w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.auth})`,
+        backgroundSize: '100% 100%',
+        backgroundPosition: 'top',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <Header />
+
+      <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
+        Host
       </div>
-      <div className="flex flex-col gap-2">{children}</div>
+
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">Panel Kontrol Host</h1>
+        <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
+          Permainan dapat dimulai setelah pemain dan perangkat utama bergabung
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 rounded-2xl border border-white/5 bg-[#121212] p-3 sm:p-4">
+        <StatTile label="Layar Utama" value={String(connectedCentrals)} />
+        <StatTile label={unitsLabel} value={String(totalUnits)} />
+        <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
+      </div>
+
+      <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-white/5 bg-[#121212] p-4 sm:p-6">
+        <div className="text-sm font-semibold text-white sm:text-base">
+          {allowTeams ? 'Tim Terhubung' : 'Pemain Terhubung'}
+        </div>
+        {allowTeams ? (
+          <TeamList players={players} teams={teams} />
+        ) : players.length === 0 ? (
+          <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+        ) : (
+          <PlayerRows players={players} />
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => startSession(sessionId)}
+        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
+      >
+        Mulai Permainan
+      </button>
+
+      {copyOpen && <CopyCodeModal onDismiss={() => setCopyOpen(false)} onCopy={copyJoinLink} />}
     </div>
   )
 }
 
-function InfoRow({
-  label,
-  onCopy,
-  children,
-}: {
-  label: string
-  onCopy?: () => void
-  children: React.ReactNode
-}) {
+function StatTile({ label, value, onCopy }: { label: string; value: string; onCopy?: () => void }) {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-[#1C1C1E] px-4 py-3 text-sm text-white/80 sm:text-base">
-      <span className="flex items-center gap-2">
-        {onCopy && <Icon icon="mdi:key-outline" className="size-4 text-white/60" />}
-        {label}
-      </span>
-      <span className="flex items-center gap-2">
-        {children}
+    <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-[#0A0A0A] p-3 sm:p-4">
+      <span className="text-xs text-[#FFB800] sm:text-sm">{label}</span>
+      <span className="flex items-center gap-2 text-lg font-bold text-white sm:text-2xl">
+        {value}
         {onCopy && (
-          <Icon
+          <button
+            type="button"
             onClick={onCopy}
-            icon="mdi:content-copy"
-            className="size-4 cursor-pointer text-yellow-300 hover:text-yellow-400"
-          />
+            className="text-yellow-300 hover:text-yellow-400"
+            aria-label={`Salin ${label}`}
+          >
+            <Icon icon="mdi:content-copy" className="size-4" />
+          </button>
         )}
       </span>
+    </div>
+  )
+}
+
+function CopyCodeModal({
+  onDismiss,
+  onCopy,
+}: {
+  onDismiss: () => void
+  onCopy: (role: 'central' | 'player') => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4"
+      onClick={onDismiss}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-white/10 bg-[#121212] p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-center text-lg font-bold text-white">Salin Kode</h2>
+        <p className="text-center text-xs text-white/60">Pilih tautan mana yang ingin disalin.</p>
+        <button
+          type="button"
+          onClick={() => onCopy('central')}
+          className="w-full rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
+        >
+          Central screen code
+        </button>
+        <button
+          type="button"
+          onClick={() => onCopy('player')}
+          className="w-full rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
+        >
+          Player code
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="w-full rounded-lg py-2 text-sm text-white/60 hover:text-white"
+        >
+          Batal
+        </button>
+      </div>
     </div>
   )
 }
