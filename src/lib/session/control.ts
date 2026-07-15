@@ -1,4 +1,10 @@
-import type { Phase, PhasePointer, PublishedGame, SessionTimer } from '@helden-inc/tg-schema'
+import type {
+  Phase,
+  PhasePointer,
+  PublishedGame,
+  SessionTimer,
+  VideoPlayback,
+} from '@helden-inc/tg-schema'
 import { get, onValue, ref, remove, set, update } from 'firebase/database'
 
 import { normalizeCode } from '@/phases/codecheck'
@@ -88,8 +94,25 @@ function pickerAnchorId(): string {
   return anyIdle ?? b.phaseOrder[0]
 }
 
+// Host-only. Seeds sessions/{id}/videoPlayback for video phases so central and
+// host both start from a known "paused at 0" state. Cleared on non-video
+// phases to keep a stale playing/paused flag from bleeding across phase types.
+async function openPhaseVideoPlayback(sessionId: string, phase: Phase | undefined) {
+  const node = ref(rtdb, `sessions/${sessionId}/videoPlayback`)
+  if (!phase || phase.content.type !== 'video') {
+    await remove(node)
+    return
+  }
+  const value: VideoPlayback = { state: 'paused', updatedAt: Date.now(), positionSec: 0 }
+  await set(node, value)
+}
+
 async function openPhase(sessionId: string, phase: Phase | undefined) {
-  await Promise.all([openPhaseTimer(sessionId, phase), openPhaseSecrets(sessionId, phase)])
+  await Promise.all([
+    openPhaseTimer(sessionId, phase),
+    openPhaseSecrets(sessionId, phase),
+    openPhaseVideoPlayback(sessionId, phase),
+  ])
 }
 
 export async function startSession(sessionId: string) {

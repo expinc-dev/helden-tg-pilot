@@ -7,6 +7,7 @@ import { GradientButton } from '@/components/GradientButton'
 import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 import { InvalidCodeModal } from '@/components/InvalidCodeModal'
 
+import { unlockAudio } from '@/lib/audioUnlock'
 import { loadIdentity, loadLastSession } from '@/lib/identity'
 import { resolveJoinCode } from '@/lib/session/join'
 
@@ -23,6 +24,10 @@ export function CentralJoin() {
 
   const rejoin = () => {
     if (!lastSessionId) return
+    // Piggyback the tap gesture to unlock audio for the whole session, so
+    // programmatic video.play() (driven later by the host's Play button) can
+    // include sound without an extra "tap to enable" step on central.
+    void unlockAudio()
     nav(`/central/${lastSessionId}`, { replace: true })
   }
 
@@ -30,6 +35,7 @@ export function CentralJoin() {
     e.preventDefault()
     setBusy(true)
     setErr(null)
+    void unlockAudio()
     const sid = await resolveJoinCode(code)
     if (!sid) {
       setErr('Kode ruangan yang Anda masukkan tidak ditemukan. Periksa kembali dan coba lagi.')

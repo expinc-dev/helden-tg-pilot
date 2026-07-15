@@ -6,6 +6,7 @@ import { TeamCodeInput } from './CodeInput'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { TeamFocusLeader } from './TeamFocusLeader'
+import { VideoRenderer } from './Video'
 import { UnknownTemplate } from './minigames/UnknownTemplate'
 import { minigameRegistry } from './minigames/registry'
 
@@ -72,6 +73,10 @@ function PhaseContentSwitch({
         />
       ) : (
         <div className="p-8 text-sm text-gray-500">Code input needs Team Mode enabled.</div>
+      )
+    case 'video':
+      return (
+        <VideoRenderer content={content} role={role} sessionId={sessionId} title={phase.title} />
       )
     case 'microlearning':
       return (

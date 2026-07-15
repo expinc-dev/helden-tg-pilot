@@ -66,6 +66,23 @@ const puzzle: Phase = {
   },
 }
 
+const video: Phase = {
+  id: 'p-video',
+  type: 'video',
+  title: 'Video briefing',
+  syncMode: 'lockstep',
+  roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: [] } },
+  content: {
+    type: 'video',
+    mediaId: 'm-video-briefing',
+    // ponytail: direct MP4 for pilot; swap to a Vimeo URL to exercise the
+    // iframe+postMessage path. Real bundles will resolve via CMS mediaId.
+    videoUrl: 'https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4',
+    target: ['central'],
+    allowPlayerControl: false,
+  },
+}
+
 // Mini-game phase (BLUEPRINT_runtime §9). team_leader_only so only the leader
 // drags; members see TeamFocusLeader (routed at PhaseRouter, plus the template
 // itself gates team_collaborative + member the same way).
@@ -110,8 +127,14 @@ export const demoBundle: PublishedGame = {
   // Modular flow: phaseOrder[0] MUST be an idle phase — it's the picker anchor.
   // Non-idle phases become level cards in the Host page control picker.
   flowMode: 'modular',
-  phaseOrder: [idle.id, intro.id, puzzle.id, sortGame.id],
-  phases: { [idle.id]: idle, [intro.id]: intro, [puzzle.id]: puzzle, [sortGame.id]: sortGame },
+  phaseOrder: [idle.id, intro.id, video.id, puzzle.id, sortGame.id],
+  phases: {
+    [idle.id]: idle,
+    [intro.id]: intro,
+    [video.id]: video,
+    [puzzle.id]: puzzle,
+    [sortGame.id]: sortGame,
+  },
   publishedAt: Date.now(),
   publishedBy: 'pilot',
 }
