@@ -87,11 +87,9 @@ export function HostView() {
     return (
       <VideoHostScreen
         sessionId={sessionId}
-        allowTeams={!!config.allowTeams}
         videoTitle={phase.title}
         videoUrl={phase.content.videoUrl}
         onAdvance={advance}
-        advanceLabel="Tahap selanjutnya"
       />
     )
   }
@@ -121,7 +119,7 @@ export function HostView() {
 
   return (
     <div className="flex min-h-dvh flex-col gap-6 p-0">
-      {/* {meta.status === 'live' &&
+      {meta.status === 'live' &&
         phase &&
         (isModular ? (
           <button
@@ -144,7 +142,7 @@ export function HostView() {
               </button>
             )
           })()
-        ))} */}
+        ))}
 
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 

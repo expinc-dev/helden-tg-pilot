@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
 import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
-import type { PlayerPresence, VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
+import type { VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
-import { pauseVideo, playVideo } from '@/lib/session/videoControl'
-import { usePresence } from '@/lib/sync/useSession'
-import { type TeamRow, useMyTeamId, useTeams } from '@/lib/sync/useTeams'
+import { pauseVideo, playVideo, setVideoPlayback } from '@/lib/session/videoControl'
+import { useMyTeamId, useTeams } from '@/lib/sync/useTeams'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
+import { useFullscreen } from '@/lib/useFullscreen'
 
 import type { Role } from './PhaseRouter'
 
@@ -276,8 +276,11 @@ function HostControls({
   const playing = state === 'playing'
   const toggle = () => {
     const pos = positionRef.current
-    if (playing) pauseVideo(sessionId, pos)
-    else playVideo(sessionId, pos)
+    if (playing) {
+      pauseVideo(sessionId, pos)
+    } else {
+      playVideo(sessionId, pos)
+    }
   }
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl bg-[#1C1C1E] px-4 py-3">
@@ -344,42 +347,40 @@ function PlayerFoldIn({
 }
 
 // ─── Host video screen ──────────────────────────────────────────────────────
-// Single screen for the host during a video phase: muted preview at top,
-// Jeda/Putar toggle immediately below it, then the roster, then the yellow
-// "Tahap selanjutnya" button which advances the phase (endLevel in modular,
-// nextPhase in sequential).
+// Mission Control layout: idle → controls → clean-playing → ended replay.
+// Host owns position (seek buttons, draggable progress bar). Every position
+// change writes to sessions/{id}/videoPlayback so central snaps in sync.
+// "Tahap selanjutnya" is disabled until the video has played through to the
+// end at least once — trainer must actually show the content.
 //
-// Rendered as a top-level branch from HostView (see lobby/index.tsx) so its
-// full-bleed background escapes the standard live wrapper — otherwise the
-// wrapper's own padding leaks the surrounding page background as a white
-// bar at the top on TabletFrame simulations.
+// Rendered top-level from lobby so the full-bleed background escapes the
+// standard live wrapper's padding (would leak parent bg as a white bar).
 export function VideoHostScreen({
   sessionId,
-  allowTeams,
   videoTitle,
   videoUrl,
   onAdvance,
-  advanceLabel,
 }: {
   sessionId: string
-  allowTeams: boolean
   videoTitle: string
   videoUrl?: string
   onAdvance: () => void
-  advanceLabel: string
 }) {
-  const teams = useTeams(sessionId)
-  const { players } = usePresence(sessionId)
   const playback = useVideoPlayback(sessionId)
   const state = playback?.state ?? 'paused'
   const positionSec = playback?.positionSec ?? 0
-  const positionRef = useRef<number>(0)
+
+  const [ended, setEnded] = useState(false)
+  const [confirm, setConfirm] = useState<null | 'replay' | 'advance'>(null)
 
   const provider = videoUrl ? detectProvider(videoUrl) : null
+  const canAdvance = ended
+
+  const { isFullscreen, toggle } = useFullscreen()
 
   return (
     <div
-      className="flex min-h-dvh w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+      className="relative flex min-h-dvh w-full flex-col gap-2 overflow-y-auto p-3 sm:p-5"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -387,146 +388,364 @@ export function VideoHostScreen({
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
-        Host
-      </div>
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">{videoTitle}</h1>
-        <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-          Pastikan semua peserta telah bergabung sebelum memulai sesi
-        </p>
-      </div>
-
-      <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/5 bg-black">
-        {videoUrl && provider === 'vimeo' && (
-          <VimeoPlayer
-            url={videoUrl}
-            state={state}
-            positionSec={positionSec}
-            muted
-            role="host"
-            positionRef={positionRef}
-          />
-        )}
-        {videoUrl && provider === 'direct' && (
-          <DirectPlayer
-            url={videoUrl}
-            state={state}
-            positionSec={positionSec}
-            muted
-            role="host"
-            positionRef={positionRef}
-          />
-        )}
-      </div>
-
-      <HostControls
-        sessionId={sessionId}
-        state={state}
-        title={videoTitle}
-        positionRef={positionRef}
-      />
-
-      <div className="flex flex-1 flex-col gap-2 rounded-2xl border border-white/5 bg-[#121212] p-3 sm:p-4">
-        {allowTeams && teams.length > 0 ? (
-          teams.map((team) => <GateTeamRow key={team.id} team={team} players={players} />)
-        ) : (
-          <GateSoloRoster players={players} />
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={onAdvance}
-        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
-      >
-        {advanceLabel}
-      </button>
-    </div>
-  )
-}
-
-function GateTeamRow({
-  team,
-  players,
-}: {
-  team: TeamRow
-  players: Record<string, PlayerPresence>
-}) {
-  const [open, setOpen] = useState(false)
-  const memberIds = Object.keys(team.memberIds ?? {})
-  const count = memberIds.length
-  return (
-    <div className="rounded-xl bg-[#1C1C1E]">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-white/90 sm:text-base"
-      >
-        <span className="flex items-center gap-2">
-          <Icon icon="mdi:account-group" className="size-4 text-[#FFB800]" />
-          <span className="font-medium">{team.teamName ?? 'Team'}</span>
-        </span>
-        <span className="flex items-center gap-2 text-[#FFB800]">
-          <span className="text-sm font-medium">
-            {count}/{count}
-          </span>
+      {/* Fullscreen button*/}
+      <div className="flex items-center justify-end">
+        <div className="z-10 w-fit rounded-full bg-black/30 p-2" onClick={toggle}>
           <Icon
-            icon="mdi:chevron-down"
-            className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
+            icon={isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'}
+            className="size-8 text-yellow-400"
           />
-        </span>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-[#08080833] p-4 sm:gap-5 sm:p-6">
+        <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
+          Host
+        </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">Mission Control</h1>
+          <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
+            Anda memegang kendali penuh atas video di layar utama.
+          </p>
+        </div>
+
+        <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+          {videoUrl && provider === 'direct' && (
+            <HostDirectPlayer
+              url={videoUrl}
+              state={state}
+              positionSec={positionSec}
+              title={videoTitle}
+              sessionId={sessionId}
+              ended={ended}
+              onEnded={() => setEnded(true)}
+              onReplayRequest={() => setConfirm('replay')}
+            />
+          )}
+          {videoUrl && provider === 'vimeo' && (
+            <div className="aspect-video w-full">
+              <VimeoPlayer
+                url={videoUrl}
+                state={state}
+                positionSec={positionSec}
+                muted
+                role="host"
+                positionRef={{ current: positionSec } as React.MutableRefObject<number>}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setConfirm('advance')}
+        disabled={!canAdvance}
+        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black transition-opacity disabled:cursor-not-allowed disabled:opacity-30 sm:py-[18px] sm:text-lg"
+      >
+        Tahap selanjutnya
       </button>
-      {open && (
-        <ul className="flex flex-col gap-1 border-t border-white/5 px-2 py-2">
-          {memberIds.map((id) => {
-            const p = players[id]
-            return (
-              <li
-                key={id}
-                className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-white/90"
-              >
-                <span className="flex items-center gap-2">
-                  <Icon icon="mdi:account-circle-outline" className="size-4 text-[#FFB800]" />
-                  {p?.name ?? id}
-                </span>
-                <Icon
-                  icon={p?.connected ? 'mdi:check' : 'mdi:close'}
-                  className={`size-4 ${p?.connected ? 'text-green-500' : 'text-white/40'}`}
-                />
-              </li>
-            )
-          })}
-        </ul>
+
+      {confirm === 'replay' && (
+        <ConfirmModal
+          title="Mulai ulang video"
+          message="Apakah anda yakin untuk memulai ulang video?"
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            setConfirm(null)
+            setEnded(false)
+            setVideoPlayback(sessionId, 'playing', 0)
+          }}
+        />
+      )}
+      {confirm === 'advance' && (
+        <ConfirmModal
+          title="Lanjut ke tahap berikutnya"
+          message="Apakah anda yakin untuk melanjutkan ke tahap berikutnya?"
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            setConfirm(null)
+            onAdvance()
+          }}
+        />
       )}
     </div>
   )
 }
 
-function GateSoloRoster({ players }: { players: Record<string, PlayerPresence> }) {
-  const entries = Object.entries(players)
-  if (entries.length === 0) {
-    return <p className="px-2 py-3 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+// Integrated host-side direct video player. Owns the <video> element, drives
+// it from RTDB videoPlayback, and writes back on play/pause/seek/replay.
+// Overlays state machine:
+//   never-played  → big centered Play button + "Klik untuk memulai video"
+//   playing/paused (mid-video) → prev-10s / play-pause / next-10s (tap-toggle,
+//                                3s auto-hide) + persistent progress bar
+//   ended         → big centered Replay icon + confirmation popup on tap
+function HostDirectPlayer({
+  url,
+  state,
+  positionSec,
+  title,
+  sessionId,
+  ended,
+  onEnded,
+  onReplayRequest,
+}: {
+  url: string
+  state: VideoPlayback['state']
+  positionSec: number
+  title: string
+  sessionId: string
+  ended: boolean
+  onEnded: () => void
+  onReplayRequest: () => void
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [currentTime, setCurrentTime] = useState(positionSec)
+  const [duration, setDuration] = useState(0)
+  const [scrubbing, setScrubbing] = useState(false)
+  const [controlsVisible, setControlsVisible] = useState(false)
+  const hideTimer = useRef<number | null>(null)
+
+  // Sync local <video> to RTDB state. Same drift guard as before to avoid
+  // fighting the host's own writes.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    if (Math.abs(el.currentTime - positionSec) > 0.5) {
+      el.currentTime = positionSec
+    }
+    if (state === 'playing') {
+      el.play().catch((err) => console.warn('video.play() blocked:', err))
+    } else {
+      el.pause()
+    }
+  }, [state, positionSec])
+
+  // Reset local currentTime when RTDB flips to a very different position
+  // (e.g., after a replay to 0). Prevents the progress bar showing stale UI.
+  useEffect(() => {
+    if (!scrubbing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentTime(positionSec)
+    }
+  }, [positionSec, scrubbing])
+
+  // Local timeupdate / duration / ended tracking.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    const onTime = () => {
+      if (!scrubbing) setCurrentTime(el.currentTime)
+    }
+    const onMeta = () => setDuration(el.duration || 0)
+    const onEnd = () => onEnded()
+    el.addEventListener('timeupdate', onTime)
+    el.addEventListener('loadedmetadata', onMeta)
+    el.addEventListener('ended', onEnd)
+    return () => {
+      el.removeEventListener('timeupdate', onTime)
+      el.removeEventListener('loadedmetadata', onMeta)
+      el.removeEventListener('ended', onEnd)
+    }
+  }, [scrubbing, onEnded])
+
+  const flashControls = () => {
+    setControlsVisible(true)
+    if (hideTimer.current) window.clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(() => setControlsVisible(false), 3000)
   }
+
+  const isPlaying = state === 'playing'
+  const neverPlayed = positionSec < 0.1 && !isPlaying && !ended && currentTime < 0.1
+
+  const play = () => {
+    playVideo(sessionId, currentTime)
+  }
+
+  const pause = () => {
+    pauseVideo(sessionId, currentTime)
+  }
+
+  const seekBy = (delta: number) => {
+    const next = Math.max(0, Math.min(duration || 0, currentTime + delta))
+    setVideoPlayback(sessionId, state, next)
+  }
+
+  const seekTo = (n: number) => {
+    setVideoPlayback(sessionId, state, n)
+  }
+
   return (
-    <ul className="flex flex-col gap-1">
-      {entries.map(([id, p]) => (
-        <li
-          key={id}
-          className="flex items-center justify-between rounded-md bg-[#1C1C1E] px-3 py-2 text-sm text-white/90"
-        >
-          <span className="flex items-center gap-2">
-            <Icon icon="mdi:account-circle-outline" className="size-4 text-[#FFB800]" />
-            {p.name}
-          </span>
-          <Icon
-            icon={p.connected ? 'mdi:check' : 'mdi:close'}
-            className={`size-4 ${p.connected ? 'text-green-500' : 'text-white/40'}`}
+    <div className="relative aspect-video w-full cursor-pointer bg-black" onClick={flashControls}>
+      <video ref={videoRef} src={url} muted playsInline className="h-full w-full object-contain" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3 text-sm text-white">
+        {title}
+      </div>
+
+      {neverPlayed && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              play()
+            }}
+            className="flex size-20 items-center justify-center rounded-full bg-black/80 ring-2 ring-white/40"
+            aria-label="Mulai video"
+          >
+            <Icon icon="mdi:play" className="size-10 text-white" />
+          </button>
+          <span className="text-sm text-white/80">Klik untuk memulai video</span>
+        </div>
+      )}
+
+      {ended && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onReplayRequest()
+            }}
+            className="flex size-20 items-center justify-center rounded-full bg-black/80 ring-2 ring-[#FFB800]/60"
+            aria-label="Mulai ulang video"
+          >
+            <Icon icon="mdi:restart" className="size-10 text-[#FFB800]" />
+          </button>
+          <span className="text-sm text-white/80">Klik untuk memainkan kembali</span>
+        </div>
+      )}
+
+      {!neverPlayed && !ended && controlsVisible && (
+        <div className="absolute inset-0 flex items-center justify-center gap-6 bg-black/30">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              seekBy(-10)
+            }}
+            className="flex size-14 items-center justify-center rounded-full bg-black/70 text-white"
+            aria-label="Mundur 10 detik"
+          >
+            <Icon icon="mdi:skip-previous" className="size-8" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (isPlaying) {
+                pause()
+              } else {
+                play()
+              }
+            }}
+            className="flex size-16 items-center justify-center rounded-full bg-black/70 text-white"
+            aria-label={isPlaying ? 'Jeda' : 'Putar'}
+          >
+            <Icon icon={isPlaying ? 'mdi:pause' : 'mdi:play'} className="size-10" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              seekBy(10)
+            }}
+            className="flex size-14 items-center justify-center rounded-full bg-black/70 text-white"
+            aria-label="Maju 10 detik"
+          >
+            <Icon icon="mdi:skip-next" className="size-8" />
+          </button>
+        </div>
+      )}
+
+      {!neverPlayed && !ended && (
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/80 to-transparent p-3">
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={currentTime}
+            onPointerDown={() => setScrubbing(true)}
+            onPointerUp={() => setScrubbing(false)}
+            onInput={(e) => setCurrentTime(Number(e.currentTarget.value))}
+            onChange={(e) => {
+              setScrubbing(false)
+              seekTo(Number(e.currentTarget.value))
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full accent-[#FFB800]"
+            aria-label="Seek video"
           />
-        </li>
-      ))}
-    </ul>
+          <span className="text-xs text-white/80">
+            {fmtTime(currentTime)} / {fmtTime(duration)}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function fmtTime(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+// ─── Confirmation modal ─────────────────────────────────────────────────────
+function ConfirmModal({
+  title,
+  message,
+  onCancel,
+  onConfirm,
+}: {
+  title: string
+  message: string
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-white/10 bg-[#121212] p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-base font-bold text-[#FFB800]">{title}</h2>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Tutup"
+            className="text-white/60 hover:text-white"
+          >
+            <Icon icon="mdi:close" className="size-5" />
+          </button>
+        </div>
+        <p className="text-sm text-white/80">{message}</p>
+        <div className="mt-1 flex gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-lg border border-white/10 py-3 text-sm font-semibold text-white"
+          >
+            Kembali
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
+          >
+            Lanjut
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
