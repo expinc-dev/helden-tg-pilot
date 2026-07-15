@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
 
+import { assets } from '@/assets'
+import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 import type { VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { pauseVideo, playVideo } from '@/lib/session/videoControl'
+import { useMyTeamId, useTeams } from '@/lib/sync/useTeams'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
 
 import type { Role } from './PhaseRouter'
@@ -29,11 +32,15 @@ export function VideoRenderer({
   role,
   sessionId,
   title,
+  playerId,
+  allowTeams,
 }: {
   content: VideoContent
   role: Role
   sessionId: string
   title: string
+  playerId?: string
+  allowTeams?: boolean
 }) {
   const playback = useVideoPlayback(sessionId)
   const url = content.videoUrl
@@ -43,7 +50,9 @@ export function VideoRenderer({
   // symmetry; it's just ignored (central never triggers writes).
   const positionRef = useRef<number>(0)
 
-  if (role === 'player') return <PlayerFoldIn title={title} />
+  if (role === 'player') {
+    return <PlayerFoldIn sessionId={sessionId} playerId={playerId} allowTeams={allowTeams} />
+  }
 
   if (!url) {
     return (
@@ -78,6 +87,7 @@ export function VideoRenderer({
           positionRef={positionRef}
         />
       )}
+      {role === 'central' && state === 'paused' && <CentralPausedOverlay />}
       {role === 'host' && (
         <HostControls sessionId={sessionId} state={state} title={title} positionRef={positionRef} />
       )}
@@ -287,12 +297,64 @@ function HostControls({
 }
 
 // ─── Player fold-in ─────────────────────────────────────────────────────────
-function PlayerFoldIn({ title }: { title: string }) {
+// Passive screen shown to players while the video plays on the central big
+// screen. Layout mirrors PlayerWaitingScreen: Helden logo top, big centered
+// prompt, team pill at the bottom (only when this session has team mode on
+// and this player is assigned to a team).
+function PlayerFoldIn({
+  sessionId,
+  playerId,
+  allowTeams,
+}: {
+  sessionId: string
+  playerId: string | undefined
+  allowTeams: boolean | undefined
+}) {
+  const myTeamId = useMyTeamId(sessionId, playerId ?? '')
+  const teams = useTeams(sessionId)
+  const myTeam = myTeamId ? teams.find((t) => t.id === myTeamId) : undefined
+  const teamName = allowTeams && myTeam?.teamName ? myTeam.teamName : undefined
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8 text-center">
-      <Icon icon="mdi:television" className="size-16 text-[#FFB800]" />
-      <h2 className="text-xl font-bold text-white">{title}</h2>
-      <p className="max-w-sm text-sm text-white/70">Lihat layar utama untuk menonton video.</p>
+    <div
+      className="relative flex min-h-dvh w-full flex-col items-center bg-neutral-950 bg-cover bg-center p-6"
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.player})`,
+        backgroundSize: '100% 100%',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+      }}
+    >
+      <HeldenLogoLotties className="h-6 w-auto" />
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+        <h1
+          className="text-3xl font-bold text-white sm:text-4xl"
+          style={{ textShadow: '0 0 16px rgba(255, 255, 255, 0.5)' }}
+        >
+          Perhatikan <span className="text-[#FFB800]">Layar Utama</span>
+        </h1>
+      </div>
+      {teamName && (
+        <div className="mb-10 rounded-full bg-white/5 px-4 py-2 text-sm text-white/80">
+          Tim {teamName}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Central paused overlay ─────────────────────────────────────────────────
+// Rendered on top of the paused central <video>/iframe. Dims the frame so the
+// pause message reads clearly while keeping the last-frame context visible.
+// Purely visual — pointer-events-none so it never intercepts host input (host
+// isn't on this screen anyway, but keeps intent explicit).
+function CentralPausedOverlay() {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/70 text-center">
+      <div className="flex size-20 items-center justify-center rounded-full bg-black/80 ring-1 ring-white/10">
+        <Icon icon="mdi:pause" className="size-10 text-[#FFB800]" />
+      </div>
+      <h2 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Video dijeda</h2>
+      <p className="text-sm text-white/80 sm:text-base">Menunggu instruksi dari host</p>
     </div>
   )
 }

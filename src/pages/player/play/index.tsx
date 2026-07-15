@@ -131,10 +131,7 @@ export function PlayerView() {
 
   if (phase && sessionId) {
     return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <p className="text-xs text-gray-500">
-          {sessionId} · {meta?.status ?? '—'} · {identity.name ?? identity.id}
-        </p>
+      <div className="flex min-h-dvh flex-col gap-4">
         <TimerBar sessionId={sessionId} phase={phase} role="player" />
         <PhaseRouter
           phase={phase}

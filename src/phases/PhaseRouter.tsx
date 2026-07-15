@@ -76,7 +76,14 @@ function PhaseContentSwitch({
       )
     case 'video':
       return (
-        <VideoRenderer content={content} role={role} sessionId={sessionId} title={phase.title} />
+        <VideoRenderer
+          content={content}
+          role={role}
+          sessionId={sessionId}
+          title={phase.title}
+          playerId={playerId}
+          allowTeams={allowTeams}
+        />
       )
     case 'microlearning':
       return (
