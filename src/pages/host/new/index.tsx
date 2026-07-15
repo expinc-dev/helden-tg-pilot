@@ -17,6 +17,7 @@ export function HostNew() {
   const [name, setName] = useState('')
   const [maxPlayers, setMaxPlayers] = useState('')
   const [maxCentralScreens, setMaxCentralScreens] = useState('')
+  const [maxMembers, setMaxMembers] = useState('')
 
   const submit = async () => {
     setBusy(true)
@@ -28,6 +29,8 @@ export function HostNew() {
         maxCentralScreens: Number(maxCentralScreens) || undefined,
         // ponytail: Multiplayer implies team mode; Single Player disables it. Wire real single-player flow later.
         allowTeams: mode === 'multiplayer',
+        // Only meaningful when allowTeams; createSession drops it otherwise.
+        maxMembers: mode === 'multiplayer' ? Number(maxMembers) || undefined : undefined,
       })
       nav(`/host/${sessionId}`, { replace: true })
     } catch (e) {
@@ -39,7 +42,7 @@ export function HostNew() {
   return (
     // <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
     <div
-      className="flex min-h-[calc(100dvh-2rem)] w-full flex-col justify-between gap-6 overflow-y-auto p-3 sm:p-8"
+      className="flex h-dvh w-full flex-col justify-between gap-6 overflow-y-auto p-3 sm:p-8"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -87,6 +90,15 @@ export function HostNew() {
             inputMode="numeric"
           />
         </div>
+        {mode === 'multiplayer' && (
+          <Field
+            label="Maksimal Anggota per Tim"
+            placeholder="Kosongkan = tanpa batas"
+            value={maxMembers}
+            onChange={setMaxMembers}
+            inputMode="numeric"
+          />
+        )}
 
         <button
           type="button"

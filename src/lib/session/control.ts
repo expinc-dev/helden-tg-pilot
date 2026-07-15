@@ -1,5 +1,5 @@
-import type { Phase, PhasePointer, SessionTimer } from '@helden-inc/tg-schema'
-import { onValue, ref, remove, set, update } from 'firebase/database'
+import type { Phase, PhasePointer, PublishedGame, SessionTimer } from '@helden-inc/tg-schema'
+import { get, onValue, ref, remove, set, update } from 'firebase/database'
 
 import { normalizeCode } from '@/phases/codecheck'
 
@@ -63,9 +63,38 @@ function requireHostUid(): string {
   return uid
 }
 
+// Snapshot of the "played" phase-id set — sessions/{id}/played/{phaseId}: true.
+// Host-only write per RTDB rules; readable by everyone. Used by endLevel to
+// decide when to auto-end the session.
+export async function readPlayedPhases(sessionId: string): Promise<Record<string, true>> {
+  const snap = await get(ref(rtdb, `sessions/${sessionId}/played`))
+  return (snap.val() ?? {}) as Record<string, true>
+}
+
+// Bundle accessor — pilot loads one static in-memory bundle. When CMS publish
+// ships, resolve by sessionId → gameVersionId → Firestore fetch.
+function bundle(): PublishedGame {
+  return demoBundle
+}
+
+// Idle phase = picker resting state in modular flow. Contract: modular bundles
+// MUST place an idle phase at phaseOrder[0]; if the first phase is not idle,
+// fall back to the first idle phase in the bundle, else the first phase.
+function pickerAnchorId(): string {
+  const b = bundle()
+  const first = b.phases[b.phaseOrder[0]]
+  if (first?.type === 'idle') return first.id
+  const anyIdle = b.phaseOrder.find((id) => b.phases[id]?.type === 'idle')
+  return anyIdle ?? b.phaseOrder[0]
+}
+
+async function openPhase(sessionId: string, phase: Phase | undefined) {
+  await Promise.all([openPhaseTimer(sessionId, phase), openPhaseSecrets(sessionId, phase)])
+}
+
 export async function startSession(sessionId: string) {
   const hostUid = requireHostUid()
-  const firstPhase = demoBundle.phaseOrder[0]
+  const firstPhase = bundle().phaseOrder[0]
   const pointer: PhasePointer = {
     activePhaseId: firstPhase,
     changedAt: Date.now(),
@@ -75,10 +104,7 @@ export async function startSession(sessionId: string) {
     'meta/status': 'live',
     phasePointer: pointer,
   })
-  await Promise.all([
-    openPhaseTimer(sessionId, demoBundle.phases[firstPhase]),
-    openPhaseSecrets(sessionId, demoBundle.phases[firstPhase]),
-  ])
+  await openPhase(sessionId, bundle().phases[firstPhase])
 }
 
 export async function nextPhase(sessionId: string, currentPhaseId: string | undefined) {
@@ -111,9 +137,88 @@ export async function nextPhase(sessionId: string, currentPhaseId: string | unde
   }
   const pointer: PhasePointer = { activePhaseId: next, changedAt: Date.now(), changedBy: hostUid }
   await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
-  await Promise.all([
-    openPhaseTimer(sessionId, demoBundle.phases[next]),
-    openPhaseSecrets(sessionId, demoBundle.phases[next]),
-  ])
+  await openPhase(sessionId, demoBundle.phases[next])
   return { done: false as const, activePhaseId: next }
+}
+
+// ─── Modular flow ───────────────────────────────────────────────────────────
+// jumpToPhase: host taps a level card on the picker. Sets phasePointer to the
+// chosen phase and opens its timer/secrets. Does NOT flush the current phase —
+// in modular flow, the current phase is expected to be idle (picker anchor)
+// when this is called; if it isn't, the caller (endLevel) has already flushed.
+// Host-only via database.rules.json.
+export async function jumpToPhase(sessionId: string, phaseId: string) {
+  const hostUid = requireHostUid()
+  const phase = bundle().phases[phaseId]
+  if (!phase) throw new Error(`jumpToPhase: unknown phaseId ${phaseId}`)
+  const pointer: PhasePointer = {
+    activePhaseId: phaseId,
+    changedAt: Date.now(),
+    changedBy: hostUid,
+  }
+  await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
+  await openPhase(sessionId, phase)
+}
+
+// endLevel: modular flow. Called from the host when a played phase is done.
+// Flushes durable results (once), marks the phase as played, then either
+// returns to the picker anchor (idle) or auto-ends the session if every
+// non-idle phase in phaseOrder is now played.
+export async function endLevel(sessionId: string, currentPhaseId: string) {
+  const b = bundle()
+  const current = b.phases[currentPhaseId]
+  if (!current) return
+  if (current.type === 'idle') return // nothing to flush on the picker anchor
+
+  try {
+    await flushPhaseResults(sessionId, current)
+  } catch (e) {
+    console.error('flushPhaseResults failed for', currentPhaseId, e)
+  }
+  await set(ref(rtdb, `sessions/${sessionId}/played/${currentPhaseId}`), true)
+
+  const played = await readPlayedPhases(sessionId)
+  const playable = b.phaseOrder.filter((id) => b.phases[id]?.type !== 'idle')
+  const allPlayed = playable.length > 0 && playable.every((id) => played[id])
+
+  if (allPlayed) {
+    await endSession(sessionId, { flushCurrent: false })
+    return { done: true as const }
+  }
+
+  const anchor = pickerAnchorId()
+  const hostUid = requireHostUid()
+  const pointer: PhasePointer = {
+    activePhaseId: anchor,
+    changedAt: Date.now(),
+    changedBy: hostUid,
+  }
+  await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
+  await openPhase(sessionId, b.phases[anchor])
+  return { done: false as const }
+}
+
+// endSession: host-triggered terminal exit. Optional flushCurrent flushes the
+// active non-idle phase before ending (default true — safe for manual end from
+// mid-level; endLevel calls with false because it just flushed).
+export async function endSession(
+  sessionId: string,
+  opts: { flushCurrent?: boolean } = { flushCurrent: true }
+) {
+  if (opts.flushCurrent) {
+    const pointerSnap = await get(ref(rtdb, `sessions/${sessionId}/phasePointer`))
+    const activeId = (pointerSnap.val() as PhasePointer | null)?.activePhaseId
+    const active = activeId ? bundle().phases[activeId] : undefined
+    if (active && active.type !== 'idle') {
+      try {
+        await flushPhaseResults(sessionId, active)
+      } catch (e) {
+        console.error('flushPhaseResults failed on endSession for', activeId, e)
+      }
+    }
+  }
+  await Promise.all([
+    update(ref(rtdb, `sessions/${sessionId}/meta`), { status: 'ended' }),
+    remove(ref(rtdb, `sessions/${sessionId}/timer`)),
+  ])
 }

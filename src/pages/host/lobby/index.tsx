@@ -4,6 +4,8 @@ import { useParams } from 'react-router-dom'
 import { assets } from '@/assets'
 import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
+import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
+import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 import { toast } from 'sonner'
@@ -12,8 +14,9 @@ import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 
 import { demoBundle } from '@/lib/demoBundle'
-import { nextPhase, startSession } from '@/lib/session/control'
+import { endLevel, endSession, jumpToPhase, nextPhase, startSession } from '@/lib/session/control'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
+import { usePlayedPhases } from '@/lib/sync/usePlayedPhases'
 import { usePresence, useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
 import { useTimer } from '@/lib/sync/useTimer'
@@ -28,6 +31,9 @@ export function HostView() {
 
   const phase = pointer ? demoBundle.phases[pointer.activePhaseId] : null
   const timer = useTimer(sessionId, phase)
+  const played = usePlayedPhases(sessionId)
+  const flowMode = demoBundle.flowMode ?? 'sequence'
+  const onPicker = flowMode === 'modular' && phase?.type === 'idle'
 
   const advancedRef = useRef<string | null>(null)
   useEffect(() => {
@@ -40,9 +46,11 @@ export function HostView() {
       advancedRef.current !== phase.id
     ) {
       advancedRef.current = phase.id
-      void nextPhase(sessionId, phase.id)
+      // Modular: timer-expiry auto-advance means "end this level → back to picker",
+      // not "next phase in order". Sequence: original nextPhase behaviour.
+      void (flowMode === 'modular' ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
     }
-  }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId])
+  }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, flowMode])
 
   if (!meta || !config || !sessionId) {
     return <div className="p-8 text-sm text-gray-500">Loading session {sessionId}…</div>
@@ -61,7 +69,7 @@ export function HostView() {
     return (
       // <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
       <div
-        className="flex min-h-[calc(100dvh-2rem)] w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+        className="flex min-h-dvh w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
         style={{
           backgroundImage: `url(${assets.images.backgrounds.auth})`,
           backgroundSize: '100% 100%',
@@ -115,7 +123,29 @@ export function HostView() {
     )
   }
 
-  // Live / paused / ended — original functional view (unchanged behavior).
+  // Live: modular → picker (when at idle) or phase render + End level.
+  //       sequence → original Next phase button.
+  if (meta.status === 'live' && onPicker) {
+    return (
+      <div
+        className="flex min-h-dvh flex-col gap-6 p-4 sm:p-8"
+        style={{
+          backgroundImage: `url(${assets.images.backgrounds.auth})`,
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'top',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <PickerGrid
+          bundle={demoBundle}
+          played={played}
+          onPick={(phaseId) => jumpToPhase(sessionId, phaseId)}
+          onEndSession={() => endSession(sessionId)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col gap-6 p-8">
       <div>
@@ -126,19 +156,29 @@ export function HostView() {
       </div>
 
       {meta.status === 'live' &&
-        (() => {
-          const order = demoBundle.phaseOrder
-          const isLast =
-            !!pointer?.activePhaseId && order.indexOf(pointer.activePhaseId) === order.length - 1
-          return (
-            <button
-              onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
-              className="w-fit rounded border px-4 py-2"
-            >
-              {isLast ? 'End session' : 'Next phase'}
-            </button>
-          )
-        })()}
+        phase &&
+        (flowMode === 'modular' ? (
+          <button
+            onClick={() => endLevel(sessionId, phase.id)}
+            className="w-fit rounded border px-4 py-2"
+          >
+            Akhiri Level
+          </button>
+        ) : (
+          (() => {
+            const order = demoBundle.phaseOrder
+            const isLast =
+              !!pointer?.activePhaseId && order.indexOf(pointer.activePhaseId) === order.length - 1
+            return (
+              <button
+                onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
+                className="w-fit rounded border px-4 py-2"
+              >
+                {isLast ? 'End session' : 'Next phase'}
+              </button>
+            )
+          })()
+        ))}
 
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
@@ -156,6 +196,10 @@ export function HostView() {
             allowTeams={config.allowTeams}
           />
         </div>
+      )}
+
+      {meta.status === 'live' && phase && (
+        <HostPresenceSpread sessionId={sessionId} phase={phase} players={players} />
       )}
     </div>
   )

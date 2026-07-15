@@ -105,8 +105,11 @@ const sortGame: Phase = {
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
-  schemaVersion: '1.2.0',
+  schemaVersion: '2.1.0',
   title: 'Pilot demo',
+  // Modular flow: phaseOrder[0] MUST be an idle phase — it's the picker anchor.
+  // Non-idle phases become level cards in the Host page control picker.
+  flowMode: 'modular',
   phaseOrder: [idle.id, intro.id, puzzle.id, sortGame.id],
   phases: { [idle.id]: idle, [intro.id]: intro, [puzzle.id]: puzzle, [sortGame.id]: sortGame },
   publishedAt: Date.now(),

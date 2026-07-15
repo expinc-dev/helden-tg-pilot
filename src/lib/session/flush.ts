@@ -149,12 +149,23 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
     await update(ref(rtdb, `sessions/${sessionId}`), durablePatch)
   }
 
-  // Live aggregate map — same store, different subtree. Boundary-only for pilot;
-  // for a live leaderboard, add per-submit tx on aggregates/scores|teamScores.
+  // Live aggregate map — same store, different subtree. Accumulates ACROSS
+  // phases: each flush adds the current phase's score to the prior total, so a
+  // later phase with score=0 (microlearning, idle) does not wipe an earlier
+  // scoring phase's contribution. Safe because flushPhaseResults runs exactly
+  // once per phase transition (sequence: nextPhase; modular: endLevel — cards
+  // disable after played so no replay).
+  //
+  // Boundary-only for pilot; for a live leaderboard, add per-submit tx on
+  // aggregates/scores|teamScores.
   const aggKey = keyBy === 'playerId' ? 'scores' : 'teamScores'
+  const priorSnap = await get(ref(rtdb, `sessions/${sessionId}/aggregates/${aggKey}`))
+  const prior = (priorSnap.val() ?? {}) as Record<string, number>
   const patch: Record<string, number> = {}
   for (const [keyId, r] of Object.entries(results)) {
-    if (typeof r.score === 'number') patch[`${aggKey}/${keyId}`] = r.score
+    if (typeof r.score === 'number') {
+      patch[`${aggKey}/${keyId}`] = (prior[keyId] ?? 0) + r.score
+    }
   }
   if (Object.keys(patch).length > 0) {
     await update(ref(rtdb, `sessions/${sessionId}/aggregates`), patch)
