@@ -15,6 +15,7 @@ const intro: Phase = {
   type: 'microlearning',
   title: 'Onboarding',
   syncMode: 'self_paced',
+  durationMin: 5,
   // Demo-only: exercises the team_leader_only path (useTeamRole + resolveStepTarget)
   // so it's actually clickable in Team Mode — otherwise nothing in this bundle did.
   teamMode: 'team_leader_only',
@@ -41,6 +42,7 @@ const puzzle: Phase = {
   type: 'codeinput',
   title: 'Team puzzle',
   syncMode: 'lockstep',
+  durationMin: 3,
   // Codeinput state lives at teams/{teamId}/codeinput — inherently team-scoped.
   // team_leader_only attributes the shared solve to the team once (not once per
   // member), so durable results land in teamResults/{teamId} with the full 146.
@@ -71,6 +73,7 @@ const video: Phase = {
   type: 'video',
   title: 'Video briefing',
   syncMode: 'lockstep',
+  durationMin: 10,
   roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: [] } },
   content: {
     type: 'video',
@@ -91,6 +94,7 @@ const sortGame: Phase = {
   type: 'minigame',
   title: 'Order the steps',
   syncMode: 'lockstep',
+  durationMin: 2,
   teamMode: 'team_leader_only',
   roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['scores'] } },
   timer: {
@@ -122,11 +126,13 @@ const sortGame: Phase = {
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
-  schemaVersion: '2.1.1',
+  schemaVersion: '3.0.0',
   title: 'Pilot demo',
   // Modular flow: phaseOrder[0] MUST be an idle phase — it's the picker anchor.
   // Non-idle phases become level cards in the Host page control picker.
-  flowMode: 'modular',
+  // 'modular-progressive' locks all cards except the next unplayed one; swap
+  // to 'modular-open' to let the trainer jump anywhere at any time.
+  flowMode: 'modular-progressive',
   phaseOrder: [idle.id, intro.id, video.id, puzzle.id, sortGame.id],
   phases: {
     [idle.id]: idle,

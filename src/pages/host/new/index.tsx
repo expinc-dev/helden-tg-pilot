@@ -93,7 +93,7 @@ export function HostNew() {
         {mode === 'multiplayer' && (
           <Field
             label="Maksimal Anggota per Tim"
-            placeholder="Kosongkan = tanpa batas"
+            placeholder="Maksimal Anggota per Tim"
             value={maxMembers}
             onChange={setMaxMembers}
             inputMode="numeric"
@@ -103,8 +103,14 @@ export function HostNew() {
         <button
           type="button"
           onClick={submit}
-          disabled={busy}
-          className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:opacity-50 sm:rounded-lg sm:py-[18px] sm:text-lg"
+          disabled={
+            busy ||
+            !name.trim() ||
+            !maxPlayers ||
+            !maxCentralScreens ||
+            (mode === 'multiplayer' && !maxMembers)
+          }
+          className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-lg sm:py-[18px] sm:text-lg"
         >
           {busy ? 'Memulai…' : 'Mulai Permainan'}
         </button>

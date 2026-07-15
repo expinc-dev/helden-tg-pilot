@@ -32,8 +32,9 @@ export function HostView() {
   const phase = pointer ? demoBundle.phases[pointer.activePhaseId] : null
   const timer = useTimer(sessionId, phase)
   const played = usePlayedPhases(sessionId)
-  const flowMode = demoBundle.flowMode ?? 'sequence'
-  const onPicker = flowMode === 'modular' && phase?.type === 'idle'
+  const flowMode = demoBundle.flowMode ?? 'sequential'
+  const isModular = flowMode === 'modular-open' || flowMode === 'modular-progressive'
+  const onPicker = isModular && phase?.type === 'idle'
 
   const advancedRef = useRef<string | null>(null)
   useEffect(() => {
@@ -48,9 +49,9 @@ export function HostView() {
       advancedRef.current = phase.id
       // Modular: timer-expiry auto-advance means "end this level → back to picker",
       // not "next phase in order". Sequence: original nextPhase behaviour.
-      void (flowMode === 'modular' ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
+      void (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
     }
-  }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, flowMode])
+  }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, isModular])
 
   if (!meta || !config || !sessionId) {
     return <div className="p-8 text-sm text-gray-500">Loading session {sessionId}…</div>
@@ -157,7 +158,7 @@ export function HostView() {
 
       {meta.status === 'live' &&
         phase &&
-        (flowMode === 'modular' ? (
+        (isModular ? (
           <button
             onClick={() => endLevel(sessionId, phase.id)}
             className="w-fit rounded border px-4 py-2"
