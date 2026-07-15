@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
 import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
-import type { VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
+import type { PlayerPresence, VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { pauseVideo, playVideo } from '@/lib/session/videoControl'
-import { useMyTeamId, useTeams } from '@/lib/sync/useTeams'
+import { usePresence } from '@/lib/sync/useSession'
+import { type TeamRow, useMyTeamId, useTeams } from '@/lib/sync/useTeams'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
 
 import type { Role } from './PhaseRouter'
@@ -339,6 +340,193 @@ function PlayerFoldIn({
         </div>
       )}
     </div>
+  )
+}
+
+// ─── Host video screen ──────────────────────────────────────────────────────
+// Single screen for the host during a video phase: muted preview at top,
+// Jeda/Putar toggle immediately below it, then the roster, then the yellow
+// "Tahap selanjutnya" button which advances the phase (endLevel in modular,
+// nextPhase in sequential).
+//
+// Rendered as a top-level branch from HostView (see lobby/index.tsx) so its
+// full-bleed background escapes the standard live wrapper — otherwise the
+// wrapper's own padding leaks the surrounding page background as a white
+// bar at the top on TabletFrame simulations.
+export function VideoHostScreen({
+  sessionId,
+  allowTeams,
+  videoTitle,
+  videoUrl,
+  onAdvance,
+  advanceLabel,
+}: {
+  sessionId: string
+  allowTeams: boolean
+  videoTitle: string
+  videoUrl?: string
+  onAdvance: () => void
+  advanceLabel: string
+}) {
+  const teams = useTeams(sessionId)
+  const { players } = usePresence(sessionId)
+  const playback = useVideoPlayback(sessionId)
+  const state = playback?.state ?? 'paused'
+  const positionSec = playback?.positionSec ?? 0
+  const positionRef = useRef<number>(0)
+
+  const provider = videoUrl ? detectProvider(videoUrl) : null
+
+  return (
+    <div
+      className="flex min-h-dvh w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.auth})`,
+        backgroundSize: '100% 100%',
+        backgroundPosition: 'top',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
+        Host
+      </div>
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">{videoTitle}</h1>
+        <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
+          Pastikan semua peserta telah bergabung sebelum memulai sesi
+        </p>
+      </div>
+
+      <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/5 bg-black">
+        {videoUrl && provider === 'vimeo' && (
+          <VimeoPlayer
+            url={videoUrl}
+            state={state}
+            positionSec={positionSec}
+            muted
+            role="host"
+            positionRef={positionRef}
+          />
+        )}
+        {videoUrl && provider === 'direct' && (
+          <DirectPlayer
+            url={videoUrl}
+            state={state}
+            positionSec={positionSec}
+            muted
+            role="host"
+            positionRef={positionRef}
+          />
+        )}
+      </div>
+
+      <HostControls
+        sessionId={sessionId}
+        state={state}
+        title={videoTitle}
+        positionRef={positionRef}
+      />
+
+      <div className="flex flex-1 flex-col gap-2 rounded-2xl border border-white/5 bg-[#121212] p-3 sm:p-4">
+        {allowTeams && teams.length > 0 ? (
+          teams.map((team) => <GateTeamRow key={team.id} team={team} players={players} />)
+        ) : (
+          <GateSoloRoster players={players} />
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onAdvance}
+        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
+      >
+        {advanceLabel}
+      </button>
+    </div>
+  )
+}
+
+function GateTeamRow({
+  team,
+  players,
+}: {
+  team: TeamRow
+  players: Record<string, PlayerPresence>
+}) {
+  const [open, setOpen] = useState(false)
+  const memberIds = Object.keys(team.memberIds ?? {})
+  const count = memberIds.length
+  return (
+    <div className="rounded-xl bg-[#1C1C1E]">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-white/90 sm:text-base"
+      >
+        <span className="flex items-center gap-2">
+          <Icon icon="mdi:account-group" className="size-4 text-[#FFB800]" />
+          <span className="font-medium">{team.teamName ?? 'Team'}</span>
+        </span>
+        <span className="flex items-center gap-2 text-[#FFB800]">
+          <span className="text-sm font-medium">
+            {count}/{count}
+          </span>
+          <Icon
+            icon="mdi:chevron-down"
+            className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </span>
+      </button>
+      {open && (
+        <ul className="flex flex-col gap-1 border-t border-white/5 px-2 py-2">
+          {memberIds.map((id) => {
+            const p = players[id]
+            return (
+              <li
+                key={id}
+                className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-white/90"
+              >
+                <span className="flex items-center gap-2">
+                  <Icon icon="mdi:account-circle-outline" className="size-4 text-[#FFB800]" />
+                  {p?.name ?? id}
+                </span>
+                <Icon
+                  icon={p?.connected ? 'mdi:check' : 'mdi:close'}
+                  className={`size-4 ${p?.connected ? 'text-green-500' : 'text-white/40'}`}
+                />
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function GateSoloRoster({ players }: { players: Record<string, PlayerPresence> }) {
+  const entries = Object.entries(players)
+  if (entries.length === 0) {
+    return <p className="px-2 py-3 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+  }
+  return (
+    <ul className="flex flex-col gap-1">
+      {entries.map(([id, p]) => (
+        <li
+          key={id}
+          className="flex items-center justify-between rounded-md bg-[#1C1C1E] px-3 py-2 text-sm text-white/90"
+        >
+          <span className="flex items-center gap-2">
+            <Icon icon="mdi:account-circle-outline" className="size-4 text-[#FFB800]" />
+            {p.name}
+          </span>
+          <Icon
+            icon={p.connected ? 'mdi:check' : 'mdi:close'}
+            className={`size-4 ${p.connected ? 'text-green-500' : 'text-white/40'}`}
+          />
+        </li>
+      ))}
+    </ul>
   )
 }
 

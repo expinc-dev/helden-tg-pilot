@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
+import { VideoHostScreen } from '@/phases/Video'
 
 import { demoBundle } from '@/lib/demoBundle'
 import { endLevel, endSession, jumpToPhase, nextPhase, startSession } from '@/lib/session/control'
@@ -74,12 +75,33 @@ export function HostView() {
     )
   }
 
+  // Video-phase host screen: rendered top-level so its full-bleed layout
+  // escapes the standard live wrapper's padding (which would otherwise leak
+  // the parent background as a white bar on TabletFrame simulations). The
+  // bottom yellow button advances the phase — endLevel in modular flow,
+  // nextPhase in sequential.
+  if (meta.status === 'live' && phase && phase.content.type === 'video') {
+    const advance = isModular
+      ? () => endLevel(sessionId, phase.id)
+      : () => nextPhase(sessionId, pointer?.activePhaseId)
+    return (
+      <VideoHostScreen
+        sessionId={sessionId}
+        allowTeams={!!config.allowTeams}
+        videoTitle={phase.title}
+        videoUrl={phase.content.videoUrl}
+        onAdvance={advance}
+        advanceLabel="Tahap selanjutnya"
+      />
+    )
+  }
+
   // Live: modular → picker (when at idle) or phase render + End level.
   //       sequence → original Next phase button.
   if (meta.status === 'live' && onPicker) {
     return (
       <div
-        className="flex min-h-dvh flex-col gap-6 p-4 sm:p-8"
+        className="flex min-h-dvh flex-col gap-6"
         style={{
           backgroundImage: `url(${assets.images.backgrounds.auth})`,
           backgroundSize: '100% 100%',
@@ -98,15 +120,8 @@ export function HostView() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-8">
-      <div>
-        <h1 className="text-xl font-semibold">
-          {meta.name ? `${meta.name} — ` : ''}Host — {meta.status}
-        </h1>
-        <p className="text-xs text-gray-500">{sessionId}</p>
-      </div>
-
-      {meta.status === 'live' &&
+    <div className="flex min-h-dvh flex-col gap-6 p-0">
+      {/* {meta.status === 'live' &&
         phase &&
         (isModular ? (
           <button
@@ -129,14 +144,14 @@ export function HostView() {
               </button>
             )
           })()
-        ))}
+        ))} */}
 
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
       {meta.status === 'live' && phase && (
-        <div className="rounded border p-4">
+        <div>
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs text-gray-500">Now playing: {phase.id}</p>
+            {/* <p className="text-xs text-gray-500">Now playing: {phase.id}</p> */}
             <TimerBar sessionId={sessionId} phase={phase} role="host" />
           </div>
           <PhaseRouter
