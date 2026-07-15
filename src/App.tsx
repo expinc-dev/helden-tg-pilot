@@ -2,6 +2,7 @@ import { Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import { TabletFrame } from './components/TabletFrame'
 import { Toaster } from './components/ui/sonner'
+import { OrientationProvider } from './lib/orientation-provider'
 import { useAuthUid } from './lib/useAuthUid'
 import { CentralJoin } from './pages/central/join'
 import { CentralView } from './pages/central/screen'
@@ -37,7 +38,7 @@ export function App() {
   }
 
   return (
-    <>
+    <OrientationProvider>
       <Toaster />
       <Routes>
         <Route path="/" element={<Landing />} />
@@ -85,7 +86,7 @@ export function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </OrientationProvider>
   )
 }
 
