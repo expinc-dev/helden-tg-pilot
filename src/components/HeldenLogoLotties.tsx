@@ -1,17 +1,12 @@
 import { assets } from '@/assets'
-import LottieImport from 'lottie-react'
-
-// Vite's CJS/UMD interop for lottie-react sometimes resolves the default
-// import to the whole module-exports object instead of the component itself
-// — unwrap defensively rather than depend on a particular bundler quirk.
-const Lottie =
-  (LottieImport as unknown as { default?: typeof LottieImport }).default ?? LottieImport
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 export function HeldenLogoLotties({ className }: { className?: string }) {
   return (
-    <Lottie
-      animationData={assets.lotties.heldenLogo}
+    <DotLottieReact
+      src={assets.lotties.heldenLogo}
       loop
+      autoplay
       className={className}
       aria-label="Helden Inc."
     />

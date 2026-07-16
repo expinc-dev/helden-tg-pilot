@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import { assets } from '@/assets'
-import LottieImport from 'lottie-react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 import { useIsLandscapeAllowed } from '@/lib/orientation'
-
-// Vite CJS/UMD interop — same defensive unwrap pattern used by HeldenLogoLotties.
-const Lottie =
-  (LottieImport as unknown as { default?: typeof LottieImport }).default ?? LottieImport
 
 // Trigger: landscape orientation at ANY viewport width. The app is
 // mobile-portrait-first for host/player/join; a landscape browser (dev or real
@@ -63,9 +59,10 @@ function Overlay() {
           backgroundRepeat: 'no-repeat',
         }}
       >
-        <Lottie
-          animationData={assets.lotties.pleaseRotate}
+        <DotLottieReact
+          src={assets.lotties.pleaseRotate}
           loop
+          autoplay
           className="size-80 flex-shrink-0 -rotate-90"
           aria-hidden
         />

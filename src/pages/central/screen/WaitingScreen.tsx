@@ -26,7 +26,7 @@ export function WaitingScreen({ sessionId, joinCode }: { sessionId?: string; joi
       <FullscreenToggle />
 
       <div className="flex flex-1 items-center justify-center gap-10">
-        <HeldenLogoLotties className="h-32 w-auto" />
+        <HeldenLogoLotties className="h-52 w-auto" />
 
         {joinUrl && (
           <>
