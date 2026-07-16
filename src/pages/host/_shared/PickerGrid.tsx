@@ -55,7 +55,7 @@ export function PickerGrid({
       <button
         type="button"
         onClick={onEndSession}
-        className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+        className="mb-5 w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
       >
         Akhiri Sesi
       </button>

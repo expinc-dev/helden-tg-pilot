@@ -18,7 +18,7 @@ import { flushPhaseResults } from './flush'
 // Grab it with a one-shot onValue (serverTime − localTime, ms; 0 if unresolved).
 // The callback can fire SYNCHRONOUSLY during onValue(), before its return value is
 // assigned — so init unsub to a no-op and defer the real unsubscribe to a microtask.
-function serverOffsetOnce(): Promise<number> {
+export function serverOffsetOnce(): Promise<number> {
   return new Promise((resolve) => {
     let unsub = () => {}
     let settled = false
@@ -54,13 +54,32 @@ async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
 // — the secret itself was never hidden, but after this it's only ever compared
 // server-side, inside a database.rules.json .validate rule the player's device
 // has no read access to. See phases/CodeInput.tsx for the guess-side of this.
+// Quiz answer keys — kept here (host-only call site) so they never leak via
+// the phase content that every client imports from demoBundle. The keys map
+// phaseId → questionIndex → correctOptionId.
+// Exported for HostQuiz's reveal — the host reads the key from here directly
+// (rules keep secrets/* read-denied for everyone; only .validate compares it).
+export const quizAnswerKeys: Record<string, Record<number, string>> = {
+  'p-quiz': {
+    0: 'b',
+    1: 'c',
+    2: 'b',
+    3: 'a',
+    4: 'c',
+  },
+}
+
 async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
-  if (!phase || phase.content.type !== 'codeinput') return
-  const { expected, caseSensitive } = phase.content
-  await set(
-    ref(rtdb, `sessions/${sessionId}/secrets/${phase.id}`),
-    normalizeCode(expected, caseSensitive)
-  )
+  if (!phase) return
+  if (phase.content.type === 'codeinput') {
+    const { expected, caseSensitive } = phase.content
+    await set(
+      ref(rtdb, `sessions/${sessionId}/secrets/${phase.id}`),
+      normalizeCode(expected, caseSensitive)
+    )
+  } else if (phase.content.type === 'quiz' && quizAnswerKeys[phase.id]) {
+    await set(ref(rtdb, `sessions/${sessionId}/secrets/${phase.id}`), quizAnswerKeys[phase.id])
+  }
 }
 
 function requireHostUid(): string {
@@ -112,6 +131,7 @@ async function openPhase(sessionId: string, phase: Phase | undefined) {
     openPhaseTimer(sessionId, phase),
     openPhaseSecrets(sessionId, phase),
     openPhaseVideoPlayback(sessionId, phase),
+    remove(ref(rtdb, `sessions/${sessionId}/centralStep`)),
   ])
 }
 

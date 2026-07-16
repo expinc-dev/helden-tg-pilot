@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
-import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
+import { Header } from '@/pages/host/_shared/Header'
 import type { VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 import { pauseVideo, playVideo, setVideoPlayback } from '@/lib/session/videoControl'
 import { useMyTeamId, useTeams } from '@/lib/sync/useTeams'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
-import { useFullscreen } from '@/lib/useFullscreen'
 
 import type { Role } from './PhaseRouter'
 
@@ -328,7 +328,7 @@ function PlayerFoldIn({
         backgroundPosition: 'center',
       }}
     >
-      <HeldenLogoLotties className="h-6 w-auto" />
+      <DotLottieReact src={assets.lotties.heldenLogo} autoplay loop className="h-25 w-auto" />
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
         <h1
           className="text-3xl font-bold text-white sm:text-4xl"
@@ -376,8 +376,6 @@ export function VideoHostScreen({
   const provider = videoUrl ? detectProvider(videoUrl) : null
   const canAdvance = ended
 
-  const { isFullscreen, toggle } = useFullscreen()
-
   return (
     <div
       className="relative flex min-h-dvh w-full flex-col gap-2 overflow-y-auto p-3 sm:p-5"
@@ -388,22 +386,11 @@ export function VideoHostScreen({
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Fullscreen button*/}
-      <div className="flex items-center justify-end">
-        <div className="z-10 w-fit rounded-full bg-black/30 p-2" onClick={toggle}>
-          <Icon
-            icon={isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'}
-            className="size-8 text-yellow-400"
-          />
-        </div>
-      </div>
+      <Header />
 
       <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-[#08080833] p-4 sm:gap-5 sm:p-6">
-        <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
-          Host
-        </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Mission Control</h1>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">Video Control</h1>
           <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
             Anda memegang kendali penuh atas video di layar utama.
           </p>

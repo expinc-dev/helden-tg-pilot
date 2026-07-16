@@ -6,6 +6,7 @@ import { TeamCodeInput } from './CodeInput'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { PresentationRenderer } from './Presentation'
+import { QuizRenderer } from './Quiz'
 import { TeamFocusLeader } from './TeamFocusLeader'
 import { VideoRenderer } from './Video'
 import { UnknownTemplate } from './minigames/UnknownTemplate'
@@ -93,6 +94,18 @@ function PhaseContentSwitch({
           role={role}
           sessionId={sessionId}
           phaseId={phase.id}
+        />
+      )
+    case 'quiz':
+      return (
+        <QuizRenderer
+          content={content}
+          role={role}
+          sessionId={sessionId}
+          phaseId={phase.id}
+          playerId={playerId}
+          teamId={teamId}
+          phase={phase}
         />
       )
     case 'microlearning':

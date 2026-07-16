@@ -183,19 +183,98 @@ const sortGame: Phase = {
   },
 }
 
+const quiz: Phase = {
+  id: 'p-quiz',
+  type: 'quiz',
+  title: 'Kuis Cepat',
+  syncMode: 'lockstep',
+  // ponytail: no phase-level timer — quiz manages per-question timers via useQuizStep.startTimer
+  timer: undefined,
+  scoring: {
+    mode: 'correctness_and_speed',
+    maxPoints: 1000,
+    speedBonus: { maxBonus: 500, decaySeconds: 20 },
+  },
+  roles: {
+    central: { enabled: true, showTimer: true, showResults: true },
+    player: { enabled: true, showTimer: true },
+    host: { monitor: ['answers', 'scores'] },
+  },
+  content: {
+    type: 'quiz',
+    mode: 'central_prompt',
+    revealAnswers: true,
+    readingTimerSeconds: 7,
+    answeringTimerSeconds: 7,
+    questions: [
+      {
+        qType: 'single_choice',
+        prompt: [{ kind: 'text', markdown: 'Data rahasia perusahaan sebaiknya...' }],
+        options: [
+          { id: 'a', label: 'Boleh ditempel ke AI publik asal cepat' },
+          { id: 'b', label: 'Jangan ditempel ke AI publik' },
+          { id: 'c', label: 'Boleh kalau dihapus setelahnya' },
+        ],
+      },
+      {
+        qType: 'single_choice',
+        prompt: [{ kind: 'text', markdown: 'Apa langkah pertama dalam membuat prompt yang baik?' }],
+        options: [
+          { id: 'a', label: 'Langsung tulis pertanyaan panjang' },
+          { id: 'b', label: 'Copy paste dari internet' },
+          { id: 'c', label: 'Tentukan tujuan dan konteks' },
+          { id: 'd', label: 'Gunakan bahasa Inggris saja' },
+        ],
+      },
+      {
+        qType: 'single_choice',
+        prompt: [{ kind: 'text', markdown: 'Hasil output AI generatif sebaiknya...' }],
+        options: [
+          { id: 'a', label: 'Langsung dipakai tanpa review' },
+          { id: 'b', label: 'Selalu di-review dan divalidasi' },
+          { id: 'c', label: 'Dianggap 100% akurat' },
+        ],
+      },
+      {
+        qType: 'single_choice',
+        prompt: [
+          { kind: 'text', markdown: 'Manakah contoh penggunaan AI yang etis di tempat kerja?' },
+        ],
+        options: [
+          { id: 'a', label: 'Membantu menyusun draft dokumen internal' },
+          { id: 'b', label: 'Mengupload data klien ke chatbot publik' },
+          { id: 'c', label: 'Meng-generate review palsu untuk produk' },
+        ],
+      },
+      {
+        qType: 'single_choice',
+        prompt: [
+          { kind: 'text', markdown: 'Apa keuntungan utama menggunakan AI dalam workflow tim?' },
+        ],
+        options: [
+          { id: 'a', label: 'Menggantikan seluruh anggota tim' },
+          { id: 'b', label: 'Membuat keputusan bisnis otomatis' },
+          { id: 'c', label: 'Mempercepat tugas repetitif dan ideasi' },
+        ],
+      },
+    ],
+  },
+}
+
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
-  schemaVersion: '3.0.0',
+  schemaVersion: '3.2.0',
   title: 'Pilot demo',
   // Modular flow: phaseOrder[0] MUST be an idle phase — it's the picker anchor.
   // Non-idle phases become level cards in the Host page control picker.
   // 'modular-progressive' locks all cards except the next unplayed one; swap
   // to 'modular-open' to let the trainer jump anywhere at any time.
   flowMode: 'modular-progressive',
-  phaseOrder: [idle.id, presentation.id, intro.id, video.id, puzzle.id, sortGame.id],
+  phaseOrder: [idle.id, quiz.id, intro.id, video.id, presentation.id, puzzle.id, sortGame.id],
   phases: {
     [idle.id]: idle,
+    [quiz.id]: quiz,
     [presentation.id]: presentation,
     [intro.id]: intro,
     [video.id]: video,

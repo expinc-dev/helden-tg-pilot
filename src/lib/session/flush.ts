@@ -90,6 +90,13 @@ function resolveCorrectness(
 }
 
 export async function flushPhaseResults(sessionId: string, phase: Phase): Promise<void> {
+  // Quiz phases: scores were already written per-question to aggregates/ by
+  // the host during the quiz. Persist them as durable results directly.
+  if (phase.content.type === 'quiz' && phase.content.mode === 'central_prompt') {
+    await flushQuizFromAggregates(sessionId, phase)
+    return
+  }
+
   const [playersSnap, teamsSnap, pointerSnap] = await Promise.all([
     get(ref(rtdb, `sessions/${sessionId}/players`)),
     get(ref(rtdb, `sessions/${sessionId}/teams`)),
@@ -182,4 +189,29 @@ function extractAnswersForPhase(
   const out: Record<string, unknown> = {}
   for (const [qId, a] of Object.entries(answers)) out[qId] = a?.value
   return Object.keys(out).length ? out : undefined
+}
+
+// Quiz flush: read the already-computed scores from aggregates/ and persist as
+// durable results. No re-scoring — the host scored each question on reveal.
+async function flushQuizFromAggregates(sessionId: string, phase: Phase): Promise<void> {
+  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const aggKey = isTeam ? 'teamScores' : 'scores'
+  const collection = isTeam ? 'teamResults' : 'results'
+  const keyBy = isTeam ? 'teamId' : 'playerId'
+
+  const scoresSnap = await get(ref(rtdb, `sessions/${sessionId}/aggregates/${aggKey}`))
+  const scores = (scoresSnap.val() ?? {}) as Record<string, number>
+
+  const durablePatch: Record<string, unknown> = {}
+  for (const [keyId, score] of Object.entries(scores)) {
+    durablePatch[`${collection}/${keyId}/${keyBy}`] = keyId
+    durablePatch[`${collection}/${keyId}/sessionId`] = sessionId
+    durablePatch[`${collection}/${keyId}/phaseResults/${phase.id}`] = {
+      score,
+      completedAt: serverTimestamp(),
+    }
+  }
+  if (Object.keys(durablePatch).length > 0) {
+    await update(ref(rtdb, `sessions/${sessionId}`), durablePatch)
+  }
 }
