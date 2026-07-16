@@ -5,8 +5,8 @@ import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
 import type { Phase } from '@helden-inc/tg-schema'
 
-import { presentationSlideExtras } from '@/lib/demoBundle'
-import { nextPhase } from '@/lib/session/control'
+import { demoBundle, presentationSlideExtras } from '@/lib/demoBundle'
+import { endLevel, nextPhase } from '@/lib/session/control'
 import { useCentralStep } from '@/lib/sync/useCentralStep'
 import { useSlideTimer } from '@/lib/sync/useCentralStepTimer'
 
@@ -52,8 +52,10 @@ export function PresentationRenderer({
   const confirmAdvance = () => {
     const kind = pendingAdvance
     setPendingAdvance(null)
-    if (kind === 'phase') void nextPhase(sessionId, phaseId)
-    else if (kind === 'slide') setStep(bounded + 1)
+    if (kind === 'phase') {
+      const isModular = (demoBundle.flowMode ?? 'sequential') !== 'sequential'
+      void (isModular ? endLevel(sessionId, phaseId) : nextPhase(sessionId, phaseId))
+    } else if (kind === 'slide') setStep(bounded + 1)
   }
 
   const image = slide.blocks.find((b) => b.kind === 'image')?.mediaId
