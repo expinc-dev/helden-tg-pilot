@@ -79,6 +79,20 @@ export function CentralView() {
     )
   }
 
+  // Idle's full-bleed lobby-style layout escapes the standard live wrapper's
+  // padding and debug line — same reasoning as the host's video bypass.
+  if (phase && sessionId && phase.content.type === 'idle') {
+    return (
+      <PhaseRouter
+        phase={phase}
+        phaseStartMs={pointer?.changedAt}
+        role="central"
+        sessionId={sessionId}
+        allowTeams={config?.allowTeams}
+      />
+    )
+  }
+
   if (phase && sessionId) {
     return (
       <div className="flex min-h-screen flex-col gap-4 p-8">

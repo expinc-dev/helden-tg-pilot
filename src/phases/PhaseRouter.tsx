@@ -22,6 +22,7 @@ type RouterProps = {
   playerId?: string
   allowTeams?: boolean
   teamId?: string
+  onAdvance?: () => void
 }
 
 // Top-level entry. Player role only, and only here: resolve team role ONCE and
@@ -57,11 +58,22 @@ function PhaseContentSwitch({
   allowTeams,
   teamId,
   teamRole,
+  onAdvance,
 }: RouterProps & { teamRole: TeamRole }) {
   const content = phase.content
   switch (content.type) {
     case 'idle':
-      return <IdleRenderer content={content} role={role} phaseId={phase.id} />
+      return (
+        <IdleRenderer
+          content={content}
+          role={role}
+          phaseId={phase.id}
+          sessionId={sessionId}
+          playerId={playerId}
+          allowTeams={allowTeams}
+          onAdvance={onAdvance}
+        />
+      )
     case 'codeinput':
       // Team-aware page: only in team mode. Otherwise fall through to the
       // "not renderable yet" default (single-player codeinput isn't built).
