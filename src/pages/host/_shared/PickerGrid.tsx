@@ -2,7 +2,10 @@ import { assets } from '@/assets'
 import type { FlowMode, Phase, PublishedGame } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
+import { useGameType } from '@/lib/sync/useGameType'
+
 import { Header } from './Header'
+import { HostBadge } from './HostBadge'
 
 // Level card status for the picker. Drives which action button renders:
 //   available → yellow "Mulai Permainan" (tappable)
@@ -34,22 +37,27 @@ export function PickerGrid({
   onEndSession: () => void
 }) {
   const cards = buildCards(bundle, played, bundle.flowMode ?? 'sequential')
+  const gameType = useGameType()
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-col">
       <Header />
 
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Pilih Level</h1>
-        <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-          Mulai permainan dengan memilih salah satu level di bawah ini.
-        </p>
-      </div>
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto rounded-2xl border border-white/5 bg-[#12121299] px-8 py-3">
+        <HostBadge pageName={gameType} />
 
-      <div className="flex flex-col gap-4">
-        {cards.map((card) => (
-          <LevelCard key={card.phase.id} card={card} onPick={() => onPick(card.phase.id)} />
-        ))}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">Pilih Level</h1>
+          <p className="mx-auto mt-2 max-w-xl text-xl font-extralight text-white/70">
+            Mulai permainan dengan memilih salah satu level di bawah ini.
+          </p>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-4">
+          {cards.map((card) => (
+            <LevelCard key={card.phase.id} card={card} onPick={() => onPick(card.phase.id)} />
+          ))}
+        </div>
       </div>
 
       <button
@@ -99,15 +107,15 @@ function LevelCard({ card, onPick }: { card: Card; onPick: () => void }) {
   // CMS media resolver ships — schema field already exists (tg-schema 3.0).
   const thumbnail = assets.images.backgrounds.auth
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-white/5 bg-[#121212] sm:flex-row">
+    <div className="grid grid-cols-4 gap-4 rounded-2xl border border-white/5 bg-[#121212] p-4 sm:flex-row sm:gap-5 sm:p-5">
       <div
-        className="aspect-video w-full flex-shrink-0 bg-cover bg-center sm:aspect-square sm:w-48"
+        className="col-span-2 aspect-[16/8] w-full flex-shrink-0 overflow-hidden rounded-xl bg-cover bg-center"
         style={{ backgroundImage: `url(${thumbnail})` }}
       />
-      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-        <div className="flex flex-col">
+      <div className="col-span-2 flex flex-1 flex-col justify-between gap-4">
+        <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-white/80">Level {level}</span>
-          <h3 className="text-lg font-bold text-[#FFB800] sm:text-xl">{phase.title}</h3>
+          <h3 className="text-helden-yellow text-lg font-bold sm:text-xl">{phase.title}</h3>
         </div>
         {phase.durationMin !== undefined && (
           <div className="flex flex-wrap gap-2">
@@ -135,7 +143,7 @@ function ActionButton({ status, onPick }: { status: CardStatus; onPick: () => vo
       <button
         type="button"
         onClick={onPick}
-        className="w-full rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
+        className="bg-helden-yellow-gradient flex h-12 w-full items-center justify-center rounded-lg py-3.5 text-base font-medium text-black"
       >
         Mulai Permainan
       </button>
@@ -146,7 +154,7 @@ function ActionButton({ status, onPick }: { status: CardStatus; onPick: () => vo
       <button
         type="button"
         disabled
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#FFB800]/40 py-3 text-sm font-bold text-[#FFB800]/60"
+        className="text-helden-yellow/60 border-helden-yellow/40 flex h-12 w-full items-center justify-center gap-2 rounded-lg border py-3.5 text-base"
       >
         <Icon icon="mdi:check-circle" className="size-4" />
         Sudah Dimainkan
@@ -158,7 +166,7 @@ function ActionButton({ status, onPick }: { status: CardStatus; onPick: () => vo
     <button
       type="button"
       disabled
-      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1C1C1E] py-3 text-sm font-semibold text-white/40"
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1C1C1E] py-3.5 text-base font-medium text-white/40"
     >
       <Icon icon="mdi:lock" className="size-4" />
       Locked

@@ -17,6 +17,7 @@ import { VideoHostScreen } from '@/phases/Video'
 
 import { demoBundle } from '@/lib/demoBundle'
 import { endLevel, endSession, jumpToPhase, nextPhase, startSession } from '@/lib/session/control'
+import { useGameType } from '@/lib/sync/useGameType'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { usePlayedPhases } from '@/lib/sync/usePlayedPhases'
 import { usePresence, useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
@@ -219,7 +220,7 @@ function LobbyView({
 
   const totalUnits = allowTeams ? teams.length : players.length
   const unitsLabel = allowTeams ? 'Total Tim' : 'Total Pemain'
-  const gameType = allowTeams ? 'Multiplayer Game' : 'Singleplayer Game'
+  const gameType = useGameType()
 
   return (
     <div
