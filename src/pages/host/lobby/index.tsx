@@ -22,6 +22,8 @@ import { usePresence, useSessionConfig, useSessionMeta } from '@/lib/sync/useSes
 import { useTeams } from '@/lib/sync/useTeams'
 import { useTimer } from '@/lib/sync/useTimer'
 
+import { HostBadge } from '../_shared/HostBadge'
+
 export function HostView() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const meta = useSessionMeta(sessionId)
@@ -219,7 +221,8 @@ function LobbyView({
 
   return (
     <div
-      className="flex min-h-dvh w-full flex-col gap-6 overflow-y-auto p-3 sm:p-8"
+      // 1. Ubah min-h-dvh jadi h-dvh dan hapus overflow-y-auto di sini agar halaman tidak ikut scroll
+      className="flex h-dvh w-full flex-col gap-3 overflow-hidden p-3 sm:p-8"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -229,36 +232,45 @@ function LobbyView({
     >
       <Header />
 
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">Panel Kontrol Host</h1>
-        <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-          Permainan dapat dimulai setelah pemain dan perangkat utama bergabung
-        </p>
-      </div>
+      {/* 2. Tambahkan flex-1 dan min-h-0 di bungkus utama panel ini */}
+      <div className="flex min-h-0 flex-1 flex-col gap-5 rounded-2xl border border-white/5 bg-[#12121299] p-4 sm:p-6">
+        <HostBadge pageName="Lobby" />
 
-      <div className="grid grid-cols-3 gap-3 rounded-2xl border border-white/5 bg-[#121212] p-3 sm:p-4">
-        <StatTile label="Layar Utama" value={String(connectedCentrals)} />
-        <StatTile label={unitsLabel} value={String(totalUnits)} />
-        <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
-      </div>
-
-      <div className="flex flex-1 flex-col gap-3 rounded-2xl border border-white/5 bg-[#121212] p-4 sm:p-6">
-        <div className="text-sm font-semibold text-white sm:text-base">
-          {allowTeams ? 'Tim Terhubung' : 'Pemain Terhubung'}
+        <div className="text-center">
+          <h1 className="manrope-font text-2xl font-semibold text-white sm:text-3xl">
+            Panel Kontrol Host
+          </h1>
+          <p className="manrope-font mx-auto mt-2 max-w-xl text-2xl font-light text-white/70">
+            Mulai sesi setelah seluruh pemain bergabung
+          </p>
         </div>
-        {allowTeams ? (
-          <TeamList players={players} teams={teams} />
-        ) : players.length === 0 ? (
-          <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
-        ) : (
-          <PlayerRows players={players} />
-        )}
+
+        <div className="grid grid-cols-3 gap-3 rounded-2xl border border-white/5 bg-[#121212] p-3 sm:p-4">
+          <StatTile label="Layar Utama" value={String(connectedCentrals)} />
+          <StatTile label={unitsLabel} value={String(totalUnits)} />
+          <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
+        </div>
+
+        {/* 3. Tambahkan min-h-0 dan overflow-y-auto di sini agar daftar tim bisa di-scroll secara independen */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/5 bg-[#121212] p-4 sm:p-6">
+          <div className="text-sm font-semibold text-white sm:text-base">
+            {allowTeams ? 'Tim Terhubung' : 'Pemain Terhubung'}
+          </div>
+          {allowTeams ? (
+            <TeamList players={players} teams={teams} />
+          ) : players.length === 0 ? (
+            <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+          ) : (
+            <PlayerRows players={players} />
+          )}
+        </div>
       </div>
 
       <button
         type="button"
         onClick={() => startSession(sessionId)}
-        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
+        // 4. Tambahkan shrink-0 dan mt-auto agar button mengunci posisinya di bawah
+        className="mt-auto w-full shrink-0 rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
       >
         Mulai Permainan
       </button>

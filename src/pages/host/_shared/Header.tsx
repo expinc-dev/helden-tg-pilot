@@ -7,7 +7,7 @@ import { useFullscreen } from '@/lib/useFullscreen'
 export const Header = () => {
   const { isFullscreen, toggle } = useFullscreen()
   return (
-    <header className="flex items-center justify-between">
+    <header className="-mt-7 flex items-center justify-between">
       <DotLottieReact src={assets.lotties.heldenLogo} autoplay loop className="h-20 w-auto" />
       <button
         type="button"

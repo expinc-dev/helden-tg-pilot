@@ -18,14 +18,14 @@ export function StatTile({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-[#0A0A0A] p-3 sm:p-4">
-      <span className="text-xs text-[#FFB800] sm:text-sm">{label}</span>
+      <span className="text-helden-yellow text-base font-medium">{label}</span>
       <span className="flex items-center gap-2 text-lg font-bold text-white sm:text-2xl">
         {value}
         {onCopy && (
           <button
             type="button"
             onClick={onCopy}
-            className="text-yellow-300 hover:text-yellow-400"
+            className="text-helden-yellow hover:text-helden-yellow/80"
             aria-label={`Salin ${label}`}
           >
             <Icon icon="mdi:content-copy" className="size-4" />
