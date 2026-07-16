@@ -219,6 +219,7 @@ function LobbyView({
 
   const totalUnits = allowTeams ? teams.length : players.length
   const unitsLabel = allowTeams ? 'Total Tim' : 'Total Pemain'
+  const gameType = allowTeams ? 'Multiplayer Game' : 'Singleplayer Game'
 
   return (
     <div
@@ -235,13 +236,11 @@ function LobbyView({
 
       {/* 2. Tambahkan flex-1 dan min-h-0 di bungkus utama panel ini */}
       <div className="flex min-h-0 flex-1 flex-col gap-5 rounded-2xl border border-white/5 bg-[#12121299] p-4 sm:p-6">
-        <HostBadge pageName="Lobby" />
+        <HostBadge pageName={gameType} />
 
         <div className="text-center">
-          <h1 className="manrope-font text-2xl font-semibold text-white sm:text-3xl">
-            Panel Kontrol Host
-          </h1>
-          <p className="manrope-font mx-auto mt-2 max-w-xl text-2xl font-light text-white/70">
+          <h1 className="text-2xl font-semibold text-white sm:text-3xl">Panel Kontrol Host</h1>
+          <p className="mx-auto mt-2 max-w-xl text-2xl font-extralight text-white/70">
             Mulai sesi setelah seluruh pemain bergabung
           </p>
         </div>
