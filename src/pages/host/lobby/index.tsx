@@ -269,8 +269,7 @@ function LobbyView({
       <button
         type="button"
         onClick={() => startSession(sessionId)}
-        // 4. Tambahkan shrink-0 dan mt-auto agar button mengunci posisinya di bawah
-        className="mt-auto w-full shrink-0 rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:rounded-lg sm:py-[18px] sm:text-lg"
+        className="bg-helden-yellow-gradient mt-auto w-full shrink-0 rounded-lg py-4 text-center text-lg font-medium text-black"
       >
         Mulai Permainan
       </button>

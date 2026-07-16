@@ -5,6 +5,10 @@
   --color-helden-yellow: #fddb00;
 }
 
+@utility bg-helden-yellow-gradient {
+  background: linear-gradient(120deg, #fddb00 14.62%, #fda400 68.41%);
+}
+
 .manrope-font {
   font-family: 'Manrope', sans-serif;
 }
