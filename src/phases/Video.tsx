@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Header } from '@/pages/host/_shared/Header'
 import type { VideoContent, VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
@@ -434,9 +435,12 @@ export function VideoHostScreen({
       </button>
 
       {confirm === 'replay' && (
-        <ConfirmModal
+        <ConfirmDialog
           title="Mulai ulang video"
           message="Apakah anda yakin untuk memulai ulang video?"
+          confirmLabel="Ulangi"
+          confirmIcon="mdi:refresh"
+          cancelLabel="Kembali"
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             setConfirm(null)
@@ -446,9 +450,12 @@ export function VideoHostScreen({
         />
       )}
       {confirm === 'advance' && (
-        <ConfirmModal
+        <ConfirmDialog
           title="Lanjut ke tahap berikutnya"
           message="Apakah anda yakin untuk melanjutkan ke tahap berikutnya?"
+          confirmLabel="Lanjut"
+          confirmIcon="mdi:arrow-right"
+          cancelLabel="Kembali"
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             setConfirm(null)
@@ -681,61 +688,6 @@ function fmtTime(sec: number): string {
 }
 
 // ─── Confirmation modal ─────────────────────────────────────────────────────
-function ConfirmModal({
-  title,
-  message,
-  onCancel,
-  onConfirm,
-}: {
-  title: string
-  message: string
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4"
-      onClick={onCancel}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-white/10 bg-[#121212] p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-base font-bold text-[#FFB800]">{title}</h2>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Tutup"
-            className="text-white/60 hover:text-white"
-          >
-            <Icon icon="mdi:close" className="size-5" />
-          </button>
-        </div>
-        <p className="text-sm text-white/80">{message}</p>
-        <div className="mt-1 flex gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-1 rounded-lg border border-white/10 py-3 text-sm font-semibold text-white"
-          >
-            Kembali
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="flex-1 rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
-          >
-            Lanjut
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Central paused overlay ─────────────────────────────────────────────────
 // Rendered on top of the paused central <video>/iframe. Dims the frame so the
 // pause message reads clearly while keeping the last-frame context visible.

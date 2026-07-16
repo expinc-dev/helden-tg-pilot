@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
+import { Modal } from '@/components/Modal'
 import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
 import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
@@ -222,7 +223,7 @@ function LobbyView({
   return (
     <div
       // 1. Ubah min-h-dvh jadi h-dvh dan hapus overflow-y-auto di sini agar halaman tidak ikut scroll
-      className="flex h-dvh w-full flex-col gap-3 overflow-hidden p-3 sm:p-8"
+      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-8 py-3"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -287,29 +288,20 @@ function CopyCodeModal({
   onCopy: (role: 'central' | 'player') => void
 }) {
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4"
-      onClick={onDismiss}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-white/10 bg-[#121212] p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-center text-lg font-bold text-white">Salin Kode</h2>
-        <p className="text-center text-xs text-white/60">Pilih tautan mana yang ingin disalin.</p>
+    <Modal title="Salin Kode" onClose={onDismiss} dismissOnBackdrop>
+      <p className="text-sm text-white/60">Pilih tautan mana yang ingin disalin.</p>
+      <div className="mt-4 flex flex-col gap-3">
         <button
           type="button"
           onClick={() => onCopy('central')}
-          className="w-full rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
+          className="bg-helden-yellow-gradient w-full rounded-lg py-3 text-sm font-bold text-black"
         >
           Central screen code
         </button>
         <button
           type="button"
           onClick={() => onCopy('player')}
-          className="w-full rounded-lg bg-[#FFB800] py-3 text-sm font-bold text-black"
+          className="bg-helden-yellow-gradient w-full rounded-lg py-3 text-sm font-bold text-black"
         >
           Player code
         </button>
@@ -321,6 +313,6 @@ function CopyCodeModal({
           Batal
         </button>
       </div>
-    </div>
+    </Modal>
   )
 }

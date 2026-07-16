@@ -42,7 +42,7 @@ export function HostNew() {
   return (
     // <div className="min-h-dvh w-full bg-black bg-cover bg-center p-3 sm:p-6">
     <div
-      className="flex h-dvh w-full flex-col justify-between gap-6 overflow-y-auto p-3 sm:p-8"
+      className="flex h-dvh w-full flex-col justify-between gap-6 overflow-y-auto px-8 py-3"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
