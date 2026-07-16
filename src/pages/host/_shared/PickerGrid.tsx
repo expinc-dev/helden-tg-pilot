@@ -2,6 +2,8 @@ import { assets } from '@/assets'
 import type { FlowMode, Phase, PublishedGame } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
+import { Header } from './Header'
+
 // Level card status for the picker. Drives which action button renders:
 //   available → yellow "Mulai Permainan" (tappable)
 //   played    → yellow-outline "Sudah Dimainkan" (disabled)
@@ -35,9 +37,7 @@ export function PickerGrid({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
-        Host
-      </div>
+      <Header />
 
       <div className="text-center">
         <h1 className="text-2xl font-bold text-[#FFB800] sm:text-3xl">Pilih Level</h1>

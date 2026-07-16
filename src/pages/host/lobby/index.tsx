@@ -212,10 +212,6 @@ function LobbyView({
     >
       <Header />
 
-      <div className="mx-auto rounded-full bg-[#1C1C1E] px-6 py-2 text-sm font-semibold text-[#FFB800]">
-        Host
-      </div>
-
       <div className="text-center">
         <h1 className="text-2xl font-bold text-white sm:text-3xl">Panel Kontrol Host</h1>
         <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
