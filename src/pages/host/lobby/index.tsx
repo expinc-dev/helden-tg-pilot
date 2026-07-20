@@ -117,6 +117,29 @@ export function HostView() {
     )
   }
 
+  // Microlearning-phase host screen: rendered top-level (bypassing the padded
+  // live wrapper below) for the same reason as video/idle — its own full-bleed
+  // background+card layout would otherwise nest awkwardly inside that wrapper.
+  // MonitorPane already renders a richer per-team/per-player progress spread
+  // than the generic HostPresenceSpread panel, plus its own "Akhiri Level"
+  // button inside the card, so this bypasses both.
+  if (meta.status === 'live' && phase && phase.content.type === 'microlearning') {
+    return (
+      <PhaseRouter
+        phase={phase}
+        phaseStartMs={pointer?.changedAt}
+        role="host"
+        sessionId={sessionId}
+        allowTeams={config.allowTeams}
+        onAdvance={
+          isModular
+            ? () => endLevel(sessionId, phase.id)
+            : () => nextPhase(sessionId, pointer?.activePhaseId)
+        }
+      />
+    )
+  }
+
   // Live: modular → picker (when at idle) or phase render + End level.
   //       sequence → original Next phase button.
   if (meta.status === 'live' && onPicker) {

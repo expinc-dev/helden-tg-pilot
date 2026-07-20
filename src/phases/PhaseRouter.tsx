@@ -129,6 +129,7 @@ function PhaseContentSwitch({
           sessionId={sessionId}
           playerId={playerId}
           phase={phase}
+          onAdvance={onAdvance}
         />
       )
     case 'minigame': {

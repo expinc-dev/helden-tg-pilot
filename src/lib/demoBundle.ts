@@ -76,10 +76,17 @@ const intro: Phase = {
   title: 'Onboarding',
   syncMode: 'self_paced',
   durationMin: 5,
-  // Demo-only: exercises the team_leader_only path (useTeamRole + resolveStepTarget)
-  // so it's actually clickable in Team Mode — otherwise nothing in this bundle did.
-  teamMode: 'team_leader_only',
-  roles: { player: { enabled: true }, host: { monitor: ['progress'] } },
+  // Demo-only: exercises the team_collaborative path — every team member keeps
+  // their own step/pace (only scoring, not stepping, is attributed to the
+  // team). team_leader_only is exercised elsewhere; that mode would leave
+  // every member but the leader on a passive "watch your leader" screen here,
+  // which defeats the point of demoing independent self-paced progress.
+  teamMode: 'team_collaborative',
+  roles: {
+    player: { enabled: true },
+    central: { enabled: true, showResults: true },
+    host: { monitor: ['progress'] },
+  },
   content: {
     type: 'microlearning',
     mode: 'sequential',
@@ -88,9 +95,72 @@ const intro: Phase = {
       { id: 's2', blocks: [{ kind: 'text', markdown: '## Rule 1\nRead each step, tap Next.' }] },
       {
         id: 's3',
-        blocks: [{ kind: 'text', markdown: '## Rule 2\nHost sees your progress live.' }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: assets.images.presentation.classroomExample,
+            caption: 'Contoh suasana kelas',
+          },
+          { kind: 'text', markdown: '## Rule 2\nHost sees your progress live.' },
+        ],
       },
-      { id: 's4', blocks: [{ kind: 'text', markdown: '## Done\nWait for the next phase.' }] },
+      {
+        id: 's4',
+        // Demo-only: exercises gate.requireAnswered — Next stays disabled until
+        // the question block below is answered.
+        gate: { requireAnswered: true },
+        blocks: [
+          {
+            kind: 'question',
+            question: {
+              qType: 'single_choice',
+              prompt: [{ kind: 'text', markdown: 'Siap lanjut ke aturan berikutnya?' }],
+              options: [
+                { id: 'yes', label: 'Ya, siap!' },
+                { id: 'no', label: 'Butuh waktu lagi' },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        id: 's4b',
+        // Demo-only: exercises multi_choice gating — same requireAnswered rule,
+        // just needs at least one option picked (not exactly one).
+        gate: { requireAnswered: true },
+        blocks: [
+          {
+            kind: 'question',
+            question: {
+              qType: 'multi_choice',
+              prompt: [{ kind: 'text', markdown: 'Materi apa saja yang menurutmu penting?' }],
+              options: [
+                { id: 'a', label: 'Aturan kelas' },
+                { id: 'b', label: 'Jadwal sesi' },
+                { id: 'c', label: 'Kontak host' },
+                { id: 'd', label: 'Materi tambahan' },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        id: 's4c',
+        // Demo-only: exercises open_text gating — Next stays disabled until
+        // something is typed.
+        gate: { requireAnswered: true },
+        blocks: [
+          {
+            kind: 'question',
+            question: {
+              qType: 'open_text',
+              prompt: [{ kind: 'text', markdown: 'Ada pertanyaan sebelum kita lanjut?' }],
+              maxLen: 280,
+            },
+          },
+        ],
+      },
+      { id: 's5', blocks: [{ kind: 'text', markdown: '## Done\nWait for the next phase.' }] },
     ],
   },
 }
@@ -271,11 +341,11 @@ export const demoBundle: PublishedGame = {
   // 'modular-progressive' locks all cards except the next unplayed one; swap
   // to 'modular-open' to let the trainer jump anywhere at any time.
   flowMode: 'modular-progressive',
-  phaseOrder: [idle.id, intro.id, presentation.id, quiz.id, video.id, puzzle.id, sortGame.id],
+  phaseOrder: [idle.id, presentation.id, intro.id, quiz.id, video.id, puzzle.id, sortGame.id],
   phases: {
     [idle.id]: idle,
-    [intro.id]: intro,
     [presentation.id]: presentation,
+    [intro.id]: intro,
     [quiz.id]: quiz,
     [video.id]: video,
     [puzzle.id]: puzzle,

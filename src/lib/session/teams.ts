@@ -1,5 +1,5 @@
 import type { Team } from '@helden-inc/tg-schema'
-import { get, ref, runTransaction, serverTimestamp, set, update } from 'firebase/database'
+import { get, ref, serverTimestamp, set, update } from 'firebase/database'
 
 import { rtdb } from '@/lib/firebase'
 import { newId } from '@/lib/ids'
@@ -9,8 +9,10 @@ import { addMember } from './teamroster'
 // Team Mode helpers. FLAT structure: every device stays a normal players/{id}.
 // A team's roster is the authoritative memberIds map on the team node (playerId
 // -> true, tg-schema 2.0.0); player.teamId points back to it. maxMembers is
-// enforced by a transaction on memberIds, exactly like maxPlayers is enforced
-// on the players collection.
+// enforced by reading memberIds and deciding before writing — same read-then-
+// decide tradeoff as joinPresence's capacity check (see its comment): a
+// transaction on the whole memberIds map re-validates every existing member's
+// ownership rule on rerun, which fails once the team already has a member.
 
 export type JoinTeamResult = { ok: true } | { ok: false; reason: 'full' }
 
@@ -53,11 +55,14 @@ export async function joinTeam(
   const cfg = await get(ref(rtdb, `sessions/${sessionId}/config`))
   const max = (cfg.val()?.maxMembers as number | undefined) ?? Infinity
 
-  const tx = await runTransaction(
-    ref(rtdb, `sessions/${sessionId}/teams/${teamId}/memberIds`),
-    (members: Record<string, true> | null) => addMember(members, playerId, max)
-  )
-  if (!tx.committed) return { ok: false, reason: 'full' }
+  const membersSnap = await get(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/memberIds`))
+  const reserved = addMember(membersSnap.val() as Record<string, true> | null, playerId, max)
+  if (!reserved) return { ok: false, reason: 'full' }
+
+  // Write only this player's own child — rules scope memberIds/$memberPlayerId
+  // to auth.uid === owner-or-self, so this never touches (or re-validates) any
+  // other member's entry.
+  await set(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/memberIds/${playerId}`), true)
 
   await update(ref(rtdb, `sessions/${sessionId}/players/${playerId}`), {
     teamId,

@@ -1,12 +1,4 @@
-import {
-  get,
-  onDisconnect,
-  ref,
-  runTransaction,
-  serverTimestamp,
-  set,
-  update,
-} from 'firebase/database'
+import { get, onDisconnect, ref, serverTimestamp, set, update } from 'firebase/database'
 
 import { auth, rtdb } from '@/lib/firebase'
 
@@ -58,10 +50,21 @@ export async function findPlayerIdByName(sessionId: string, name: string): Promi
 // Caller owns a stable id (from localStorage) so refresh reuses the same RTDB node.
 // isNew=true → first join, establish node + joinedAt. isNew=false → rejoin, merge
 // presence fields only so selfStep/joinedAt survive (BLUEPRINT_runtime §7).
-// Capacity is enforced atomically by a transaction on the collection BEFORE the
-// presence node is written; an N+1 join is rejected with { ok: false, reason: 'full' }.
-// ponytail: transaction rewrites the whole players/centrals collection; fine at
-// pilot scale (max ~30). Move to a dedicated counter node if a session ever gets large.
+//
+// Capacity is enforced by reading the collection and deciding BEFORE writing,
+// not a transaction on the whole collection. A transaction there looked
+// appealing for atomicity, but it's a trap: rules give every child its own
+// ownership .validate (auth.uid === that id's owner), and RTDB re-validates
+// EVERY sibling in the payload whenever a transaction reruns against fresher
+// server data — which happens the moment a second member already exists. That
+// rerun executes under the NEW joiner's auth, so the existing member's own
+// node fails its own ownership check and the whole join gets permission_denied
+// (same hazard submitAnswer.ts hit with sessions/{id}/aggregates). Reading
+// first and writing only this id's own child avoids that entirely — no
+// sibling is ever re-validated. Trades away strict atomicity (two joins
+// landing in the same instant could both slip past the cap) for a fix that
+// needs no rules change; an accepted pilot-scale tradeoff, same as the
+// join-code collision odds documented in session/create.ts.
 export async function joinPresence(
   sessionId: string,
   role: Role,
@@ -80,14 +83,13 @@ export async function joinPresence(
   const cfg = await get(ref(rtdb, `sessions/${sessionId}/config`))
   const max = (cfg.val()?.[maxField] as number | undefined) ?? Infinity
 
-  const tx = await runTransaction(ref(rtdb, collPath), (members: Record<string, Member> | null) =>
-    reserveSlot(members, id, max)
-  )
-  if (!tx.committed) return { ok: false, reason: 'full' }
+  const collSnap = await get(ref(rtdb, collPath))
+  const reserved = reserveSlot(collSnap.val() as Record<string, Member> | null, id, max)
+  if (!reserved) return { ok: false, reason: 'full' }
 
-  // Slot secured — write the full presence node (overwrites the reserve marker).
-  // AWAIT the write: callers chain team-join after this, and a fire-and-forget
-  // set() would race that update() and clobber player.teamId.
+  // Slot available — write the full presence node. AWAIT the write: callers
+  // chain team-join after this, and a fire-and-forget set() would race that
+  // update() and clobber player.teamId.
   const base =
     role === 'player'
       ? { connected: true, lastSeen: serverTimestamp(), name: opts.name ?? 'Anon' }

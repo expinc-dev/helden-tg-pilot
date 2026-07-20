@@ -2,6 +2,7 @@ import authBackground from './images/backgrounds/auth.png'
 import centralLobbyBackground from './images/backgrounds/centralLobby.png'
 import playerLobbyBackground from './images/backgrounds/playerLobby.png'
 import rotateBackground from './images/backgrounds/rotate.png'
+import trophyIcon from './images/icons/trophy.png'
 import heldenLogoSm from './images/logos/heldenLogoSm.png'
 import classroomExample from './images/presentation/classroomExample.png'
 import classroomExampleFramed from './images/presentation/classroomExampleFramed.png'
@@ -16,6 +17,9 @@ export const assets = {
       central: centralLobbyBackground,
       player: playerLobbyBackground,
       rotate: rotateBackground,
+    },
+    icons: {
+      trophy: trophyIcon,
     },
     logos: {
       helden: {

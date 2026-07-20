@@ -28,6 +28,8 @@ export function TeamLeaderWaitingScreen({
   const members = useTeamMembersPresence(sessionId, memberIds)
   const inviteUrl = teamInviteUrl(joinCode, teamId)
 
+  console.log('awa', inviteUrl)
+
   return (
     <div
       className="relative flex min-h-screen w-full flex-col gap-4 bg-neutral-950 bg-cover bg-center p-6"
