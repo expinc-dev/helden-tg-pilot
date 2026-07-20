@@ -271,13 +271,13 @@ export const demoBundle: PublishedGame = {
   // 'modular-progressive' locks all cards except the next unplayed one; swap
   // to 'modular-open' to let the trainer jump anywhere at any time.
   flowMode: 'modular-progressive',
-  phaseOrder: [idle.id, presentation.id, intro.id, video.id, quiz.id, puzzle.id, sortGame.id],
+  phaseOrder: [idle.id, intro.id, presentation.id, quiz.id, video.id, puzzle.id, sortGame.id],
   phases: {
     [idle.id]: idle,
-    [presentation.id]: presentation,
     [intro.id]: intro,
-    [video.id]: video,
+    [presentation.id]: presentation,
     [quiz.id]: quiz,
+    [video.id]: video,
     [puzzle.id]: puzzle,
     [sortGame.id]: sortGame,
   },

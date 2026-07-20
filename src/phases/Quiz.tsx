@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { assets } from '@/assets'
 import { GradientButton } from '@/components/GradientButton'
 import type { Phase } from '@helden-inc/tg-schema'
+import { Icon } from '@iconify/react'
 import { onValue, ref } from 'firebase/database'
 
 import { demoBundle } from '@/lib/demoBundle'
@@ -24,6 +25,9 @@ const OPTION_COLORS = [
   { bg: '#D89E00', text: '#000' }, // yellow
   { bg: '#26890C', text: '#fff' }, // green
 ]
+
+// Kahoot-style shape-per-option identity. Index-matched to OPTION_COLORS.
+const OPTION_ICONS = ['mdi:poker-club', 'mdi:poker-heart', 'mdi:poker-spade', 'mdi:poker-diamond']
 
 function promptText(q: { prompt: unknown[] }): string {
   return q.prompt
@@ -130,7 +134,7 @@ function CentralQuiz({
       {/* Preparation: just the title */}
       {quizStep.stage === 'preparation' && (
         <>
-          <div className="text-7xl">🎯</div>
+          <Icon icon="mdi:target" className="size-16 text-[#FFB800]" />
           <h1 className="text-4xl font-bold text-[#FFB800]">Bersiap!</h1>
           <div className="h-1 w-40 animate-pulse rounded-full bg-[#FFB800]/30" />
         </>
@@ -182,11 +186,12 @@ function CentralQuiz({
           <div className="grid w-full max-w-4xl grid-cols-2 gap-4">
             {questionOptions(q).map((opt, i) => {
               const color = OPTION_COLORS[i % OPTION_COLORS.length]
+              const icon = OPTION_ICONS[i % OPTION_ICONS.length]
               const isCorrect = quizStep.stage === 'reveal' && quizStep.correctId === opt.id
               return (
                 <div
                   key={opt.id}
-                  className="relative overflow-hidden rounded-xl p-6 text-center text-xl font-semibold shadow-lg transition-all duration-300"
+                  className="relative flex items-center justify-center gap-3 overflow-hidden rounded-xl p-6 text-center text-xl font-semibold shadow-lg transition-all duration-300"
                   style={{
                     background: color.bg,
                     color: color.text,
@@ -194,10 +199,11 @@ function CentralQuiz({
                     transform: isCorrect ? 'scale(1.05)' : 'scale(1)',
                   }}
                 >
-                  {opt.label}
+                  <Icon icon={icon} className="size-7 shrink-0" />
+                  <span>{opt.label}</span>
                   {isCorrect && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg text-green-600 shadow">
-                      ✓
+                    <span className="absolute -top-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-white text-green-600 shadow">
+                      <Icon icon="mdi:check-circle" className="size-5" />
                     </span>
                   )}
                 </div>
@@ -243,6 +249,7 @@ function PlayerQuiz({
   const myScore = usePlayerScore(sessionId, playerId, phase)
   const [submitted, setSubmitted] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const lastStepRef = useRef(-1)
   const timers = resolveTimers(content)
 
@@ -251,6 +258,7 @@ function PlayerQuiz({
       lastStepRef.current = quizStep.step
       setSubmitted(null)
       setSubmitting(false)
+      setSelectedId(null)
     }
   }, [quizStep.step])
 
@@ -274,6 +282,7 @@ function PlayerQuiz({
 
   const handleAnswer = async (optionId: string) => {
     if (submitted || submitting) return
+    setSelectedId(optionId)
     setSubmitting(true)
     const qId = `${phaseId}_q${quizStep.step}`
     await submitAnswer({ sessionId, playerId, keyId, qId, value: optionId, optionId })
@@ -281,13 +290,13 @@ function PlayerQuiz({
     setSubmitting(false)
   }
 
-  const canAnswer = quizStep.stage === 'answering' && !timer.expired && !submitted
+  const canAnswer = quizStep.stage === 'answering' && !timer.expired && !submitted && !submitting
 
   // ── Preparation ──
   if (quizStep.stage === 'preparation') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-[#121212] p-8">
-        <div className="text-7xl">🎯</div>
+        <Icon icon="mdi:target" className="size-16 text-[#FFB800]" />
         <h2 className="text-3xl font-bold text-[#FFB800]">Bersiap!</h2>
         <p className="text-lg text-white/50">
           Pertanyaan {quizStep.step + 1} / {content.questions.length}
@@ -301,7 +310,7 @@ function PlayerQuiz({
   if (quizStep.stage === 'reading') {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-[#121212] p-8">
-        <div className="text-5xl">📺</div>
+        <Icon icon="mdi:television" className="size-12 text-white" />
         <h2 className="text-2xl font-bold text-white">Perhatikan Layar Utama</h2>
         <p className="text-white/40">Pertanyaan sedang ditampilkan...</p>
         {timer.active && (
@@ -324,10 +333,14 @@ function PlayerQuiz({
         {timer.active && (
           <div className="flex flex-col items-center gap-1 px-4 pt-4">
             <span
-              className="text-4xl font-bold tabular-nums"
+              className="flex items-center text-4xl font-bold tabular-nums"
               style={{ color: timer.remainingSec <= 5 ? '#E21B3C' : '#FFB800' }}
             >
-              {timer.expired ? '⏰' : mmss(timer.remainingSec)}
+              {timer.expired ? (
+                <Icon icon="mdi:alarm" className="size-9" />
+              ) : (
+                mmss(timer.remainingSec)
+              )}
             </span>
             {!timer.expired && (
               <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
@@ -345,25 +358,38 @@ function PlayerQuiz({
         {submitted ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#26890C]/20">
-              <span className="text-4xl text-[#26890C]">✓</span>
+              <Icon icon="mdi:check-circle" className="size-10 text-[#26890C]" />
             </div>
             <p className="text-xl font-semibold text-white">Jawaban terkirim!</p>
             <p className="text-white/40">Menunggu jawaban lainnya...</p>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col justify-end gap-3 p-4 pb-8">
+          <div className="grid flex-1 grid-cols-2 gap-3 p-4 pb-8">
             {questionOptions(q).map((opt, i) => {
               const color = OPTION_COLORS[i % OPTION_COLORS.length]
+              const icon = OPTION_ICONS[i % OPTION_ICONS.length]
+              const isSelected = selectedId === opt.id
+              const isDeselected = selectedId !== null && !isSelected
               return (
                 <button
                   key={opt.id}
                   type="button"
                   disabled={!canAnswer}
                   onClick={() => handleAnswer(opt.id)}
-                  className="rounded-xl p-5 text-lg font-bold shadow-lg transition-all active:scale-[0.97] disabled:opacity-40"
+                  aria-label={opt.label}
+                  className={`relative flex items-center justify-center rounded-xl shadow-lg transition-all duration-200 ease-out active:scale-[0.97] disabled:cursor-not-allowed ${
+                    isSelected
+                      ? 'z-10 scale-105 opacity-100 shadow-2xl ring-4 ring-white'
+                      : isDeselected
+                        ? 'scale-95 opacity-30'
+                        : 'disabled:opacity-40'
+                  }`}
                   style={{ background: color.bg, color: color.text }}
                 >
-                  {opt.label}
+                  {isSelected && (
+                    <span className="absolute inset-0 animate-ping rounded-xl ring-4 ring-white" />
+                  )}
+                  <Icon icon={icon} className="size-16" />
                 </button>
               )
             })}
@@ -397,7 +423,7 @@ function PlayerQuiz({
       ) : (
         <>
           <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/5">
-            <span className="text-6xl">⏰</span>
+            <Icon icon="mdi:alarm" className="size-14 text-white/50" />
           </div>
           <h2 className="text-2xl font-bold text-white/50">Tidak menjawab</h2>
         </>
@@ -527,9 +553,15 @@ function HostQuiz({
         <button
           type="button"
           onClick={() => setLeaderboardOpen((o) => !o)}
-          className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
         >
-          {leaderboardOpen ? 'Tutup' : '🏆 Leaderboard'}
+          {leaderboardOpen ? (
+            'Tutup'
+          ) : (
+            <>
+              <Icon icon="mdi:trophy" className="size-4" /> Leaderboard
+            </>
+          )}
         </button>
       </div>
 
@@ -543,7 +575,7 @@ function HostQuiz({
       {/* ── Preparation ── */}
       {quizStep.stage === 'preparation' && (
         <div className="flex flex-1 flex-col items-center justify-center gap-5">
-          <div className="text-5xl">🎯</div>
+          <Icon icon="mdi:target" className="size-12 text-[#FFB800]" />
           <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-8 py-4 text-center">
             <p className="text-sm text-white/40">Semua layar menampilkan</p>
             <p className="mt-1 text-lg font-medium text-white/70">"Bersiap!"</p>
@@ -570,7 +602,9 @@ function HostQuiz({
           )}
           <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-8 py-4 text-center">
             <p className="text-sm text-white/40">Pemain melihat</p>
-            <p className="mt-1 text-lg font-medium text-white/70">"📺 Perhatikan Layar Utama"</p>
+            <p className="mt-1 flex items-center justify-center gap-1.5 text-lg font-medium text-white/70">
+              <Icon icon="mdi:television" className="size-5" /> "Perhatikan Layar Utama"
+            </p>
           </div>
           <p className="text-sm text-white/30">Jawaban otomatis terbuka saat waktu baca habis</p>
         </div>
@@ -582,10 +616,16 @@ function HostQuiz({
           <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
             {timer.active && (
               <span
-                className="font-mono text-3xl font-bold tabular-nums"
+                className="flex items-center gap-1.5 font-mono text-3xl font-bold tabular-nums"
                 style={{ color: timer.remainingSec <= 5 ? '#E21B3C' : '#FFB800' }}
               >
-                {timer.expired ? '⏰ Waktu habis' : mmss(timer.remainingSec)}
+                {timer.expired ? (
+                  <>
+                    <Icon icon="mdi:alarm" className="size-7" /> Waktu habis
+                  </>
+                ) : (
+                  mmss(timer.remainingSec)
+                )}
               </span>
             )}
             <div className="flex items-center gap-2 text-sm">
@@ -620,8 +660,17 @@ function HostQuiz({
             correctId={quizStep.correctId}
           />
 
-          <GradientButton onClick={handleNext} className="mt-auto px-6 py-3 text-base">
-            {isLastQuestion ? '✓ Selesai' : 'Soal Berikutnya →'}
+          <GradientButton
+            onClick={handleNext}
+            className="mt-auto flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+          >
+            {isLastQuestion ? (
+              <>
+                <Icon icon="mdi:check-circle" className="size-5" /> Selesai
+              </>
+            ) : (
+              'Soal Berikutnya →'
+            )}
           </GradientButton>
         </div>
       )}
@@ -658,14 +707,18 @@ function DistributionBars({
         const count = dist[opt.id] ?? 0
         const pct = Math.round((count / total) * 100)
         const color = OPTION_COLORS[i % OPTION_COLORS.length]
+        const icon = OPTION_ICONS[i % OPTION_ICONS.length]
         const isCorrect = showCorrect && correctId === opt.id
 
         return (
           <div key={opt.id} className="flex items-center gap-3">
             <div className="w-full">
               <div className="mb-1 flex items-center justify-between text-sm">
-                <span className={`${isCorrect ? 'font-bold text-green-400' : 'text-white/80'}`}>
-                  {opt.label} {isCorrect && '✓'}
+                <span
+                  className={`flex items-center gap-1.5 ${isCorrect ? 'font-bold text-green-400' : 'text-white/80'}`}
+                >
+                  <Icon icon={icon} className="size-4 shrink-0" />
+                  {opt.label} {isCorrect && <Icon icon="mdi:check-circle" className="size-4" />}
                 </span>
                 <span className="font-mono text-white/50">{count}</span>
               </div>
@@ -724,7 +777,9 @@ function RevealOverlay({
       </div>
 
       <div className="w-80 rounded-xl border border-white/10 bg-black/50 p-5 backdrop-blur-sm">
-        <h3 className="mb-4 text-center text-lg font-bold text-[#FFB800]">🏆 Leaderboard</h3>
+        <h3 className="mb-4 flex items-center justify-center gap-1.5 text-lg font-bold text-[#FFB800]">
+          <Icon icon="mdi:trophy" className="size-5" /> Leaderboard
+        </h3>
         {sorted.length === 0 ? (
           <p className="text-center text-sm text-white/30">Belum ada skor</p>
         ) : (
@@ -755,7 +810,9 @@ function LeaderboardPanel({ sessionId, phase }: { sessionId: string; phase: Phas
 
   return (
     <div className="rounded-xl border border-white/10 bg-[#181818] p-4">
-      <h3 className="mb-3 text-sm font-bold text-[#FFB800]">🏆 Leaderboard</h3>
+      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-[#FFB800]">
+        <Icon icon="mdi:trophy" className="size-4" /> Leaderboard
+      </h3>
       {sorted.length === 0 ? (
         <p className="text-sm text-white/30">Belum ada skor</p>
       ) : (

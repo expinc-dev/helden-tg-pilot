@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
+import { GradientButton } from '@/components/GradientButton'
 import { Modal } from '@/components/Modal'
 import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
@@ -33,6 +34,7 @@ export function HostView() {
   const pointer = usePhasePointer(sessionId)
   const { players, centrals } = usePresence(sessionId)
   const teams = useTeams(sessionId)
+  const gameType = useGameType()
 
   const phase = pointer ? demoBundle.phases[pointer.activePhaseId] : null
   const timer = useTimer(sessionId, phase)
@@ -139,40 +141,23 @@ export function HostView() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col gap-6 p-0">
-      {meta.status === 'live' &&
-        phase &&
-        (isModular ? (
-          <button
-            onClick={() => endLevel(sessionId, phase.id)}
-            className="w-fit rounded border px-4 py-2"
-          >
-            Akhiri Level
-          </button>
-        ) : (
-          (() => {
-            const order = demoBundle.phaseOrder
-            const isLast =
-              !!pointer?.activePhaseId && order.indexOf(pointer.activePhaseId) === order.length - 1
-            return (
-              <button
-                onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
-                className="w-fit rounded border px-4 py-2"
-              >
-                {isLast ? 'End session' : 'Next phase'}
-              </button>
-            )
-          })()
-        ))}
+    <div
+      className="flex min-h-dvh w-full flex-col gap-3 px-8 py-3"
+      style={{
+        backgroundImage: `url(${assets.images.backgrounds.auth})`,
+        backgroundSize: '100% 100%',
+        backgroundPosition: 'top',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <Header />
 
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
       {meta.status === 'live' && phase && (
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            {/* <p className="text-xs text-gray-500">Now playing: {phase.id}</p> */}
-            <TimerBar sessionId={sessionId} phase={phase} role="host" />
-          </div>
+        <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/5 bg-[#12121299] p-4 sm:p-6">
+          <HostBadge pageName={gameType} />
+          <TimerBar sessionId={sessionId} phase={phase} role="host" />
           <PhaseRouter
             phase={phase}
             phaseStartMs={pointer?.changedAt}
@@ -186,6 +171,31 @@ export function HostView() {
       {meta.status === 'live' && phase && (
         <HostPresenceSpread sessionId={sessionId} phase={phase} players={players} />
       )}
+
+      {meta.status === 'live' &&
+        phase &&
+        (isModular ? (
+          <button
+            onClick={() => endLevel(sessionId, phase.id)}
+            className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+          >
+            Akhiri Level
+          </button>
+        ) : (
+          (() => {
+            const order = demoBundle.phaseOrder
+            const isLast =
+              !!pointer?.activePhaseId && order.indexOf(pointer.activePhaseId) === order.length - 1
+            return (
+              <GradientButton
+                onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
+                className="w-full py-4 text-base"
+              >
+                {isLast ? 'Akhiri Sesi' : 'Tahap Selanjutnya'}
+              </GradientButton>
+            )
+          })()
+        ))}
     </div>
   )
 }

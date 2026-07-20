@@ -27,11 +27,11 @@ export function TimerBar({
   return (
     <div className="flex items-center justify-center">
       {timer.expired ? (
-        <span className="rounded bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
+        <span className="rounded-full bg-[#E21B3C]/10 px-3 py-1 text-sm font-semibold text-[#E21B3C]">
           Time’s up
         </span>
       ) : (
-        <span className="rounded bg-gray-100 px-3 py-1 font-mono text-lg tabular-nums">
+        <span className="rounded-full bg-white/5 px-3 py-1 font-mono text-lg text-[#FFB800] tabular-nums">
           {mmss(timer.remainingSec)}
         </span>
       )}
