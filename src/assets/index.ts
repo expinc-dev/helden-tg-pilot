@@ -2,6 +2,10 @@ import authBackground from './images/backgrounds/auth.png'
 import centralLobbyBackground from './images/backgrounds/centralLobby.png'
 import playerLobbyBackground from './images/backgrounds/playerLobby.png'
 import rotateBackground from './images/backgrounds/rotate.png'
+import eldercareCompanionship from './images/games/microlearning/eldercareCompanionship.png'
+import eldercareVideoCall from './images/games/microlearning/eldercareVideoCall.png'
+import eldercareWalkEvent from './images/games/microlearning/eldercareWalkEvent.png'
+import industrialSafetyTeam from './images/games/microlearning/industrialSafetyTeam.png'
 import trophyIcon from './images/icons/trophy.png'
 import heldenLogoSm from './images/logos/heldenLogoSm.png'
 import classroomExample from './images/presentation/classroomExample.png'
@@ -20,6 +24,14 @@ export const assets = {
     },
     icons: {
       trophy: trophyIcon,
+    },
+    games: {
+      microlearning: {
+        eldercareCompanionship,
+        eldercareVideoCall,
+        eldercareWalkEvent,
+        industrialSafetyTeam,
+      },
     },
     logos: {
       helden: {

@@ -180,6 +180,11 @@ function StepCard({
   )
   const label = (textBlock && parseTextBlock(textBlock.markdown).heading) ?? `Langkah ${index + 1}`
   const locked = status === 'locked'
+  // Steps without their own image block (most text/question-only steps) still
+  // get a decorative thumbnail here so the card isn't a flat black square —
+  // this is purely card artwork, independent of the step's actual content, so
+  // it must NOT also appear as a hero image inside the step's own detail view.
+  const thumbnail = imageBlock?.mediaId ?? assets.images.presentation.classroomExample
 
   return (
     <button
@@ -189,13 +194,11 @@ function StepCard({
       className="relative aspect-square overflow-hidden rounded-lg text-left disabled:cursor-not-allowed"
       style={cardStateStyle(status)}
     >
-      {imageBlock ? (
-        <img
-          src={imageBlock.mediaId}
-          alt=""
-          className={`absolute inset-0 size-full object-cover ${locked ? 'grayscale' : ''}`}
-        />
-      ) : null}
+      <img
+        src={thumbnail}
+        alt=""
+        className={`absolute inset-0 size-full object-cover ${locked ? 'grayscale' : ''}`}
+      />
       <div
         className={`absolute inset-0 ${
           locked ? 'bg-black/70' : 'bg-gradient-to-t from-black/85 via-black/20 to-transparent'

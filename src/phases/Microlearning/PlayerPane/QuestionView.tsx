@@ -1,5 +1,7 @@
-import type { Block, Question } from '@helden-inc/tg-schema'
+import type { Block } from '@helden-inc/tg-schema'
 
+import { ImageSequenceView } from './ImageSequenceQuestion'
+import { type MicroQuestion, OrderQuestionView } from './OrderQuestion'
 import { SectionHeading } from './shared'
 
 function blockPromptText(prompt: Block[]): string {
@@ -59,7 +61,7 @@ export function QuestionView({
   onDraftChange,
   disabled,
 }: {
-  question: Question
+  question: MicroQuestion
   answer: unknown
   draft: unknown
   onDraftChange: (value: unknown) => void
@@ -132,6 +134,34 @@ export function QuestionView({
             <span>{question.labels?.[1] ?? question.max}</span>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (question.qType === 'order') {
+    return (
+      <div className="flex flex-col gap-3">
+        <SectionHeading text={prompt} />
+        <OrderQuestionView
+          question={question}
+          draft={current}
+          onDraftChange={onDraftChange}
+          disabled={locked}
+        />
+      </div>
+    )
+  }
+
+  if (question.qType === 'image_sequence') {
+    return (
+      <div className="flex flex-col gap-3">
+        <SectionHeading text={prompt} />
+        <ImageSequenceView
+          question={question}
+          draft={current}
+          onDraftChange={onDraftChange}
+          disabled={locked}
+        />
       </div>
     )
   }

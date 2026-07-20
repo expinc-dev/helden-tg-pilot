@@ -1,5 +1,8 @@
 import { assets } from '@/assets'
-import type { Phase, PublishedGame } from '@helden-inc/tg-schema'
+import type { Phase, PublishedGame, Question } from '@helden-inc/tg-schema'
+
+import type { ImageSequenceQuestion } from '@/phases/Microlearning/PlayerPane/ImageSequenceQuestion'
+import type { OrderQuestion } from '@/phases/Microlearning/PlayerPane/OrderQuestion'
 
 import type { SlideTimerConfig } from './sync/useCentralStepTimer'
 
@@ -73,7 +76,7 @@ const presentation: Phase = {
 const intro: Phase = {
   id: 'p-intro',
   type: 'microlearning',
-  title: 'Onboarding',
+  title: 'micro learning',
   syncMode: 'self_paced',
   durationMin: 5,
   // Demo-only: exercises the team_collaborative path — every team member keeps
@@ -157,6 +160,53 @@ const intro: Phase = {
               prompt: [{ kind: 'text', markdown: 'Ada pertanyaan sebelum kita lanjut?' }],
               maxLen: 280,
             },
+          },
+        ],
+      },
+      {
+        id: 's4d',
+        // Demo-only: exercises the 'order' qType — a microlearning-only
+        // extension to tg-schema's Question union (see OrderQuestion.tsx),
+        // so the object literal is cast at this boundary rather than typed
+        // directly. Same drag-to-reorder interaction as the standalone
+        // sort_order minigame (Level 6), just embedded as a step here instead
+        // of its own phase. Ungraded like every other microlearning question.
+        gate: { requireAnswered: true },
+        blocks: [
+          {
+            kind: 'question',
+            question: {
+              qType: 'order',
+              prompt: [{ kind: 'text', markdown: 'Urutkan langkah menulis prompt yang baik.' }],
+              items: [
+                { id: 'i1', label: 'Set the goal & context' },
+                { id: 'i2', label: 'Give an example of the desired format' },
+                { id: 'i3', label: 'Ask the AI to generate a draft' },
+                { id: 'i4', label: 'Review & refine the result' },
+              ],
+            } satisfies OrderQuestion as unknown as Question,
+          },
+        ],
+      },
+      {
+        id: 's4e',
+        // Demo-only: exercises the 'image_sequence' qType — another
+        // microlearning-only extension (see ImageSequenceQuestion.tsx), same
+        // cast-at-the-boundary pattern as 'order' above.
+        gate: { requireAnswered: true },
+        blocks: [
+          {
+            kind: 'question',
+            question: {
+              qType: 'image_sequence',
+              prompt: [{ kind: 'text', markdown: 'Seret gambar untuk membuat rangkaian cerita.' }],
+              images: [
+                { id: 'g1', mediaId: assets.images.games.microlearning.eldercareWalkEvent },
+                { id: 'g2', mediaId: assets.images.games.microlearning.eldercareVideoCall },
+                { id: 'g3', mediaId: assets.images.games.microlearning.eldercareCompanionship },
+                { id: 'g4', mediaId: assets.images.games.microlearning.industrialSafetyTeam },
+              ],
+            } satisfies ImageSequenceQuestion as unknown as Question,
           },
         ],
       },
