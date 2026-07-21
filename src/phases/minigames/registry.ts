@@ -1,5 +1,5 @@
-import { SortOrderRenderer } from './sort_order'
-import { scoreSortOrder, sortOrderConfigSchema } from './sort_order.score'
+import { SortOrderRenderer } from './SortOrder'
+import { scoreSortOrder, sortOrderConfigSchema } from './SortOrder/score'
 import type { MinigameTemplate } from './types'
 
 // The registry: templateId → template code. Add a new template by importing

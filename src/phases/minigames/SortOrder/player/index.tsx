@@ -20,21 +20,11 @@ import { CSS } from '@dnd-kit/utilities'
 import { Icon } from '@iconify/react'
 import { onValue, ref, serverTimestamp, set } from 'firebase/database'
 
+import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
+
 import { rtdb } from '@/lib/firebase'
 
-import { ActionButton } from '../Microlearning/PlayerPane/shared'
-import { TeamFocusLeader } from '../TeamFocusLeader'
-import type { SortOrderConfig } from './sort_order.score'
-import type { MinigameRendererProps } from './types'
-
-// sort_order template (BLUEPRINT_runtime §9 v1). Player arranges labelled items
-// into the correctOrder set by the author. Scored on exact-match correctness +
-// speed (via ScoringConfig.speedBonus at the phase level, applied by
-// scorePhase — this template only returns the correctness signal).
-//
-// Team mode: only the team leader plays; members see a "focus on the leader"
-// screen. Submissions are locked once written (server-side would need rules to
-// enforce; UI enforces client-side).
+import type { SortOrderConfig } from '../score'
 
 function SortableRow({ id, label, position }: { id: string; label: string; position: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -87,7 +77,7 @@ function SortOrderShell({
   )
 }
 
-function SortOrderPlayerActive({
+export function SortOrderPlayerActive({
   title,
   config,
   phaseId,
@@ -189,36 +179,5 @@ function SortOrderPlayerActive({
         </SortableContext>
       </DndContext>
     </SortOrderShell>
-  )
-}
-
-function SortOrderMonitor({ config }: { config: SortOrderConfig }) {
-  return (
-    <div
-      className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-cover bg-top p-6"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
-    >
-      <p className="text-sm text-white/70">Menunggu ketua tim mengirimkan jawaban…</p>
-      <p className="text-xs text-white/40">{config.items.length} langkah untuk diurutkan.</p>
-    </div>
-  )
-}
-
-export function SortOrderRenderer(props: MinigameRendererProps<SortOrderConfig>) {
-  const { config, phase, sessionId, playerId, role, teamRole } = props
-  if (role !== 'player') return <SortOrderMonitor config={config} />
-  // Router already gates team_leader_only + member (via TeamFocusLeader before
-  // reaching here). Sort_order additionally treats team_collaborative + member
-  // the same way — only the leader plays in EITHER team mode.
-  if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
-  if (!playerId) return <SortOrderMonitor config={config} />
-  return (
-    <SortOrderPlayerActive
-      title={phase.title}
-      config={config}
-      phaseId={phase.id}
-      sessionId={sessionId}
-      writerId={playerId}
-    />
   )
 }

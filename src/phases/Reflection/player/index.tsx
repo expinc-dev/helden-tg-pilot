@@ -2,53 +2,18 @@ import { useEffect, useState } from 'react'
 
 import { assets } from '@/assets'
 import { GradientButton } from '@/components/GradientButton'
-import type { Phase, PlayerPresence } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 import { onValue, ref } from 'firebase/database'
 
 import { rtdb } from '@/lib/firebase'
 import { submitAnswer } from '@/lib/sync/submitAnswer'
-import { usePresence } from '@/lib/sync/useSession'
 
-import type { Role } from './PhaseRouter'
+import type { ReflectionAnswer, ReflectionContent } from '../lib'
 
-type ReflectionContent = Extract<Phase['content'], { type: 'reflection' }>
-type ReflectionAnswer = { text: string; scale: number }
-
-// ─── Entry ──────────────────────────────────────────────────────────────────
-
-export function ReflectionRenderer({
-  content,
-  role,
-  sessionId,
-  phaseId,
-  playerId,
-}: {
-  content: ReflectionContent
-  role: Role
-  sessionId: string
-  phaseId: string
-  playerId?: string
-}) {
-  if (role === 'player' && playerId)
-    return (
-      <PlayerReflection
-        content={content}
-        sessionId={sessionId}
-        phaseId={phaseId}
-        playerId={playerId}
-      />
-    )
-  if (role === 'central')
-    return <CentralReflection content={content} sessionId={sessionId} phaseId={phaseId} />
-  return <HostReflection content={content} sessionId={sessionId} phaseId={phaseId} />
-}
-
-// ─── Player: open-text + 1-5 scale, no timer, explicit submit ───────────────
-// Nothing is written per keystroke — the whole answer lands on the player's
-// own node (players/{id}/answers/{phaseId}) in one shot when they tap Kirim.
-
-function PlayerReflection({
+// Open-text + 1-5 scale, no timer, explicit submit. Nothing is written per
+// keystroke — the whole answer lands on the player's own node
+// (players/{id}/answers/{phaseId}) in one shot when they tap Kirim.
+export function PlayerReflection({
   content,
   sessionId,
   phaseId,
@@ -230,139 +195,5 @@ function SubmitButton({
     <GradientButton type="button" onClick={onClick} className="w-full py-3.5 text-sm">
       {children}
     </GradientButton>
-  )
-}
-
-// ─── Host / Central: read incoming answers + scale average ─────────────────
-// No reveal, no per-player "correct/wrong" — just who's answered and the room's
-// average scale rating. Central gets a nameless version (public screen);
-// host gets the full per-player spread (folded into one monitor pane).
-
-type ReflectionRow = { id: string; name: string; connected: boolean; answer?: ReflectionAnswer }
-
-function useReflectionResponses(sessionId: string, phaseId: string): ReflectionRow[] {
-  const { players } = usePresence(sessionId)
-  return Object.entries(players).map(([id, p]) => {
-    const pv = p as PlayerPresence & {
-      answers?: Record<string, { value?: ReflectionAnswer }>
-    }
-    return {
-      id,
-      name: pv.name,
-      connected: pv.connected,
-      answer: pv.answers?.[phaseId]?.value,
-    }
-  })
-}
-
-function useReflectionStats(sessionId: string, phaseId: string) {
-  const rows = useReflectionResponses(sessionId, phaseId)
-  const answered = rows.filter((r) => r.answer)
-  const avgScale = answered.length
-    ? Math.round(
-        (answered.reduce((sum, r) => sum + (r.answer?.scale ?? 0), 0) / answered.length) * 10
-      ) / 10
-    : null
-  return { rows, answered, avgScale }
-}
-
-// Big-screen view — same full-bleed background + centered layout as
-// CentralQuiz, so a reflection phase doesn't look like a different app on the
-// main screen. Nameless (public display): answered count only — the scale
-// average and per-player list stay on the host's device.
-function CentralReflection({
-  content,
-  sessionId,
-  phaseId,
-}: {
-  content: ReflectionContent
-  sessionId: string
-  phaseId: string
-}) {
-  const { rows, answered } = useReflectionStats(sessionId, phaseId)
-
-  return (
-    <div
-      className="fixed inset-0 flex flex-col items-center justify-center gap-8 p-8"
-      style={{
-        backgroundImage: `url(${assets.images.backgrounds.central})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
-      <div className="flex items-center gap-3 rounded-full bg-white/10 px-6 py-2 text-xl text-white/80">
-        <Icon icon="mdi:comment-quote-outline" className="size-6 text-[#FFB800]" />
-        <span className="font-bold text-[#FFB800]">{answered.length}</span>
-        <span>/</span>
-        <span>{rows.length}</span>
-        <span className="text-white/50">menjawab</span>
-      </div>
-
-      <h1 className="max-w-4xl text-center text-4xl leading-tight font-bold text-white drop-shadow-lg">
-        {content.prompt}
-      </h1>
-    </div>
-  )
-}
-
-// Host's monitor pane — embedded inside the host page's own dark card, so no
-// background of its own (matches HostQuiz/LeaderboardPanel). Full per-player
-// spread, folded into one pane per the AC.
-function HostReflection({
-  content,
-  sessionId,
-  phaseId,
-}: {
-  content: ReflectionContent
-  sessionId: string
-  phaseId: string
-}) {
-  const { rows, answered, avgScale } = useReflectionStats(sessionId, phaseId)
-
-  return (
-    <div className="flex h-full flex-col gap-4">
-      <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-4 py-3">
-        <StatPill label="Menjawab" value={`${answered.length}/${rows.length}`} />
-        <StatPill
-          label="Rata-rata skala"
-          value={avgScale !== null ? `${avgScale}/${content.scale.max}` : '—'}
-        />
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-        {rows.length === 0 && <p className="text-sm text-white/30">Belum ada pemain.</p>}
-        {rows.map((r) => (
-          <div key={r.id} className="rounded-lg border border-white/10 bg-[#181818] p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2 truncate text-sm text-white/90">
-                <span
-                  className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                    r.connected ? 'bg-green-500' : 'bg-gray-500'
-                  }`}
-                />
-                {r.name}
-              </span>
-              {r.answer ? (
-                <span className="shrink-0 rounded-full bg-[#FFB800]/10 px-2 py-0.5 text-xs font-bold text-[#FFB800]">
-                  {r.answer.scale}/{content.scale.max}
-                </span>
-              ) : (
-                <span className="shrink-0 text-xs text-white/30">Belum menjawab</span>
-              )}
-            </div>
-            {r.answer && <p className="mt-1.5 text-xs text-white/50">{r.answer.text}</p>}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-1 flex-col items-center gap-0.5 py-1">
-      <span className="text-lg font-bold text-[#FFB800]">{value}</span>
-      <span className="text-[10px] text-white/40">{label}</span>
-    </div>
   )
 }

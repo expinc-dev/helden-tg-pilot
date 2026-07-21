@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
-import type { CorrectnessSignal, MinigameScorerArgs } from './types'
+import type { CorrectnessSignal, MinigameScorerArgs } from '../types'
 
-// Config schema + pure scorer for sort_order. Split from sort_order.tsx so the
+// Config schema + pure scorer for sort_order. Split from the renderer so the
 // self-check can run without pulling React/Firebase into the import graph.
 
 export const sortOrderConfigSchema = z.object({

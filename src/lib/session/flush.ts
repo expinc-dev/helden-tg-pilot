@@ -1,7 +1,7 @@
 import type { Phase } from '@helden-inc/tg-schema'
 import { get, ref, serverTimestamp, update } from 'firebase/database'
 
-import { minigameRegistry } from '@/phases/minigames/registry'
+import { minigameRegistry } from '@/phases/Minigames/registry'
 
 import { rtdb } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
