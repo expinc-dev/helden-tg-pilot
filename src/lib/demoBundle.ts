@@ -381,6 +381,31 @@ const quiz: Phase = {
   },
 }
 
+const reflection: Phase = {
+  id: 'p-reflection',
+  type: 'reflection',
+  title: 'Refleksi',
+  syncMode: 'self_paced',
+  durationMin: 3,
+  scoring: { mode: 'participation', maxPoints: 50 },
+  roles: {
+    player: { enabled: true },
+    central: { enabled: true },
+    host: { monitor: ['answers'] },
+  },
+  content: {
+    type: 'reflection',
+    prompt: 'Apa satu hal yang akan kamu lakukan berbeda setelah sesi ini?',
+    openText: { label: 'Refleksimu', maxLen: 500 },
+    scale: {
+      label: 'Seberapa percaya diri kamu menerapkannya?',
+      min: 1,
+      max: 5,
+      labels: ['Belum percaya diri', 'Sangat percaya diri'],
+    },
+  },
+}
+
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
@@ -391,7 +416,16 @@ export const demoBundle: PublishedGame = {
   // 'modular-progressive' locks all cards except the next unplayed one; swap
   // to 'modular-open' to let the trainer jump anywhere at any time.
   flowMode: 'modular-progressive',
-  phaseOrder: [idle.id, presentation.id, intro.id, quiz.id, video.id, puzzle.id, sortGame.id],
+  phaseOrder: [
+    idle.id,
+    presentation.id,
+    intro.id,
+    quiz.id,
+    video.id,
+    puzzle.id,
+    sortGame.id,
+    reflection.id,
+  ],
   phases: {
     [idle.id]: idle,
     [presentation.id]: presentation,
@@ -400,6 +434,7 @@ export const demoBundle: PublishedGame = {
     [video.id]: video,
     [puzzle.id]: puzzle,
     [sortGame.id]: sortGame,
+    [reflection.id]: reflection,
   },
   publishedAt: Date.now(),
   publishedBy: 'pilot',

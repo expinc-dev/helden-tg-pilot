@@ -7,6 +7,7 @@ import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { PresentationRenderer } from './Presentation'
 import { QuizRenderer } from './Quiz'
+import { ReflectionRenderer } from './Reflection'
 import { TeamFocusLeader } from './TeamFocusLeader'
 import { VideoRenderer } from './Video'
 import { UnknownTemplate } from './minigames/UnknownTemplate'
@@ -130,6 +131,16 @@ function PhaseContentSwitch({
           playerId={playerId}
           phase={phase}
           onAdvance={onAdvance}
+        />
+      )
+    case 'reflection':
+      return (
+        <ReflectionRenderer
+          content={content}
+          role={role}
+          sessionId={sessionId}
+          phaseId={phase.id}
+          playerId={playerId}
         />
       )
     case 'minigame': {

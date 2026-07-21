@@ -82,6 +82,11 @@ function resolveCorrectness(
         phaseStartMs: ctx.phaseStartMs,
       })
     }
+    case 'reflection': {
+      // Participation-scored: submitting at all is the bar, not correctness.
+      const ans = ctx.player.answers?.[phase.id]
+      return ans ? { correct: true, answered: true, elapsedMs: 0 } : null
+    }
     // Quiz / other scored types: read from ctx.player.answers[qId] and compare
     // against the phase content's answer key when the resolver ships.
     default:
