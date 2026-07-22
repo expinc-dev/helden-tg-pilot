@@ -9,18 +9,11 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import type { Block } from '@helden-inc/tg-schema'
+import type { Question } from '@helden-inc/tg-schema'
 
-// Another microlearning-only extension to tg-schema's Question union (see
-// OrderQuestion.tsx for the same pattern/rationale) — drag each pool image
-// into a numbered slot to build an ordered sequence. Unlike 'order' (which
-// reorders a pre-placed list), slots start empty: the draft is a same-length
-// array of image ids or null, indexed by slot position.
-export type ImageSequenceQuestion = {
-  qType: 'image_sequence'
-  prompt: Block[]
-  images: { id: string; mediaId: string }[]
-}
+// Drag each pool image into a numbered slot to build an ordered sequence.
+// Unlike 'order' (which reorders a pre-placed list), slots start empty: the
+// draft is a same-length array of image ids or null, indexed by slot position.
 
 function PoolThumb({ id, mediaId }: { id: string; mediaId: string }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id })
@@ -82,7 +75,7 @@ export function ImageSequenceView({
   onDraftChange,
   disabled,
 }: {
-  question: ImageSequenceQuestion
+  question: Extract<Question, { qType: 'image_sequence' }>
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean

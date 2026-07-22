@@ -1,7 +1,7 @@
-import type { Block } from '@helden-inc/tg-schema'
+import type { Block, Question } from '@helden-inc/tg-schema'
 
 import { ImageSequenceView } from './ImageSequenceQuestion'
-import { type MicroQuestion, OrderQuestionView } from './OrderQuestion'
+import { OrderQuestionView } from './OrderQuestion'
 import { SectionHeading } from './shared'
 
 function blockPromptText(prompt: Block[]): string {
@@ -61,7 +61,7 @@ export function QuestionView({
   onDraftChange,
   disabled,
 }: {
-  question: MicroQuestion
+  question: Question
   answer: unknown
   draft: unknown
   onDraftChange: (value: unknown) => void

@@ -1,11 +1,11 @@
-import type { MicroQuestion } from './OrderQuestion'
+import type { Question } from '@helden-inc/tg-schema'
 
 // Whether a not-yet-committed draft is enough to satisfy gate.requireAnswered
 // for this question. Scale and order always have a value (no "empty" slider
 // position, and OrderQuestionView seeds the draft with the authored item
 // order on mount), so neither ever blocks — image_sequence requires every
 // slot filled, the rest need an explicit pick/typed answer.
-export function isDraftValid(question: MicroQuestion, draft: unknown): boolean {
+export function isDraftValid(question: Question, draft: unknown): boolean {
   if (question.qType === 'single_choice') return typeof draft === 'string' && draft.length > 0
   if (question.qType === 'multi_choice') return Array.isArray(draft) && draft.length > 0
   if (question.qType === 'scale') return typeof draft === 'number'

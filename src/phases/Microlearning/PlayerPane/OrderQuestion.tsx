@@ -16,23 +16,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Block, Question } from '@helden-inc/tg-schema'
+import type { Question } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
-
-import type { ImageSequenceQuestion } from './ImageSequenceQuestion'
-
-// tg-schema's Question union has no ranking/reorder variant — this is a
-// microlearning-only extension (author it in demoBundle.ts with `as unknown
-// as Question` at the object-literal boundary, same pattern as the standalone
-// sort_order minigame template but embedded as a step block here instead of
-// its own phase).
-export type OrderQuestion = {
-  qType: 'order'
-  prompt: Block[]
-  items: { id: string; label: string }[]
-}
-
-export type MicroQuestion = Question | OrderQuestion | ImageSequenceQuestion
 
 function SortableRow({ id, label, position }: { id: string; label: string; position: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -70,7 +55,7 @@ export function OrderQuestionView({
   onDraftChange,
   disabled,
 }: {
-  question: OrderQuestion
+  question: Extract<Question, { qType: 'order' }>
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean

@@ -1,8 +1,5 @@
 import { assets } from '@/assets'
-import type { Phase, PublishedGame, Question } from '@helden-inc/tg-schema'
-
-import type { ImageSequenceQuestion } from '@/phases/Microlearning/PlayerPane/ImageSequenceQuestion'
-import type { OrderQuestion } from '@/phases/Microlearning/PlayerPane/OrderQuestion'
+import type { Phase, PublishedGame } from '@helden-inc/tg-schema'
 
 import type { SlideTimerConfig } from './sync/useCentralStepTimer'
 
@@ -165,12 +162,10 @@ const intro: Phase = {
       },
       {
         id: 's4d',
-        // Demo-only: exercises the 'order' qType — a microlearning-only
-        // extension to tg-schema's Question union (see OrderQuestion.tsx),
-        // so the object literal is cast at this boundary rather than typed
-        // directly. Same drag-to-reorder interaction as the standalone
-        // sort_order minigame (Level 6), just embedded as a step here instead
-        // of its own phase. Ungraded like every other microlearning question.
+        // Demo-only: exercises the 'order' qType. Same drag-to-reorder
+        // interaction as the standalone sort_order minigame (Level 6), just
+        // embedded as a step here instead of its own phase. Ungraded like
+        // every other microlearning question.
         gate: { requireAnswered: true },
         blocks: [
           {
@@ -184,15 +179,13 @@ const intro: Phase = {
                 { id: 'i3', label: 'Ask the AI to generate a draft' },
                 { id: 'i4', label: 'Review & refine the result' },
               ],
-            } satisfies OrderQuestion as unknown as Question,
+            },
           },
         ],
       },
       {
         id: 's4e',
-        // Demo-only: exercises the 'image_sequence' qType — another
-        // microlearning-only extension (see ImageSequenceQuestion.tsx), same
-        // cast-at-the-boundary pattern as 'order' above.
+        // Demo-only: exercises the 'image_sequence' qType.
         gate: { requireAnswered: true },
         blocks: [
           {
@@ -206,7 +199,7 @@ const intro: Phase = {
                 { id: 'g3', mediaId: assets.images.games.microlearning.eldercareCompanionship },
                 { id: 'g4', mediaId: assets.images.games.microlearning.industrialSafetyTeam },
               ],
-            } satisfies ImageSequenceQuestion as unknown as Question,
+            },
           },
         ],
       },
