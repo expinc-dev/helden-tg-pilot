@@ -152,10 +152,10 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
   for (const [keyId, phaseResult] of Object.entries(results)) {
     durablePatch[`${collection}/${keyId}/${keyBy}`] = keyId
     durablePatch[`${collection}/${keyId}/sessionId`] = sessionId
-    durablePatch[`${collection}/${keyId}/phaseResults/${phase.id}`] = {
+    durablePatch[`${collection}/${keyId}/phaseResults/${phase.id}`] = stripUndefined({
       ...phaseResult,
       completedAt: serverTimestamp(),
-    }
+    })
   }
   if (Object.keys(durablePatch).length > 0) {
     await update(ref(rtdb, `sessions/${sessionId}`), durablePatch)
@@ -182,6 +182,17 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
   if (Object.keys(patch).length > 0) {
     await update(ref(rtdb, `sessions/${sessionId}/aggregates`), patch)
   }
+}
+
+// RTDB's update() rejects literal `undefined` anywhere in the payload (e.g.
+// phaseResult.answers is undefined for phase types with no answers concept —
+// presentation, video) — the key must be omitted, not set to undefined.
+function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+  const out = {} as T
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) (out as Record<string, unknown>)[k] = v
+  }
+  return out
 }
 
 // Answers written by submitAnswer land at players/{id}/answers/{qId}. Question
