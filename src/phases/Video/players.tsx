@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import type { VideoPlayback } from '@helden-inc/tg-schema'
 
 import type { Role } from '../PhaseRouter'
-import { vimeoEmbedUrl } from './lib'
+import { vimeoEmbedUrl, youtubeEmbedUrl } from './lib'
 
 export function DirectPlayer({
   url,
@@ -124,6 +124,81 @@ export function VimeoPlayer({
     <iframe
       ref={ref}
       src={embedUrl}
+      allow="autoplay; fullscreen; picture-in-picture"
+      className={
+        role === 'central' ? 'h-full w-full border-0' : 'aspect-video w-full rounded-lg border-0'
+      }
+      title="Video"
+    />
+  )
+}
+
+export function YoutubePlayer({
+  url,
+  state,
+  positionSec,
+  muted,
+  role,
+  positionRef,
+}: {
+  url: string
+  state: VideoPlayback['state']
+  positionSec: number
+  muted: boolean
+  role: Role
+  positionRef: React.MutableRefObject<number>
+}) {
+  const ref = useRef<HTMLIFrameElement>(null)
+  const readyRef = useRef(false)
+  const embedUrl = youtubeEmbedUrl(url, muted)
+
+  const send = (func: string, args?: unknown[]) => {
+    const iframe = ref.current
+    if (!iframe?.contentWindow) return
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event: 'command', func, args: args ?? [] }),
+      '*'
+    )
+  }
+
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (typeof e.data !== 'string') return
+      try {
+        const msg = JSON.parse(e.data) as {
+          event?: string
+          info?: { currentTime?: number }
+        }
+        if (msg.event === 'onReady') {
+          readyRef.current = true
+          send('seekTo', [positionSec, true])
+          if (state === 'playing') send('playVideo')
+        } else if (msg.event === 'infoDelivery' && typeof msg.info?.currentTime === 'number') {
+          positionRef.current = msg.info.currentTime
+        }
+      } catch {
+        /* YouTube sometimes sends non-JSON strings, ignore */
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!readyRef.current) return
+    if (Math.abs(positionRef.current - positionSec) > 0.5) {
+      send('seekTo', [positionSec, true])
+    }
+    send(state === 'playing' ? 'playVideo' : 'pauseVideo')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, positionSec])
+
+  return (
+    <iframe
+      ref={ref}
+      src={embedUrl}
+      onLoad={() => send('listening')}
       allow="autoplay; fullscreen; picture-in-picture"
       className={
         role === 'central' ? 'h-full w-full border-0' : 'aspect-video w-full rounded-lg border-0'

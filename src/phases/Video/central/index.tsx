@@ -5,7 +5,7 @@ import type { VideoContent } from '@helden-inc/tg-schema'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
 
 import { detectProvider } from '../lib'
-import { DirectPlayer, VimeoPlayer } from '../players'
+import { DirectPlayer, VimeoPlayer, YoutubePlayer } from '../players'
 import { CentralPausedOverlay } from './components/CentralPausedOverlay'
 
 export function CentralVideo({ content, sessionId }: { content: VideoContent; sessionId: string }) {
@@ -16,7 +16,7 @@ export function CentralVideo({ content, sessionId }: { content: VideoContent; se
   if (!url) {
     return (
       <div className="p-8 text-sm text-gray-500">
-        Video URL not set (content.videoUrl absent; mediaId resolver pending).
+        Video URL not set (content.videoUrl is empty for this slide).
       </div>
     )
   }
@@ -29,6 +29,15 @@ export function CentralVideo({ content, sessionId }: { content: VideoContent; se
     <div className="fixed inset-0 z-0 bg-black">
       {provider === 'vimeo' ? (
         <VimeoPlayer
+          url={url}
+          state={state}
+          positionSec={positionSec}
+          muted={false}
+          role="central"
+          positionRef={positionRef}
+        />
+      ) : provider === 'youtube' ? (
+        <YoutubePlayer
           url={url}
           state={state}
           positionSec={positionSec}

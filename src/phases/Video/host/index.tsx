@@ -9,7 +9,7 @@ import { setVideoPlayback } from '@/lib/session/videoControl'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
 
 import { detectProvider } from '../lib'
-import { DirectPlayer, VimeoPlayer } from '../players'
+import { DirectPlayer, VimeoPlayer, YoutubePlayer } from '../players'
 import { HostControls } from './components/HostControls'
 import { HostDirectPlayer } from './components/HostDirectPlayer'
 
@@ -29,7 +29,7 @@ export function HostVideo({
   if (!url) {
     return (
       <div className="p-8 text-sm text-gray-500">
-        Video URL not set (content.videoUrl absent; mediaId resolver pending).
+        Video URL not set (content.videoUrl is empty for this slide).
       </div>
     )
   }
@@ -42,6 +42,15 @@ export function HostVideo({
     <div className="flex flex-col gap-4">
       {provider === 'vimeo' ? (
         <VimeoPlayer
+          url={url}
+          state={state}
+          positionSec={positionSec}
+          muted
+          role="host"
+          positionRef={positionRef}
+        />
+      ) : provider === 'youtube' ? (
+        <YoutubePlayer
           url={url}
           state={state}
           positionSec={positionSec}
@@ -121,6 +130,18 @@ export function VideoHostScreen({
           {videoUrl && provider === 'vimeo' && (
             <div className="aspect-video w-full">
               <VimeoPlayer
+                url={videoUrl}
+                state={state}
+                positionSec={positionSec}
+                muted
+                role="host"
+                positionRef={{ current: positionSec } as React.MutableRefObject<number>}
+              />
+            </div>
+          )}
+          {videoUrl && provider === 'youtube' && (
+            <div className="aspect-video w-full">
+              <YoutubePlayer
                 url={videoUrl}
                 state={state}
                 positionSec={positionSec}
