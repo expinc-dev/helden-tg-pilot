@@ -10,16 +10,39 @@ import { submitAnswer } from '@/lib/sync/submitAnswer'
 
 import type { ReflectionAnswer, ReflectionContent } from '../lib'
 
+// Fixed 1-5 mood scale — the schema only carries a start/end label pair, but
+// the design calls for a distinct icon + label per step, so these are UI-only
+// constants rather than content-driven.
+const MOOD_OPTIONS = [
+  { value: 1, label: 'Tidak Menyenangkan', icon: 'mdi:emoticon-sad-outline', color: '#FF5A5A' },
+  {
+    value: 2,
+    label: 'Kurang Menyenangkan',
+    icon: 'mdi:emoticon-confused-outline',
+    color: '#FF9A3D',
+  },
+  { value: 3, label: 'Biasa Saja', icon: 'mdi:emoticon-neutral-outline', color: '#FFD93D' },
+  { value: 4, label: 'Menyenangkan', icon: 'mdi:emoticon-happy-outline', color: '#8BD450' },
+  {
+    value: 5,
+    label: 'Sangat Menyenangkan',
+    icon: 'mdi:emoticon-excited-outline',
+    color: '#26890C',
+  },
+] as const
+
 // Open-text + 1-5 scale, no timer, explicit submit. Nothing is written per
 // keystroke — the whole answer lands on the player's own node
-// (players/{id}/answers/{phaseId}) in one shot when they tap Kirim.
+// (players/{id}/answers/{phaseId}) in one shot when they tap Selanjutnya.
 export function PlayerReflection({
   content,
+  title,
   sessionId,
   phaseId,
   playerId,
 }: {
   content: ReflectionContent
+  title: string
   sessionId: string
   phaseId: string
   playerId: string
@@ -55,8 +78,8 @@ export function PlayerReflection({
 
   if (submitted) {
     return (
-      <ReflectionShell>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+      <ReflectionShell title={title}>
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#26890C]/20">
             <Icon icon="mdi:check-circle" className="size-10 text-[#26890C]" />
           </div>
@@ -67,63 +90,72 @@ export function PlayerReflection({
     )
   }
 
-  const steps = content.scale.max - content.scale.min + 1
-
   return (
     <ReflectionShell
+      title={title}
+      subtitle={content.prompt}
       footer={
         <SubmitButton disabled={!canSubmit} onClick={handleSubmit}>
-          Kirim
+          Selanjutnya
         </SubmitButton>
       }
     >
-      <div className="flex flex-col gap-6">
-        <SectionHeading text={content.prompt} />
-
-        <div className="flex flex-col gap-3">
-          {content.openText.label && (
-            <p className="text-sm text-white/60">{content.openText.label}</p>
-          )}
-          <div className="rounded-xl border border-white/10 bg-[#1C1C1E] p-4">
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value.slice(0, content.openText.maxLen))}
-              maxLength={content.openText.maxLen}
-              rows={5}
-              placeholder="Tulis refleksimu di sini..."
-              className="w-full resize-none text-sm text-white placeholder:text-white/30 focus:outline-none"
-            />
-            <p className="mt-2 text-right text-xs text-white/40">
-              {text.length}/{content.openText.maxLen}
-            </p>
-          </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
+        <div
+          className="flex min-h-0 flex-1 flex-col rounded-lg border p-4"
+          style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.08)' }}
+        >
+          <CardHeading
+            heading={
+              content.openText.label || 'Apa pelajaran yang bisa kau ambil dari permainan ini?'
+            }
+            subtext="Ceritakan dengan kata-katamu sendiri"
+          />
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value.slice(0, content.openText.maxLen))}
+            maxLength={content.openText.maxLen}
+            placeholder="Tulis refleksimu di sini..."
+            className="mt-3 min-h-0 w-full flex-1 resize-none rounded-lg border p-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
+            style={{ borderColor: '#353535', background: 'rgba(255, 255, 255, 0.04)' }}
+          />
+          <p className="mt-2 text-right text-xs text-white/40">
+            {text.length}/{content.openText.maxLen} Karakter
+          </p>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {content.scale.label && <p className="text-sm text-white/60">{content.scale.label}</p>}
-          <div className="rounded-xl border border-white/10 bg-[#1C1C1E] p-4">
-            <div className="flex items-center justify-between gap-2">
-              {Array.from({ length: steps }, (_, i) => content.scale.min + i).map((n) => (
+        <div
+          className="rounded-lg border p-4"
+          style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.08)' }}
+        >
+          <CardHeading
+            heading={content.scale.label || 'Seberapa menyenangkan permainan ini?'}
+            subtext="Pilih satu yang paling sesuai dengan pengalamanmu"
+          />
+          <div className="mt-3 grid grid-cols-5 gap-2">
+            {MOOD_OPTIONS.map((mood) => {
+              const selected = scale === mood.value
+              return (
                 <button
-                  key={n}
+                  key={mood.value}
                   type="button"
-                  onClick={() => setScale(n)}
-                  className={`flex h-12 flex-1 items-center justify-center rounded-lg border text-lg font-bold transition ${
-                    scale === n
-                      ? 'border-[#FFB800] bg-[#FFB800] text-black'
-                      : 'border-white/10 bg-transparent text-white/70'
-                  }`}
+                  onClick={() => setScale(mood.value)}
+                  className="flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition"
+                  style={{
+                    borderColor: selected ? '#FFB800' : '#353535',
+                    backgroundColor: selected ? `${mood.color}26` : 'transparent',
+                    opacity: selected ? 1 : 0.64,
+                  }}
                 >
-                  {n}
+                  <Icon icon={mood.icon} className="size-7" style={{ color: mood.color }} />
+                  <span
+                    className={`text-xs leading-[120%] tracking-[-0.48px] ${selected ? 'font-semibold text-white' : 'font-normal text-[#CCC]'}`}
+                  >
+                    {mood.label}
+                  </span>
                 </button>
-              ))}
-            </div>
-            {content.scale.labels && (
-              <div className="mt-2 flex justify-between text-xs text-white/40">
-                <span>{content.scale.labels[0]}</span>
-                <span>{content.scale.labels[1]}</span>
-              </div>
-            )}
+              )
+            })}
           </div>
         </div>
       </div>
@@ -137,33 +169,43 @@ export function PlayerReflection({
 function ReflectionShell({
   children,
   footer,
+  title,
+  subtitle,
 }: {
   children: React.ReactNode
   footer?: React.ReactNode
+  title: string
+  subtitle?: string
 }) {
   return (
     <div
-      className="flex min-h-dvh flex-col bg-cover bg-top p-4 sm:p-6"
+      className="flex min-h-dvh flex-col gap-4 bg-cover bg-top p-4 sm:p-6"
       style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
     >
       <div
         className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border"
         style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
       >
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
-        {footer && <div className="p-4 pt-0 sm:p-6 sm:pt-0">{footer}</div>}
+        <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+          <div className="mb-6 text-center">
+            <h1 className="text-xl font-bold text-white sm:text-2xl">{title}</h1>
+            {subtitle && <p className="mx-auto mt-2 max-w-md text-sm text-white/60">{subtitle}</p>}
+          </div>
+          {children}
+        </div>
       </div>
+      {footer}
     </div>
   )
 }
 
-// A short accent tick + heading — same "card title" language used above
-// microlearning question prompts, so Reflection's prompt reads the same way.
-function SectionHeading({ text }: { text: string }) {
+// A short accent tick + heading + helper subtext — the per-card title
+// language used inside each Reflection card.
+function CardHeading({ heading, subtext }: { heading: string; subtext?: string }) {
   return (
-    <div className="flex flex-col gap-2">
-      <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-      <h2 className="text-lg font-bold text-[#FFB800]">{text}</h2>
+    <div className="flex flex-col gap-1.5">
+      <h2 className="text-base font-bold text-[#FFB800]">{heading}</h2>
+      {subtext && <p className="text-xs text-white/50">{subtext}</p>}
     </div>
   )
 }

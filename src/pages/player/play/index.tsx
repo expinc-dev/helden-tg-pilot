@@ -129,9 +129,28 @@ export function PlayerView() {
     )
   }
 
+  // Minigame templates own their full screen (background + card + their own
+  // timer, e.g. SortOrder) — same reasoning as the host page's video/idle
+  // bypass. The generic TimerBar row would sit above the template's own
+  // min-h-dvh shell and push the page taller than one viewport, forcing an
+  // unwanted scroll.
+  if (phase && sessionId && phase.content.type === 'minigame') {
+    return (
+      <PhaseRouter
+        phase={phase}
+        phaseStartMs={pointer?.changedAt}
+        role="player"
+        sessionId={sessionId}
+        playerId={identity.id}
+        allowTeams={config?.allowTeams}
+        teamId={myTeamId}
+      />
+    )
+  }
+
   if (phase && sessionId) {
     return (
-      <div className="flex min-h-dvh flex-col gap-4">
+      <div className="flex min-h-dvh flex-col gap-4 bg-[#121212]">
         <TimerBar sessionId={sessionId} phase={phase} role="player" />
         <PhaseRouter
           phase={phase}

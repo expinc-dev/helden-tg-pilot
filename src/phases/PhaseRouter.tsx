@@ -137,6 +137,7 @@ function PhaseContentSwitch({
       return (
         <ReflectionRenderer
           content={content}
+          title={phase.title}
           role={role}
           sessionId={sessionId}
           phaseId={phase.id}

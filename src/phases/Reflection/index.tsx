@@ -6,12 +6,14 @@ import { PlayerReflection } from './player'
 
 export function ReflectionRenderer({
   content,
+  title,
   role,
   sessionId,
   phaseId,
   playerId,
 }: {
   content: ReflectionContent
+  title: string
   role: Role
   sessionId: string
   phaseId: string
@@ -21,6 +23,7 @@ export function ReflectionRenderer({
     return (
       <PlayerReflection
         content={content}
+        title={title}
         sessionId={sessionId}
         phaseId={phaseId}
         playerId={playerId}

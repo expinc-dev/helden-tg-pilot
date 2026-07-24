@@ -16,8 +16,9 @@ import type { SortOrderConfig } from './score'
 export function SortOrderRenderer(props: MinigameRendererProps<SortOrderConfig>) {
   const { config, phase, sessionId, playerId, role, teamRole } = props
 
-  if (role === 'central') return <CentralSortOrder sessionId={sessionId} phase={phase} />
-  if (role === 'host') return <HostSortOrder sessionId={sessionId} phase={phase} />
+  if (role === 'central')
+    return <CentralSortOrder sessionId={sessionId} phase={phase} config={config} />
+  if (role === 'host') return <HostSortOrder sessionId={sessionId} phase={phase} config={config} />
 
   // Router already gates team_leader_only + member (via TeamFocusLeader before
   // reaching here). Sort_order additionally treats team_collaborative + member
@@ -32,9 +33,8 @@ export function SortOrderRenderer(props: MinigameRendererProps<SortOrderConfig>)
   }
   return (
     <SortOrderPlayerActive
-      title={phase.title}
+      phase={phase}
       config={config}
-      phaseId={phase.id}
       sessionId={sessionId}
       writerId={playerId}
     />

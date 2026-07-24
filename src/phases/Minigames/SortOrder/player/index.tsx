@@ -4,6 +4,7 @@ import { assets } from '@/assets'
 import {
   DndContext,
   type DragEndEvent,
+  type Modifier,
   PointerSensor,
   TouchSensor,
   closestCenter,
@@ -17,14 +18,33 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 import { onValue, ref, serverTimestamp, set } from 'firebase/database'
 
 import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
 import { rtdb } from '@/lib/firebase'
+import { mmss } from '@/lib/sync/timermath'
+import { useTimer } from '@/lib/sync/useTimer'
 
 import type { SortOrderConfig } from '../score'
+
+// This is a vertical-only reorder list — without this, dnd-kit's default drag
+// transform follows the pointer on both axes, letting a row slide sideways
+// and push the page into horizontal overflow/scroll.
+const restrictToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 })
+
+// Fisher-Yates — the AC calls for shuffled cards, not the authored item order
+// (which would just start already-solved).
+function shuffled(ids: string[]): string[] {
+  const arr = [...ids]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
 
 function SortableRow({ id, label, position }: { id: string; label: string; position: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -53,13 +73,18 @@ function SortableRow({ id, label, position }: { id: string; label: string; posit
 }
 
 // Full-bleed background + rounded card frame, matching the microlearning step
-// cards (StepShell) so this template doesn't look like a different app.
+// cards (StepShell) so this template doesn't look like a different app. Owns
+// its own timer pill (when the phase has one) instead of relying on the page
+// shell's generic TimerBar — that row would stack above this min-h-dvh card
+// and push the page taller than one viewport, forcing a scroll.
 function SortOrderShell({
   children,
   footer,
+  timerLabel,
 }: {
   children: React.ReactNode
   footer?: React.ReactNode
+  timerLabel?: string
 }) {
   return (
     <div
@@ -70,6 +95,13 @@ function SortOrderShell({
         className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border"
         style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
       >
+        {timerLabel && (
+          <div className="flex justify-center pt-4">
+            <span className="rounded-full bg-white/5 px-3 py-1 font-mono text-lg text-[#FFB800] tabular-nums">
+              {timerLabel}
+            </span>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
         {footer && <div className="p-4 pt-0 sm:p-6 sm:pt-0">{footer}</div>}
       </div>
@@ -78,19 +110,25 @@ function SortOrderShell({
 }
 
 export function SortOrderPlayerActive({
-  title,
+  phase,
   config,
-  phaseId,
   sessionId,
   writerId,
 }: {
-  title: string
+  phase: Phase
   config: SortOrderConfig
-  phaseId: string
   sessionId: string
   writerId: string // playerId that owns the write path (solo=self, leader=leader)
 }) {
-  const [order, setOrder] = useState<string[]>(config.items.map((i) => i.id))
+  const title = phase.title
+  const phaseId = phase.id
+  const timer = useTimer(sessionId, phase)
+  const timerLabel = timer.active
+    ? timer.expired
+      ? 'Waktu habis'
+      : mmss(timer.remainingSec)
+    : undefined
+  const [order, setOrder] = useState<string[]>(() => shuffled(config.items.map((i) => i.id)))
   const [busy, setBusy] = useState(false)
   const [submittedIds, setSubmittedIds] = useState<string[] | null>(null)
 
@@ -130,7 +168,7 @@ export function SortOrderPlayerActive({
 
   if (submittedIds) {
     return (
-      <SortOrderShell>
+      <SortOrderShell timerLabel={timerLabel}>
         <div className="flex flex-col items-center gap-1 pb-5 text-center">
           <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
           <h1 className="text-xl font-bold text-[#FFB800]">{title}</h1>
@@ -156,6 +194,7 @@ export function SortOrderPlayerActive({
 
   return (
     <SortOrderShell
+      timerLabel={timerLabel}
       footer={
         <ActionButton disabled={busy} onClick={submit}>
           {busy ? 'Mengirim…' : 'Selanjutnya'}
@@ -169,7 +208,12 @@ export function SortOrderPlayerActive({
           Seret setiap langkah ke urutan yang benar, lalu lanjutkan.
         </p>
       </div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={onDragEnd}
+        modifiers={[restrictToVerticalAxis]}
+      >
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <ol className="flex flex-col gap-2.5">
             {order.map((id, i) => (
