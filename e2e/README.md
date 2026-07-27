@@ -18,9 +18,15 @@ both down.
 
 - Playwright's browser: `npx playwright install chromium` (one-time).
 - **JDK 21+** for the Realtime Database emulator. If `java -version` is below
-  21, install one without touching the system default, e.g.
-  `brew install openjdk@21` — `playwright.config.ts` already points the
-  emulator subprocess (only) at it via `PATH`.
+  21, install one without touching the system default:
+  - macOS: `brew install openjdk@21`
+  - Windows: install a JDK 21 (e.g. Temurin/Oracle) to the default
+    `C:\Program Files\Java\jdk-21` location, or set `JDK21_BIN` to wherever
+    its `bin` folder actually is.
+
+  `playwright.config.ts` points the emulator subprocess (only) at it via
+  `PATH`, picking the path by `process.platform` (override with `JDK21_BIN`
+  if yours lives somewhere else on either OS).
 
 ## What it proves
 
