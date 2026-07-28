@@ -1,8 +1,6 @@
 import { assets } from '@/assets'
 import type { Phase, PublishedGame } from '@helden-inc/tg-schema'
 
-import type { SlideTimerConfig } from './sync/useCentralStepTimer'
-
 // ponytail: in-memory bundle. Move to Firestore load when CMS publish exists (T-cms-publish).
 const idle: Phase = {
   id: 'p-idle',
@@ -13,9 +11,9 @@ const idle: Phase = {
   content: { type: 'idle', lottieMediaId: 'm-lottie-waiting', caption: 'Welcome' },
 }
 
-// Host-controlled slide deck, shown before onboarding (level 1). Slide images
-// stay in `blocks`; per-slide display extras (title/details/timer/style) live
-// outside the schema in `presentationSlideExtras` below — see that export.
+// Host-controlled slide deck, shown before onboarding (level 1). Each slide's
+// blocks render as a stacked list (same BlockView Microlearning uses) — a
+// slide can hold text/image/video/question, not just one image.
 const presentation: Phase = {
   id: 'p-presentation',
   type: 'presentation',
@@ -28,43 +26,153 @@ const presentation: Phase = {
     slides: [
       {
         id: 'slide-1',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-1',
+            url: assets.images.presentation.classroomExample,
+          },
+        ],
       },
       {
         id: 'slide-2',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-2',
+            url: assets.images.presentation.classroomExampleFramed,
+          },
+          { kind: 'heading', text: 'Selamat Datang' },
+        ],
       },
       {
         id: 'slide-3',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-3',
+            url: assets.images.presentation.classroomExample,
+          },
+          {
+            kind: 'text',
+            markdown:
+              '## Kenapa Sesi Ini Penting\nPelatihan ini membantu tim memahami alur kerja baru sebelum onboarding dimulai.',
+          },
+        ],
       },
       {
         id: 'slide-4',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-4',
+            url: assets.images.presentation.classroomExampleFramed,
+          },
+          { kind: 'heading', text: 'Aturan Sesi' },
+          {
+            kind: 'text',
+            markdown:
+              '## Ikuti Instruksi Host\nPerhatikan layar utama dan ikuti arahan host di setiap fase.',
+          },
+          { kind: 'timer', seconds: 30, direction: 'down' },
+        ],
       },
       {
         id: 'slide-5',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-5',
+            url: assets.images.presentation.classroomExample,
+          },
+          { kind: 'timer', seconds: 15, direction: 'up' },
+        ],
       },
       {
         id: 'slide-6',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-6',
+            url: assets.images.presentation.classroomExampleFramed,
+          },
+          { kind: 'heading', text: 'Bersiap' },
+          { kind: 'timer', seconds: 20, direction: 'down' },
+        ],
       },
       {
         id: 'slide-7',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-7',
+            url: assets.images.presentation.classroomExample,
+          },
+          { kind: 'heading', text: 'Tim & Kolaborasi' },
+          {
+            kind: 'text',
+            markdown:
+              '## Kerja Sama Tim\nBeberapa fase membutuhkan kerja sama dengan anggota tim lain.',
+          },
+          { kind: 'timer', seconds: 25, direction: 'down' },
+        ],
       },
       {
         id: 'slide-8',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-8',
+            url: assets.images.presentation.classroomExampleFramed,
+          },
+          {
+            kind: 'text',
+            markdown:
+              '## Waktu Terbatas\nBeberapa fase memiliki batas waktu, perhatikan timer di layar.',
+          },
+          { kind: 'timer', seconds: 20, direction: 'down' },
+        ],
       },
       {
         id: 'slide-9',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExample }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-9',
+            url: assets.images.presentation.classroomExample,
+          },
+          { kind: 'heading', text: 'Skor & Penilaian' },
+          {
+            kind: 'question',
+            question: {
+              qType: 'single_choice',
+              prompt: [{ kind: 'text', markdown: 'Bagaimana skor dihitung dalam pelatihan ini?' }],
+              options: [
+                { id: 'a', label: 'Ketepatan dan kecepatan menjawab' },
+                { id: 'b', label: 'Jumlah slide yang dilihat' },
+                { id: 'c', label: 'Lama waktu login' },
+              ],
+              correctId: 'a',
+            },
+          },
+          { kind: 'timer', seconds: 20, direction: 'down' },
+        ],
       },
       {
         id: 'slide-10',
-        blocks: [{ kind: 'image', mediaId: assets.images.presentation.classroomExampleFramed }],
+        blocks: [
+          {
+            kind: 'image',
+            mediaId: 'm-slide-10',
+            url: assets.images.presentation.classroomExampleFramed,
+          },
+          { kind: 'heading', text: 'Siap Memulai?' },
+          {
+            kind: 'text',
+            markdown: '## Mari Mulai\nTekan lanjut untuk memulai fase onboarding.',
+          },
+          { kind: 'timer', seconds: 15, direction: 'down' },
+        ],
       },
     ],
   },
@@ -457,75 +565,4 @@ export const demoBundle: PublishedGame = {
   },
   publishedAt: Date.now(),
   publishedBy: 'pilot',
-}
-
-// Presentation-only slide extras, keyed by slide id — outside the schema so the
-// visual layout (title/details/timer/style) can change without a schema field.
-// See src/phases/Presentation/README.md for the supported combinations.
-export type PresentationSlideExtras = {
-  title?: string
-  details?: { heading: string; body: string }
-  timer?: SlideTimerConfig
-  style?: 'timer-emphasis' | 'detail-emphasis'
-}
-
-export const presentationSlideExtras: Record<string, PresentationSlideExtras> = {
-  'slide-1': {},
-  'slide-2': {
-    title: 'Selamat Datang',
-  },
-  'slide-3': {
-    details: {
-      heading: 'Kenapa Sesi Ini Penting',
-      body: 'Pelatihan ini membantu tim memahami alur kerja baru sebelum onboarding dimulai.',
-    },
-  },
-  'slide-4': {
-    title: 'Aturan Sesi',
-    details: {
-      heading: 'Ikuti Instruksi Host',
-      body: 'Perhatikan layar utama dan ikuti arahan host di setiap fase.',
-    },
-    timer: { seconds: 30, direction: 'down' },
-  },
-  'slide-5': {
-    timer: { seconds: 15, direction: 'up' },
-  },
-  'slide-6': {
-    title: 'Bersiap',
-    timer: { seconds: 20, direction: 'down' },
-  },
-  'slide-7': {
-    title: 'Tim & Kolaborasi',
-    details: {
-      heading: 'Kerja Sama Tim',
-      body: 'Beberapa fase membutuhkan kerja sama dengan anggota tim lain.',
-    },
-    timer: { seconds: 25, direction: 'down' },
-    style: 'detail-emphasis',
-  },
-  'slide-8': {
-    details: {
-      heading: 'Waktu Terbatas',
-      body: 'Beberapa fase memiliki batas waktu, perhatikan timer di layar.',
-    },
-    timer: { seconds: 20, direction: 'down' },
-  },
-  'slide-9': {
-    title: 'Skor & Penilaian',
-    details: {
-      heading: 'Cara Penilaian',
-      body: 'Skor dihitung dari ketepatan dan kecepatan menjawab.',
-    },
-    timer: { seconds: 20, direction: 'down' },
-  },
-  'slide-10': {
-    title: 'Siap Memulai?',
-    details: {
-      heading: 'Mari Mulai',
-      body: 'Tekan lanjut untuk memulai fase onboarding.',
-    },
-    timer: { seconds: 15, direction: 'down' },
-    style: 'detail-emphasis',
-  },
 }

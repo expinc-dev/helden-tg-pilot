@@ -118,6 +118,9 @@ function PhaseContentSwitch({
           role={role}
           sessionId={sessionId}
           phaseId={phase.id}
+          phase={phase}
+          playerId={playerId}
+          teamId={allowTeams ? teamId : undefined}
         />
       )
     case 'quiz':

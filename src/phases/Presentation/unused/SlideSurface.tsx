@@ -1,12 +1,12 @@
-import type { PresentationSlideExtras } from '@/lib/demoBundle'
 import { mmss } from '@/lib/sync/timermath'
 import type { useSlideTimer } from '@/lib/sync/useCentralStepTimer'
 
-import type { Role } from '../PhaseRouter'
+import type { Role } from '../../PhaseRouter'
 import { CentralTimerDetailsSlide } from './layouts/CentralTimerDetailsSlide'
 import { CornerOverlaySlide } from './layouts/CornerOverlaySlide'
 import { SplitSidebarSlide } from './layouts/SplitSidebarSlide'
 import { StackedOverlaySlide } from './layouts/StackedOverlaySlide'
+import type { PresentationSlideExtras } from './presentationSlideExtras'
 
 export function SlideSurface({
   image,
