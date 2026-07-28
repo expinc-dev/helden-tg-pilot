@@ -58,7 +58,7 @@ export function PresentationRenderer({
     } else if (kind === 'slide') setStep(bounded + 1)
   }
 
-  const image = slide.blocks.find((b) => b.kind === 'image')?.mediaId
+  const image = slide.blocks.find((b) => b.kind === 'image')?.url
 
   const controls = role === 'host' && (
     <div
