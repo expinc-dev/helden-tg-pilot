@@ -37,9 +37,13 @@ export function useTeamLiveScore(
   phase: Phase | null,
   phaseStartMs: number | undefined
 ): number {
-  const active = !!sessionId && !!teamId && !!phase && phase.content.type === 'codeinput'
-  const subKey = active ? `${sessionId}/${teamId}/${phase.id}` : null
-  const path = active ? `sessions/${sessionId}/teams/${teamId}/codeinput/${phase.id}` : null
+  const active = !!sessionId && !!phase && phase.content.type === 'codeinput'
+  const subKey = active ? `${sessionId}/${teamId ?? 'room'}/${phase.id}` : null
+  const path = active
+    ? teamId
+      ? `sessions/${sessionId}/teams/${teamId}/codeinput/${phase.id}`
+      : `sessions/${sessionId}/codeinput/${phase.id}`
+    : null
 
   const [entry, setEntry] = useState<Entry | null>(null)
 

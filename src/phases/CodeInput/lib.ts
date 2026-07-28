@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { CodeInputContent } from '@helden-inc/tg-schema'
+import type { CodeInputContent, Phase } from '@helden-inc/tg-schema'
 import { onValue, ref, runTransaction, update } from 'firebase/database'
 
 import { rtdb } from '@/lib/firebase'
@@ -14,11 +14,19 @@ export type CodeInputState = {
   lastGuessNormalized?: string
 }
 
+// Team-scoped when teamId is given, room-scoped (shared by the whole
+// session — everyone's solving the same puzzle together, same as team mode
+// conceptually, just without a formal team) otherwise.
+function codeInputPath(sessionId: string, teamId: string | undefined, phaseId: string): string {
+  return teamId
+    ? `sessions/${sessionId}/teams/${teamId}/codeinput/${phaseId}`
+    : `sessions/${sessionId}/codeinput/${phaseId}`
+}
+
 export function useCodeInputState(sessionId: string, teamId: string | undefined, phaseId: string) {
   const [state, setState] = useState<CodeInputState>({ attempts: 0, solved: false })
   useEffect(() => {
-    if (!teamId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/codeinput/${phaseId}`), (s) =>
+    return onValue(ref(rtdb, codeInputPath(sessionId, teamId, phaseId)), (s) =>
       setState(s.val() ?? { attempts: 0, solved: false })
     )
   }, [sessionId, teamId, phaseId])
@@ -39,12 +47,12 @@ export function useCodeInputState(sessionId: string, teamId: string | undefined,
 // are all-or-nothing per call), which is exactly why these stay separate.
 export async function submitCode(
   sessionId: string,
-  teamId: string,
+  teamId: string | undefined,
   phaseId: string,
   input: string,
   content: CodeInputContent
 ): Promise<boolean> {
-  const node = ref(rtdb, `sessions/${sessionId}/teams/${teamId}/codeinput/${phaseId}`)
+  const node = ref(rtdb, codeInputPath(sessionId, teamId, phaseId))
   const guess = normalizeCode(input, content.caseSensitive)
 
   const tx = await runTransaction(node, (cur: CodeInputState | null) => {
@@ -63,4 +71,46 @@ export async function submitCode(
   } catch {
     return false // permission-denied from the rule == wrong guess, not a real error
   }
+}
+
+// content.onSuccess.advance support — host-only consumer (see host/lobby's
+// auto-advance effect). Room mode: the single shared room node. Team mode:
+// EVERY team must be solved before advancing — one team finishing first
+// must never cut the others off mid-puzzle. Returns false outright for any
+// non-codeinput phase or when onSuccess.advance isn't set, so the caller can
+// gate purely on this without re-checking content.type itself.
+export function useCodeInputAllSolved(
+  sessionId: string | undefined,
+  phase: Phase | null,
+  teamIds: string[],
+  allowTeams: boolean
+): boolean {
+  const isCodeInput = !!phase && phase.content.type === 'codeinput'
+  const wantsAdvance = isCodeInput && !!(phase.content as CodeInputContent).onSuccess?.advance
+  const phaseId = phase?.id
+
+  const [roomSolved, setRoomSolved] = useState(false)
+  useEffect(() => {
+    if (!sessionId || !phaseId || !wantsAdvance || allowTeams) return
+    return onValue(ref(rtdb, `sessions/${sessionId}/codeinput/${phaseId}/solved`), (s) =>
+      setRoomSolved(!!s.val())
+    )
+  }, [sessionId, phaseId, wantsAdvance, allowTeams])
+
+  const [teamSolved, setTeamSolved] = useState<Record<string, boolean>>({})
+  const teamKey = teamIds.join(',')
+  useEffect(() => {
+    if (!sessionId || !phaseId || !wantsAdvance || !allowTeams) return
+    const unsubs = teamIds.map((teamId) =>
+      onValue(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/codeinput/${phaseId}/solved`), (s) =>
+        setTeamSolved((prev) => ({ ...prev, [teamId]: !!s.val() }))
+      )
+    )
+    return () => unsubs.forEach((u) => u())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, phaseId, wantsAdvance, allowTeams, teamKey])
+
+  if (!wantsAdvance) return false
+  if (!allowTeams) return roomSolved
+  return teamIds.length > 0 && teamIds.every((id) => teamSolved[id])
 }

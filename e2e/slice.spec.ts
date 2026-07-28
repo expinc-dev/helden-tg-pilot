@@ -1,19 +1,21 @@
 import { type Page, expect, test } from '@playwright/test'
 
-// T-08 — full slice E2E: Idle -> Microlearning -> Quiz -> Code (CodeInput),
-// driven by 1 host + 1 central (+ 1 skewed second central) + 2 players (one
-// team, leader + member), against a local Firebase emulator (see
-// playwright.config.ts + .env.e2e). Covers all 4 acceptance criteria:
+// T-08 — full slice E2E: Idle -> Microlearning -> Quiz -> CodePiece -> Code
+// (CodeInput), driven by 1 host + 1 central (+ 1 skewed second central) + 2
+// players (one team, leader + member), against a local Firebase emulator
+// (see playwright.config.ts + .env.e2e). Covers all 4 acceptance criteria:
 //   1. full flow runs on 3 roles, zero console errors
 //   2. reconnect mid-phase returns to the correct step
 //   3. timers stay in sync under clock skew
 //   4. no listener storm — player RTDB subscriptions stay narrowly scoped
+// Also exercises the "Code" ticket's CodePiece half (own fragment, "piece N
+// of M", team-scoped distribution).
 //
 // The demo bundle's flowMode is 'modular-progressive' (see demoBundle.ts):
 // host picks one level at a time from a picker, always in phaseOrder order.
 // So reaching CodeInput ("Code") also requires playing (not skipping)
 // presentation/video/sortGame — those get a light touch (no console errors,
-// no deep assertions) since they aren't named in this ticket's ACs.
+// no deep assertions) since they aren't named in either ticket's ACs.
 
 test.setTimeout(240_000)
 
@@ -201,6 +203,18 @@ test('full slice: Idle -> Microlearning -> Quiz -> Code across host/central/play
 
   // ── Video briefing: not named in this ticket, forced past via playAvailableLevel ──
   await playAvailableLevel(hostPage)
+
+  // ── CodePiece ("Kumpulkan kode") — each team member gets their OWN fragment,
+  //    no leader/member asymmetry (unlike codeinput/sortGame). Team Rocket's
+  //    frozen order is [Alice, Bob] (joinedAt), fragments ['HEL','DEN']. ──
+  await playAvailableLevel(hostPage)
+  await expect(playerA.getByText('Bagian 1 dari 2')).toBeVisible()
+  // Full 6-slot code, only this player's own span filled in — en dash ("–",
+  // not a hyphen) for the blanks, matching CodePiece/player/index.tsx exactly.
+  await expect(playerA.getByTestId('codepiece-slots')).toHaveText('HEL–––')
+  await expect(playerB.getByText('Bagian 2 dari 2')).toBeVisible()
+  await expect(playerB.getByTestId('codepiece-slots')).toHaveText('–––DEN')
+  await clickEndLevel(hostPage)
 
   // ── Code (CodeInput / "puzzle") ───────────────────────────────────────────
   await hostPage.getByRole('button', { name: 'Mulai Permainan' }).first().click()

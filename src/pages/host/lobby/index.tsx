@@ -12,6 +12,7 @@ import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 import { toast } from 'sonner'
 
+import { useCodeInputAllSolved } from '@/phases/CodeInput/lib'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 import { VideoHostScreen } from '@/phases/Video'
@@ -59,6 +60,24 @@ export function HostView() {
       void (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
     }
   }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, isModular])
+
+  // codeinput's onSuccess.advance — same advance-once guard as the timer
+  // effect above, separate ref so the two auto-advance triggers can't race
+  // each other into double-advancing the same phase.
+  const teamIds = teams.map((t) => t.id)
+  const codeInputAllSolved = useCodeInputAllSolved(sessionId, phase, teamIds, !!config?.allowTeams)
+  const advancedOnSolveRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!sessionId || !phase) return
+    if (
+      codeInputAllSolved &&
+      pointer?.activePhaseId === phase.id &&
+      advancedOnSolveRef.current !== phase.id
+    ) {
+      advancedOnSolveRef.current = phase.id
+      void (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
+    }
+  }, [sessionId, phase, codeInputAllSolved, pointer?.activePhaseId, isModular])
 
   if (!meta || !config || !sessionId) {
     return <div className="p-8 text-sm text-gray-500">Loading session {sessionId}…</div>

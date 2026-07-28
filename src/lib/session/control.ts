@@ -126,11 +126,61 @@ async function openPhaseVideoPlayback(sessionId: string, phase: Phase | undefine
   await set(node, value)
 }
 
+// Host-only. Freeze CodePiece's fragment distribution the moment the phase
+// opens — computed once from whoever's rostered RIGHT NOW, ordered by
+// joinedAt (stable, already tracked on every player; this is the ordering
+// basis BLUEPRINT_runtime left open for T-07, settled here). Room mode: one
+// order for the whole session. Team mode (session config's allowTeams, not
+// this phase's own teamMode — CodePiece has no leader/member asymmetry, every
+// member gets a fragment): one order PER team, computed from that team's own
+// roster only. Late joiners after this point don't get a fragment — that's
+// what "frozen at phase start" means.
+async function openPhaseFragmentOrder(sessionId: string, phase: Phase | undefined) {
+  if (!phase || phase.content.type !== 'codepiece') return
+
+  const [playersSnap, teamsSnap, configSnap] = await Promise.all([
+    get(ref(rtdb, `sessions/${sessionId}/players`)),
+    get(ref(rtdb, `sessions/${sessionId}/teams`)),
+    get(ref(rtdb, `sessions/${sessionId}/config`)),
+  ])
+  const players = (playersSnap.val() ?? {}) as Record<string, { joinedAt?: number } | null>
+  const teams = (teamsSnap.val() ?? {}) as Record<
+    string,
+    { memberIds?: Record<string, true> } | null
+  >
+  const allowTeams = !!configSnap.val()?.allowTeams
+  const byJoinedAt = (a: string, b: string) =>
+    (players[a]?.joinedAt ?? 0) - (players[b]?.joinedAt ?? 0)
+
+  if (allowTeams) {
+    const patch: Record<string, unknown> = {}
+    for (const [teamId, team] of Object.entries(teams)) {
+      if (!team) continue
+      patch[`teams/${teamId}/codepiece/${phase.id}/fragmentOrder`] = Object.keys(
+        team.memberIds ?? {}
+      ).sort(byJoinedAt)
+    }
+    if (Object.keys(patch).length > 0) await update(ref(rtdb, `sessions/${sessionId}`), patch)
+    return
+  }
+
+  const order = Object.keys(players).sort(byJoinedAt)
+  await set(ref(rtdb, `sessions/${sessionId}/codepiece/${phase.id}/fragmentOrder`), order)
+}
+
 async function openPhase(sessionId: string, phase: Phase | undefined) {
   await Promise.all([
     openPhaseTimer(sessionId, phase),
     openPhaseSecrets(sessionId, phase),
     openPhaseVideoPlayback(sessionId, phase),
+    // Caught separately from the others: a permission_denied here (e.g. real
+    // deployed rules that predate the codepiece/fragmentOrder path) must not
+    // reject this whole Promise.all and silently skip the timer/secrets/
+    // videoPlayback writes alongside it — surface it loudly instead so it's
+    // debuggable, but let everything else still open normally.
+    openPhaseFragmentOrder(sessionId, phase).catch((e) =>
+      console.error('openPhaseFragmentOrder failed for', phase?.id, e)
+    ),
     remove(ref(rtdb, `sessions/${sessionId}/centralStep`)),
   ])
 }

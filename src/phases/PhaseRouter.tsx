@@ -3,6 +3,7 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { type TeamRole, useTeamRole } from '@/lib/sync/useTeamRole'
 
 import { TeamCodeInput } from './CodeInput'
+import { CodePieceRenderer } from './CodePiece'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { UnknownTemplate } from './Minigames/UnknownTemplate'
@@ -76,18 +77,28 @@ function PhaseContentSwitch({
         />
       )
     case 'codeinput':
-      // Team-aware page: only in team mode. Otherwise fall through to the
-      // "not renderable yet" default (single-player codeinput isn't built).
-      return allowTeams ? (
+      // Team-scoped when this session has team mode on, room-scoped
+      // (shared by everyone) otherwise — TeamCodeInput itself branches on
+      // allowTeams/teamId, see CodeInput/index.tsx.
+      return (
         <TeamCodeInput
           phase={phase}
           phaseStartMs={phaseStartMs}
           sessionId={sessionId}
           role={role}
           teamId={teamId}
+          allowTeams={allowTeams}
         />
-      ) : (
-        <div className="p-8 text-sm text-gray-500">Code input needs Team Mode enabled.</div>
+      )
+    case 'codepiece':
+      return (
+        <CodePieceRenderer
+          phase={phase}
+          sessionId={sessionId}
+          role={role}
+          playerId={playerId}
+          teamId={allowTeams ? teamId : undefined}
+        />
       )
     case 'video':
       return (

@@ -208,6 +208,30 @@ const intro: Phase = {
   },
 }
 
+// Paired with `puzzle` right below — each team member (not just the leader:
+// no teamMode set here, unlike codeinput's team_leader_only, because
+// CodePiece's whole point is that everyone gets a fragment) gets one piece
+// of the SAME code the puzzle phase expects ("HELDEN" -> "HEL"/"DEN"),
+// assembled by talking to each other, then entered on the next phase.
+// Works without Team Mode too — falls back to one room-wide fragment order.
+const codepiece: Phase = {
+  id: 'p-codepiece',
+  type: 'codepiece',
+  title: 'Kumpulkan kode',
+  syncMode: 'self_paced',
+  durationMin: 2,
+  roles: { player: { enabled: true }, central: { enabled: true }, host: { monitor: ['progress'] } },
+  content: {
+    type: 'codepiece',
+    distribution: 'round_robin',
+    fragments: [
+      { id: 'f1', value: 'HEL' },
+      { id: 'f2', value: 'DEN' },
+    ],
+    hint: 'Gabungkan dengan bagian anggota tim lainnya.',
+  },
+}
+
 // Team-mode physical puzzle: each team assembles a printed code and enters it.
 // Only renders as a team page when the session has allowTeams=true.
 const puzzle: Phase = {
@@ -402,19 +426,20 @@ const reflection: Phase = {
 export const demoBundle: PublishedGame = {
   id: 'pilot-demo',
   gameId: 'pilot',
-  schemaVersion: '3.2.0',
+  schemaVersion: '3.5.0',
   title: 'Pilot demo',
   // Modular flow: phaseOrder[0] MUST be an idle phase — it's the picker anchor.
   // Non-idle phases become level cards in the Host page control picker.
   // 'modular-progressive' locks all cards except the next unplayed one; swap
   // to 'modular-open' to let the trainer jump anywhere at any time.
-  flowMode: 'modular-progressive',
+  flowMode: 'modular-open',
   phaseOrder: [
     idle.id,
     presentation.id,
     intro.id,
     quiz.id,
     video.id,
+    codepiece.id,
     puzzle.id,
     sortGame.id,
     reflection.id,
@@ -425,6 +450,7 @@ export const demoBundle: PublishedGame = {
     [intro.id]: intro,
     [quiz.id]: quiz,
     [video.id]: video,
+    [codepiece.id]: codepiece,
     [puzzle.id]: puzzle,
     [sortGame.id]: sortGame,
     [reflection.id]: reflection,

@@ -16,10 +16,15 @@ export function HostPresenceSpread({
   players: Record<string, PlayerPresence>
 }) {
   const rows = usePlayerBoard(sessionId)
-  // Reflection has no step concept (single screen, own dedicated host pane
-  // already shows per-player answers) — a step-based spread would just show
-  // a meaningless "Langkah 1" for everyone, so skip it here.
-  if (phase.syncMode !== 'self_paced' || phase.content.type === 'reflection') return null
+  // Reflection and CodePiece have no step concept (single screen, own
+  // dedicated host pane already shows per-player state) — a step-based
+  // spread would just show a meaningless "Langkah 1" for everyone.
+  if (
+    phase.syncMode !== 'self_paced' ||
+    phase.content.type === 'reflection' ||
+    phase.content.type === 'codepiece'
+  )
+    return null
 
   const totalSteps = phase.content.type === 'microlearning' ? phase.content.steps.length : undefined
 

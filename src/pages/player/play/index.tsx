@@ -129,12 +129,18 @@ export function PlayerView() {
     )
   }
 
-  // Minigame templates own their full screen (background + card + their own
-  // timer, e.g. SortOrder) — same reasoning as the host page's video/idle
-  // bypass. The generic TimerBar row would sit above the template's own
-  // min-h-dvh shell and push the page taller than one viewport, forcing an
-  // unwanted scroll.
-  if (phase && sessionId && phase.content.type === 'minigame') {
+  // Minigame + codeinput/codepiece templates own their full screen
+  // (background + card + their own timer, e.g. SortOrder/CodeInput) — same
+  // reasoning as the host page's video/idle bypass. The generic TimerBar row
+  // would sit above the template's own min-h-dvh shell and push the page
+  // taller than one viewport, forcing an unwanted scroll.
+  if (
+    phase &&
+    sessionId &&
+    (phase.content.type === 'minigame' ||
+      phase.content.type === 'codeinput' ||
+      phase.content.type === 'codepiece')
+  ) {
     return (
       <PhaseRouter
         phase={phase}
