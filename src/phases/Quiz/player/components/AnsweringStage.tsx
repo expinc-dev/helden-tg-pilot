@@ -1,12 +1,13 @@
 import { Icon } from '@iconify/react'
 
-import { mmss } from '@/lib/sync/timermath'
-
+import { TimerRing } from '../../TimerRing'
 import { type ChoiceOption, OPTION_COLORS, OPTION_ICONS } from '../../lib'
 
 export function AnsweringStage({
   timer,
   timers,
+  step,
+  total,
   submitted,
   selectedId,
   canAnswer,
@@ -15,6 +16,8 @@ export function AnsweringStage({
 }: {
   timer: { active: boolean; remainingSec: number; expired: boolean }
   timers: { answering: number }
+  step: number
+  total: number
   submitted: string | null
   selectedId: string | null
   canAnswer: boolean
@@ -23,28 +26,21 @@ export function AnsweringStage({
 }) {
   return (
     <div className="flex min-h-dvh flex-col bg-[#121212]">
+      <div className="h-1.5 w-full bg-white/10">
+        <div
+          className="h-full rounded-r-full bg-[#FFB800] transition-all duration-500"
+          style={{ width: `${((step + 1) / total) * 100}%` }}
+        />
+      </div>
+
       {timer.active && (
-        <div className="flex flex-col items-center gap-1 px-4 pt-4">
-          <span
-            className="flex items-center text-4xl font-bold tabular-nums"
-            style={{ color: timer.remainingSec <= 5 ? '#E21B3C' : '#FFB800' }}
-          >
-            {timer.expired ? (
-              <Icon icon="mdi:alarm" className="size-9" />
-            ) : (
-              mmss(timer.remainingSec)
-            )}
-          </span>
-          {!timer.expired && (
-            <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-[#FFB800] transition-all duration-1000 ease-linear"
-                style={{
-                  width: `${Math.max(0, (timer.remainingSec / timers.answering) * 100)}%`,
-                }}
-              />
-            </div>
-          )}
+        <div className="flex flex-col items-center px-4 pt-4">
+          <TimerRing
+            remainingSec={timer.remainingSec}
+            totalSec={timers.answering}
+            expired={timer.expired}
+            size={96}
+          />
         </div>
       )}
 

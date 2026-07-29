@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
@@ -7,10 +8,10 @@ import { Icon } from '@iconify/react'
 import { demoBundle } from '@/lib/demoBundle'
 import { endLevel, nextPhase, quizAnswerKeys } from '@/lib/session/control'
 import { scoreQuizQuestion } from '@/lib/session/quizScoring'
-import { mmss } from '@/lib/sync/timermath'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
 
+import { TimerRing } from '../TimerRing'
 import {
   type QuizContent,
   promptText,
@@ -18,8 +19,9 @@ import {
   resolveTimers,
   useAnsweredCount,
   useTotalPlayers,
+  writeLeaderboardOpen,
 } from '../lib'
-import { DistributionBars } from './components/DistributionBars'
+import { AnswerOptionsList } from './components/AnswerOptionsList'
 import { LeaderboardPanel } from './components/LeaderboardPanel'
 
 export function HostQuiz({
@@ -39,17 +41,32 @@ export function HostQuiz({
   const answeredCount = useAnsweredCount(sessionId, `${phaseId}_q${quizStep.step}`)
   const totalPlayers = useTotalPlayers(sessionId)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [confirmReveal, setConfirmReveal] = useState(false)
   const scoredRef = useRef<string | null>(null)
 
   const isLastQuestion = quizStep.step >= content.questions.length - 1
   const timers = resolveTimers(content)
 
+  const closeLeaderboard = useCallback(() => {
+    setLeaderboardOpen(false)
+    void writeLeaderboardOpen(sessionId, false)
+  }, [sessionId])
+
+  const toggleLeaderboard = useCallback(() => {
+    setLeaderboardOpen((o) => {
+      const next = !o
+      void writeLeaderboardOpen(sessionId, next)
+      return next
+    })
+  }, [sessionId])
+
   const handlePreparation = useCallback(
     (step: number) => {
       scoredRef.current = null
+      closeLeaderboard()
       void write({ step, stage: 'preparation', correctId: undefined })
     },
-    [write]
+    [write, closeLeaderboard]
   )
 
   const handleStartReading = useCallback(async () => {
@@ -80,14 +97,25 @@ export function HostQuiz({
     }
   }, [clearTimer, write, sessionId, phaseId, quizStep.step, phase, timers.answering])
 
+  // Manual reveal before time's up needs confirmation; the automatic reveal
+  // on timer expiry (the effect below) already implies the host is fine with it.
+  const handleRevealClick = useCallback(() => {
+    if (timer.active && !timer.expired) {
+      setConfirmReveal(true)
+    } else {
+      void handleReveal()
+    }
+  }, [timer.active, timer.expired, handleReveal])
+
   const handleNext = useCallback(() => {
     if (isLastQuestion) {
+      closeLeaderboard()
       const isModular = (demoBundle.flowMode ?? 'sequential') !== 'sequential'
       void (isModular ? endLevel(sessionId, phaseId) : nextPhase(sessionId, phaseId))
     } else {
       handlePreparation(quizStep.step + 1)
     }
-  }, [isLastQuestion, sessionId, phaseId, quizStep.step, handlePreparation])
+  }, [isLastQuestion, sessionId, phaseId, quizStep.step, handlePreparation, closeLeaderboard])
 
   useEffect(() => {
     if (!timer.active || !timer.expired) return
@@ -101,38 +129,21 @@ export function HostQuiz({
   if (!q) return null
 
   const text = promptText(q)
-  const stageLabel =
-    quizStep.stage === 'preparation'
-      ? 'Persiapan'
-      : quizStep.stage === 'reading'
-        ? 'Membaca'
-        : quizStep.stage === 'answering'
-          ? 'Menjawab'
-          : 'Reveal'
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="rounded-full bg-[#FFB800]/10 px-3 py-1 text-sm font-medium text-[#FFB800]">
-            Soal {quizStep.step + 1} / {content.questions.length}
-          </span>
-          <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-white/40">
-            {stageLabel}
-          </span>
+        <div className="text-2xl font-bold">
+          <span style={{ color: '#FFB800' }}>{quizStep.step + 1}</span>
+          <span className="text-white/40">/{content.questions.length}</span>
         </div>
         <button
           type="button"
-          onClick={() => setLeaderboardOpen((o) => !o)}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
+          onClick={toggleLeaderboard}
+          aria-label="Leaderboard"
+          className="flex size-8 items-center justify-center rounded-lg bg-[#FFB800] text-black shadow transition hover:brightness-110"
         >
-          {leaderboardOpen ? (
-            'Tutup'
-          ) : (
-            <>
-              <Icon icon="mdi:trophy" className="size-4" /> Leaderboard
-            </>
-          )}
+          <Icon icon="mdi:poll" className="size-4" />
         </button>
       </div>
 
@@ -158,15 +169,12 @@ export function HostQuiz({
       {quizStep.stage === 'reading' && (
         <div className="flex flex-1 flex-col items-center justify-center gap-5">
           {timer.active && (
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-sm text-white/40">Waktu baca</span>
-              <span
-                className="font-mono text-5xl font-bold tabular-nums"
-                style={{ color: timer.remainingSec <= 3 ? '#E21B3C' : '#FFB800' }}
-              >
-                {mmss(timer.remainingSec)}
-              </span>
-            </div>
+            <TimerRing
+              remainingSec={timer.remainingSec}
+              totalSec={timers.reading}
+              expired={false}
+              size={90}
+            />
           )}
           <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-8 py-4 text-center">
             <p className="text-sm text-white/40">Pemain melihat</p>
@@ -179,50 +187,51 @@ export function HostQuiz({
       )}
 
       {quizStep.stage === 'answering' && (
-        <div className="flex flex-1 flex-col gap-4">
-          <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3">
-            {timer.active && (
-              <span
-                className="flex items-center gap-1.5 font-mono text-3xl font-bold tabular-nums"
-                style={{ color: timer.remainingSec <= 5 ? '#E21B3C' : '#FFB800' }}
-              >
-                {timer.expired ? (
-                  <>
-                    <Icon icon="mdi:alarm" className="size-7" /> Waktu habis
-                  </>
-                ) : (
-                  mmss(timer.remainingSec)
-                )}
-              </span>
-            )}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-bold text-[#FFB800]">{answeredCount}</span>
-              <span className="text-white/40">/ {totalPlayers} menjawab</span>
-            </div>
-          </div>
+        <div className="flex flex-1 flex-col items-center gap-4">
+          {timer.active && (
+            <TimerRing
+              remainingSec={timer.remainingSec}
+              totalSec={timers.answering}
+              expired={timer.expired}
+              size={90}
+            />
+          )}
 
-          <DistributionBars
+          <AnswerOptionsList
             sessionId={sessionId}
             phaseId={phaseId}
             questionIndex={quizStep.step}
             options={questionOptions(q)}
-            showCorrect={false}
+            revealed={false}
           />
 
-          <GradientButton onClick={handleReveal} className="mt-auto px-6 py-3 text-base">
-            Reveal Jawaban
+          <div className="mt-auto flex w-full items-center gap-3 rounded-lg border border-white/15 bg-black/20 px-4 py-2.5">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
+                style={{ width: `${totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0}%` }}
+              />
+            </div>
+            <span className="shrink-0 text-xs whitespace-nowrap text-white/60">
+              <span className="font-bold text-white">{answeredCount}</span> dari{' '}
+              <span className="font-bold text-white">{totalPlayers}</span> pemain telah menjawab
+            </span>
+          </div>
+
+          <GradientButton onClick={handleRevealClick} className="w-full px-6 py-3 text-base">
+            Perlihatkan Jawaban
           </GradientButton>
         </div>
       )}
 
       {quizStep.stage === 'reveal' && (
         <div className="flex flex-1 flex-col gap-4">
-          <DistributionBars
+          <AnswerOptionsList
             sessionId={sessionId}
             phaseId={phaseId}
             questionIndex={quizStep.step}
             options={questionOptions(q)}
-            showCorrect
+            revealed
             correctId={quizStep.correctId}
           />
 
@@ -241,7 +250,28 @@ export function HostQuiz({
         </div>
       )}
 
-      {leaderboardOpen && <LeaderboardPanel sessionId={sessionId} phase={phase} />}
+      {leaderboardOpen && (
+        <LeaderboardPanel
+          sessionId={sessionId}
+          phase={phase}
+          content={content}
+          onClose={closeLeaderboard}
+        />
+      )}
+
+      {confirmReveal && (
+        <ConfirmDialog
+          title="Perlihatkan jawaban?"
+          message="Waktu level masih panjang, apakah kamu yakin memperlihatkan jawaban?"
+          confirmLabel="Perlihatkan"
+          cancelLabel="Kembali"
+          onCancel={() => setConfirmReveal(false)}
+          onConfirm={() => {
+            setConfirmReveal(false)
+            void handleReveal()
+          }}
+        />
+      )}
     </div>
   )
 }

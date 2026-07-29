@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue, ref, set } from 'firebase/database'
 
 import { rtdb } from '@/lib/firebase'
 
@@ -14,12 +14,7 @@ export const OPTION_COLORS = [
   { bg: '#26890C', text: '#fff' },
 ]
 
-export const OPTION_ICONS = [
-  'mdi:poker-club',
-  'mdi:poker-heart',
-  'mdi:poker-spade',
-  'mdi:poker-diamond',
-]
+export const OPTION_ICONS = ['mdi:circle', 'mdi:rhombus', 'mdi:triangle', 'mdi:square-rounded']
 
 export type ChoiceOption = { id: string; label: string }
 
@@ -113,6 +108,53 @@ export function useScoresMap(sessionId: string | undefined, phase: Phase): Recor
     })
   }, [sessionId, path])
   return scores
+}
+
+// Host writes, central listens — scoped to the quiz phase only (Q1/Q2): the
+// host clears it back to false whenever the question advances.
+export function useLeaderboardOpen(sessionId: string | undefined): boolean {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!sessionId) return
+    return onValue(ref(rtdb, `sessions/${sessionId}/leaderboardOpen`), (s) => {
+      setOpen(!!s.val())
+    })
+  }, [sessionId])
+  return open
+}
+
+export function writeLeaderboardOpen(sessionId: string, open: boolean) {
+  return set(ref(rtdb, `sessions/${sessionId}/leaderboardOpen`), open)
+}
+
+// Cumulative correct/wrong counts per player (or team), scoped per quiz phase
+// (keyed by phaseId) so the leaderboard bar's denominator is "this quiz's
+// question count", not a lifetime tally. Written by scoreQuizQuestion on reveal.
+export function useAnswerTally(
+  sessionId: string | undefined,
+  phase: Phase
+): { correct: Record<string, number>; wrong: Record<string, number> } {
+  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const base = isTeam ? `teamCorrectCount/${phase.id}` : `correctCount/${phase.id}`
+  const wrongBase = isTeam ? `teamWrongCount/${phase.id}` : `wrongCount/${phase.id}`
+  const [correct, setCorrect] = useState<Record<string, number>>({})
+  const [wrong, setWrong] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (!sessionId) return
+    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${base}`), (s) => {
+      setCorrect((s.val() as Record<string, number>) ?? {})
+    })
+  }, [sessionId, base])
+
+  useEffect(() => {
+    if (!sessionId) return
+    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${wrongBase}`), (s) => {
+      setWrong((s.val() as Record<string, number>) ?? {})
+    })
+  }, [sessionId, wrongBase])
+
+  return { correct, wrong }
 }
 
 export function usePlayerNames(sessionId: string | undefined): Record<string, string> {

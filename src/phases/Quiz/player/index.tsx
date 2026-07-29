@@ -90,6 +90,8 @@ export function PlayerQuiz({
       <AnsweringStage
         timer={timer}
         timers={timers}
+        step={quizStep.step}
+        total={content.questions.length}
         submitted={submitted}
         selectedId={selectedId}
         canAnswer={canAnswer}

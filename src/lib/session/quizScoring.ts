@@ -33,6 +33,7 @@ export async function scoreQuizQuestion(opts: {
 
   // Collect per-player scores
   const playerScores: Record<string, number> = {}
+  const playerCorrect: Record<string, boolean> = {}
   const teamAnswers: Record<string, { optionId: string; submittedAt: number }[]> = {}
 
   for (const [playerId, p] of Object.entries(players)) {
@@ -45,6 +46,7 @@ export async function scoreQuizQuestion(opts: {
     const submittedAt = typeof ans.submittedAt === 'number' ? ans.submittedAt : Date.now()
     const elapsedMs = Math.max(0, submittedAt - phaseStartMs)
     const correct = ans.value === correctId
+    playerCorrect[playerId] = correct
 
     if (isTeamMode && p.teamId) {
       if (!teamAnswers[p.teamId]) teamAnswers[p.teamId] = []
@@ -66,15 +68,25 @@ export async function scoreQuizQuestion(opts: {
   if (isTeamMode) {
     // team_leader_only: leader's score = team score
     // team_collaborative: majority vote determines correctness, earliest majority timestamp for speed
-    const teamsSnap = await get(ref(rtdb, `sessions/${sessionId}/teams`))
+    const [teamsSnap, priorSnap, priorCorrectSnap, priorWrongSnap] = await Promise.all([
+      get(ref(rtdb, `sessions/${sessionId}/teams`)),
+      get(ref(rtdb, `sessions/${sessionId}/aggregates/teamScores`)),
+      get(ref(rtdb, `sessions/${sessionId}/aggregates/teamCorrectCount/${phase.id}`)),
+      get(ref(rtdb, `sessions/${sessionId}/aggregates/teamWrongCount/${phase.id}`)),
+    ])
     const teams = (teamsSnap.val() ?? {}) as Record<string, { ownerPlayerId?: string }>
-    const priorSnap = await get(ref(rtdb, `sessions/${sessionId}/aggregates/teamScores`))
     const prior = (priorSnap.val() ?? {}) as Record<string, number>
+    const priorCorrect = (priorCorrectSnap.val() ?? {}) as Record<string, number>
+    const priorWrong = (priorWrongSnap.val() ?? {}) as Record<string, number>
 
     for (const [teamId, team] of Object.entries(teams)) {
       let teamScore = 0
+      let teamCorrect: boolean | undefined
       if (phase.teamMode === 'team_leader_only') {
-        teamScore = team.ownerPlayerId ? (playerScores[team.ownerPlayerId] ?? 0) : 0
+        if (team.ownerPlayerId && team.ownerPlayerId in playerCorrect) {
+          teamCorrect = playerCorrect[team.ownerPlayerId]
+          teamScore = playerScores[team.ownerPlayerId] ?? 0
+        }
       } else {
         // team_collaborative: majority vote
         const votes = teamAnswers[teamId] ?? []
@@ -91,10 +103,10 @@ export async function scoreQuizQuestion(opts: {
           }
         }
         if (best.optionId) {
-          const correct = best.optionId === correctId
+          teamCorrect = best.optionId === correctId
           const elapsedMs = Math.max(0, best.earliestAt - phaseStartMs)
           teamScore = scoreAnswer(phase.scoring, {
-            correct,
+            correct: teamCorrect,
             answered: true,
             elapsedMs,
             phaseDurationMs,
@@ -102,13 +114,29 @@ export async function scoreQuizQuestion(opts: {
         }
       }
       patch[`teamScores/${teamId}`] = (prior[teamId] ?? 0) + teamScore
+      if (teamCorrect !== undefined) {
+        const key = teamCorrect ? 'teamCorrectCount' : 'teamWrongCount'
+        const priorMap = teamCorrect ? priorCorrect : priorWrong
+        patch[`${key}/${phase.id}/${teamId}`] = (priorMap[teamId] ?? 0) + 1
+      }
     }
   } else {
     // individual mode
-    const priorSnap = await get(ref(rtdb, `sessions/${sessionId}/aggregates/scores`))
+    const [priorSnap, priorCorrectSnap, priorWrongSnap] = await Promise.all([
+      get(ref(rtdb, `sessions/${sessionId}/aggregates/scores`)),
+      get(ref(rtdb, `sessions/${sessionId}/aggregates/correctCount/${phase.id}`)),
+      get(ref(rtdb, `sessions/${sessionId}/aggregates/wrongCount/${phase.id}`)),
+    ])
     const prior = (priorSnap.val() ?? {}) as Record<string, number>
+    const priorCorrect = (priorCorrectSnap.val() ?? {}) as Record<string, number>
+    const priorWrong = (priorWrongSnap.val() ?? {}) as Record<string, number>
     for (const [playerId, score] of Object.entries(playerScores)) {
       patch[`scores/${playerId}`] = (prior[playerId] ?? 0) + score
+      if (playerId in playerCorrect) {
+        const key = playerCorrect[playerId] ? 'correctCount' : 'wrongCount'
+        const priorMap = playerCorrect[playerId] ? priorCorrect : priorWrong
+        patch[`${key}/${phase.id}/${playerId}`] = (priorMap[playerId] ?? 0) + 1
+      }
     }
   }
 

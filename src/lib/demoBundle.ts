@@ -449,8 +449,8 @@ const quiz: Phase = {
     type: 'quiz',
     mode: 'central_prompt',
     revealAnswers: true,
-    readingTimerSeconds: 7,
-    answeringTimerSeconds: 7,
+    readingTimerSeconds: 10,
+    answeringTimerSeconds: 20,
     questions: [
       {
         qType: 'single_choice',
@@ -543,9 +543,9 @@ export const demoBundle: PublishedGame = {
   flowMode: 'modular-open',
   phaseOrder: [
     idle.id,
+    quiz.id,
     presentation.id,
     intro.id,
-    quiz.id,
     video.id,
     codepiece.id,
     puzzle.id,
@@ -554,9 +554,9 @@ export const demoBundle: PublishedGame = {
   ],
   phases: {
     [idle.id]: idle,
+    [quiz.id]: quiz,
     [presentation.id]: presentation,
     [intro.id]: intro,
-    [quiz.id]: quiz,
     [video.id]: video,
     [codepiece.id]: codepiece,
     [puzzle.id]: puzzle,

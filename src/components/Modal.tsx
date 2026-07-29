@@ -12,11 +12,13 @@ export function Modal({
   title,
   onClose,
   dismissOnBackdrop = false,
+  maxWidthClassName = 'max-w-sm',
   children,
 }: {
   title: string
   onClose: () => void
   dismissOnBackdrop?: boolean
+  maxWidthClassName?: string
   children: ReactNode
 }) {
   return (
@@ -27,7 +29,7 @@ export function Modal({
       aria-modal="true"
     >
       <div
-        className="w-full max-w-sm overflow-hidden rounded-lg border"
+        className={`w-full ${maxWidthClassName} overflow-hidden rounded-lg border`}
         style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -45,7 +47,7 @@ export function Modal({
             <Icon icon="mdi:close" className="size-5" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="max-h-[70vh] overflow-y-auto p-5">{children}</div>
       </div>
     </div>
   )
