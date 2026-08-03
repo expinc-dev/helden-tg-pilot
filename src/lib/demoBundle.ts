@@ -449,8 +449,8 @@ const quiz: Phase = {
     type: 'quiz',
     mode: 'central_prompt',
     revealAnswers: true,
-    readingTimerSeconds: 10,
-    answeringTimerSeconds: 20,
+    readingTimerSeconds: 0,
+    answeringTimerSeconds: 920,
     questions: [
       {
         qType: 'single_choice',

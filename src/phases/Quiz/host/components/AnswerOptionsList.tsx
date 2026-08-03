@@ -27,7 +27,7 @@ export function AnswerOptionsList({
   const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1
 
   return (
-    <div className="flex w-full flex-col gap-2.5">
+    <div className="flex w-full flex-col gap-2.5 px-10">
       {options.map((opt, i) => {
         const letter = String.fromCharCode(65 + i)
         const count = dist[opt.id] ?? 0
@@ -37,7 +37,7 @@ export function AnswerOptionsList({
         return (
           <div
             key={opt.id}
-            className="flex items-center gap-3 px-4 py-3"
+            className={`flex items-center gap-3 px-4 py-6`}
             style={{
               borderRadius: 8,
               border: isCorrect ? strokeContainer : '1px solid #2a2a2a',
@@ -47,17 +47,19 @@ export function AnswerOptionsList({
             <div
               className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
               style={{
-                borderColor: isCorrect ? '#26890C' : '#4a4a4a',
+                borderColor: isCorrect ? '#26890C' : '#fddb00',
                 background: isCorrect ? '#26890C' : 'transparent',
-                color: isCorrect ? '#fff' : '#9a9a9a',
+                color: '#fff',
               }}
             >
               {letter}
             </div>
-            <span className="flex-1 text-sm text-white/80">{opt.label}</span>
+
+            {!revealed && <span className="flex-1 text-lg text-white">{opt.label}</span>}
+
             {revealed && (
               <>
-                <div className="h-2 w-32 overflow-hidden rounded-full bg-white/10">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${pct}%`, background: isCorrect ? '#26890C' : '#5a5a5a' }}
@@ -65,8 +67,10 @@ export function AnswerOptionsList({
                 </div>
                 <span className="w-6 text-right font-mono text-sm text-white/60">{count}</span>
                 <Icon
-                  icon={isCorrect ? 'mdi:check-circle' : 'mdi:close-circle'}
-                  className="size-5 shrink-0"
+                  icon={
+                    isCorrect ? 'material-symbols:check-rounded' : 'material-symbols:close-rounded'
+                  }
+                  className="size-7 shrink-0"
                   style={{ color: isCorrect ? '#26890C' : '#E21B3C' }}
                 />
               </>

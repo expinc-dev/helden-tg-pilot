@@ -16,7 +16,6 @@ import { toast } from 'sonner'
 
 import { useCodeInputAllSolved } from '@/phases/CodeInput/lib'
 import { PhaseRouter } from '@/phases/PhaseRouter'
-import { TimerBar } from '@/phases/TimerBar'
 import { VideoHostScreen } from '@/phases/Video'
 
 import { demoBundle } from '@/lib/demoBundle'
@@ -223,9 +222,7 @@ export function HostView() {
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
       {meta.status === 'live' && phase && (
-        <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/5 bg-[#12121299] p-4 sm:p-6">
-          <HostBadge pageName={gameType} />
-          <TimerBar sessionId={sessionId} phase={phase} role="host" />
+        <div className="relative flex flex-1 flex-col gap-4 rounded-2xl border border-white/20 bg-[#12121299]">
           <PhaseRouter
             phase={phase}
             phaseStartMs={pointer?.changedAt}

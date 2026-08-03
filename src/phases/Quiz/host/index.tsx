@@ -24,8 +24,6 @@ import {
 import { AnswerOptionsList } from './components/AnswerOptionsList'
 import { LeaderboardPanel } from './components/LeaderboardPanel'
 
-const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
-
 export function HostQuiz({
   content,
   sessionId,
@@ -128,63 +126,45 @@ export function HostQuiz({
     }
   }, [quizStep.stage, timer.active, timer.expired, handleStartAnswering, handleReveal])
 
+  // Skip the "Bersiap!" staging screen — jump straight into reading as soon as
+  // a question is staged, instead of waiting for the host to tap "Mulai".
+  useEffect(() => {
+    if (quizStep.stage === 'preparation') {
+      void handleStartReading()
+    }
+  }, [quizStep.stage, handleStartReading])
+
   if (!q) return null
 
   const text = promptText(q)
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-2xl font-bold">
-          <span style={{ color: '#FFB800' }}>{quizStep.step + 1}</span>
-          <span className="text-white/40">/{content.questions.length}</span>
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between border-b border-white/20 px-10 py-3">
+        <div className="text-2xl">
+          <span className="text-helden-yellow font-bold">{quizStep.step + 1}</span>
+          <span className="font-thin text-white">/{content.questions.length}</span>
         </div>
         <button
           type="button"
           onClick={toggleLeaderboard}
           aria-label="Leaderboard"
-          className="flex size-8 items-center justify-center rounded-lg bg-[#FFB800] text-black shadow transition hover:brightness-110"
+          className="bg-helden-yellow-gradient flex size-8 items-center justify-center rounded-lg text-black shadow transition hover:brightness-110"
         >
-          <Icon icon="mdi:poll" className="size-4" />
+          <Icon icon="material-symbols:leaderboard-outline-rounded" className="size-4" />
         </button>
       </div>
 
-      {quizStep.stage !== 'preparation' && (
-        <div className="rounded-xl p-5" style={{ border: strokeContainer, background: '#181818' }}>
-          <p className="text-lg leading-relaxed font-semibold text-white">{text}</p>
-        </div>
-      )}
-
-      {quizStep.stage === 'preparation' && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5">
-          <Icon icon="mdi:target" className="size-12 text-[#FFB800]" />
-          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-8 py-4 text-center">
-            <p className="text-sm text-white/40">Semua layar menampilkan</p>
-            <p className="mt-1 text-lg font-medium text-white/70">"Bersiap!"</p>
-          </div>
-          <GradientButton onClick={handleStartReading} className="px-10 py-3.5 text-lg">
-            Mulai ▶
-          </GradientButton>
-        </div>
-      )}
-
       {quizStep.stage === 'reading' && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5">
+        <div className="mt-12 flex flex-1 flex-col items-center justify-center gap-5">
           {timer.active && (
             <TimerRing
               remainingSec={timer.remainingSec}
               totalSec={timers.reading}
               expired={false}
-              size={90}
+              size={120}
             />
           )}
-          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-8 py-4 text-center">
-            <p className="text-sm text-white/40">Pemain melihat</p>
-            <p className="mt-1 flex items-center justify-center gap-1.5 text-lg font-medium text-white/70">
-              <Icon icon="mdi:television" className="size-5" /> "Perhatikan Layar Utama"
-            </p>
-          </div>
-          <p className="text-sm text-white/30">Jawaban otomatis terbuka saat waktu baca habis</p>
         </div>
       )}
 
@@ -195,9 +175,14 @@ export function HostQuiz({
               remainingSec={timer.remainingSec}
               totalSec={timers.answering}
               expired={timer.expired}
-              size={90}
+              size={120}
+              className="mt-10"
             />
           )}
+
+          <div className="flex w-full items-start px-10 py-5">
+            <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+          </div>
 
           <AnswerOptionsList
             sessionId={sessionId}
@@ -207,22 +192,35 @@ export function HostQuiz({
             revealed={false}
           />
 
-          <div className="mt-auto flex w-full items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
-                style={{ width: `${totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0}%` }}
-              />
+          <div className="flex w-full flex-col gap-3 px-10">
+            <div className="mt-auto flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
+                  style={{
+                    width: `${totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <span className="shrink-0 text-xs whitespace-nowrap text-white">
+                <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
+                <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
+                menjawab
+              </span>
             </div>
-            <span className="shrink-0 text-xs whitespace-nowrap text-white/60">
-              <span className="font-bold text-white">{answeredCount}</span> dari{' '}
-              <span className="font-bold text-white">{totalPlayers}</span> pemain telah menjawab
-            </span>
           </div>
 
-          <GradientButton onClick={handleRevealClick} className="w-full px-6 py-3 text-base">
-            Perlihatkan Jawaban
-          </GradientButton>
+          <div className="absolute bottom-10 flex w-full flex-col gap-3 px-10">
+            <GradientButton onClick={handleRevealClick} className="w-full px-6 py-3 text-base">
+              Perlihatkan Jawaban
+            </GradientButton>
+          </div>
+        </div>
+      )}
+
+      {quizStep.stage !== 'preparation' && quizStep.stage !== 'answering' && (
+        <div className="px-12 py-10">
+          <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
         </div>
       )}
 
@@ -237,18 +235,20 @@ export function HostQuiz({
             correctId={quizStep.correctId}
           />
 
-          <GradientButton
-            onClick={handleNext}
-            className="mt-auto flex items-center justify-center gap-1.5 px-6 py-3 text-base"
-          >
-            {isLastQuestion ? (
-              <>
-                <Icon icon="mdi:check-circle" className="size-5" /> Selesai
-              </>
-            ) : (
-              'Soal Berikutnya →'
-            )}
-          </GradientButton>
+          <div className="absolute bottom-10 mt-auto flex w-full flex-col gap-3 px-10">
+            <GradientButton
+              onClick={handleNext}
+              className="mt-auto flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+            >
+              {isLastQuestion ? (
+                <>
+                  <Icon icon="mdi:check-circle" className="size-5" /> Selesai
+                </>
+              ) : (
+                'Soal Berikutnya →'
+              )}
+            </GradientButton>
+          </div>
         </div>
       )}
 

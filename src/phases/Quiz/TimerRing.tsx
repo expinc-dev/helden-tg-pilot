@@ -7,11 +7,13 @@ export function TimerRing({
   totalSec,
   expired,
   size = 96,
+  className = '',
 }: {
   remainingSec: number
   totalSec: number
   expired: boolean
   size?: number
+  className?: string
 }) {
   const isUrgent = remainingSec <= 5
   const ringColor = isUrgent ? '#E21B3C' : '#FFB800'
@@ -20,7 +22,7 @@ export function TimerRing({
 
   return (
     <div
-      className={`relative flex shrink-0 items-center justify-center rounded-full ${
+      className={`relative flex shrink-0 items-center justify-center rounded-full ${className} ${
         isUrgent && !expired ? 'animate-pulse' : ''
       }`}
       style={{
