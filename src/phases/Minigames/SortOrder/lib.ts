@@ -107,13 +107,14 @@ export function previewScore(
   })
 }
 
-// Reveal gate (AC: "reveal correct order only after all submit/expiry") —
-// every roster row has submitted, or the phase timer has run out.
+// Reveal gate — wait for the phase timer to run out, full stop. Previously
+// this also revealed early once every roster row had submitted, but with a
+// roster of 1 (solo play/testing) that made it fire the instant the lone
+// player submitted, well before the clock ran out.
 export function isRevealReady(
   roster: SortOrderParticipant[],
   answers: Record<string, SortOrderAnswer | undefined>,
   timerExpired: boolean
 ): boolean {
-  if (timerExpired) return true
-  return roster.length > 0 && roster.every((r) => !!answers[r.writerId])
+  return timerExpired
 }

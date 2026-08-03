@@ -24,6 +24,8 @@ import {
 import { AnswerOptionsList } from './components/AnswerOptionsList'
 import { LeaderboardPanel } from './components/LeaderboardPanel'
 
+const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
+
 export function HostQuiz({
   content,
   sessionId,
@@ -148,7 +150,7 @@ export function HostQuiz({
       </div>
 
       {quizStep.stage !== 'preparation' && (
-        <div className="rounded-xl border border-white/10 bg-[#181818] p-5">
+        <div className="rounded-xl p-5" style={{ border: strokeContainer, background: '#181818' }}>
           <p className="text-lg leading-relaxed font-semibold text-white">{text}</p>
         </div>
       )}
@@ -205,7 +207,7 @@ export function HostQuiz({
             revealed={false}
           />
 
-          <div className="mt-auto flex w-full items-center gap-3 rounded-lg border border-white/15 bg-black/20 px-4 py-2.5">
+          <div className="mt-auto flex w-full items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
               <div
                 className="h-full rounded-full bg-[#FFB800] transition-all duration-500"

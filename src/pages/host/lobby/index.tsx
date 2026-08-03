@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 import { Modal } from '@/components/Modal'
 import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
 import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
+import { LevelIntro } from '@/pages/host/_shared/LevelIntro'
 import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
@@ -18,13 +20,20 @@ import { TimerBar } from '@/phases/TimerBar'
 import { VideoHostScreen } from '@/phases/Video'
 
 import { demoBundle } from '@/lib/demoBundle'
-import { endLevel, endSession, jumpToPhase, nextPhase, startSession } from '@/lib/session/control'
+import {
+  endLevel,
+  endSession,
+  forceExpireTimer,
+  jumpToPhase,
+  nextPhase,
+  startSession,
+} from '@/lib/session/control'
 import { useGameType } from '@/lib/sync/useGameType'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { usePlayedPhases } from '@/lib/sync/usePlayedPhases'
 import { usePresence, useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
-import { useTimer } from '@/lib/sync/useTimer'
+import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 
 import { HostBadge } from '../_shared/HostBadge'
 
@@ -43,6 +52,9 @@ export function HostView() {
   const flowMode = demoBundle.flowMode ?? 'sequential'
   const isModular = flowMode === 'modular-open' || flowMode === 'modular-progressive'
   const onPicker = isModular && phase?.type === 'idle'
+  // Picker → intro → play: tapping a level card stages it here instead of
+  // jumping straight in, so the host gets a "brief the room" beat first.
+  const [pendingPhaseId, setPendingPhaseId] = useState<string | null>(null)
 
   const advancedRef = useRef<string | null>(null)
   useEffect(() => {
@@ -162,6 +174,20 @@ export function HostView() {
   // Live: modular → picker (when at idle) or phase render + End level.
   //       sequence → original Next phase button.
   if (meta.status === 'live' && onPicker) {
+    const pendingPhase = pendingPhaseId ? demoBundle.phases[pendingPhaseId] : null
+    if (pendingPhase) {
+      return (
+        <LevelIntro
+          phase={pendingPhase}
+          level={levelNumberFor(pendingPhase.id)}
+          gameType={gameType}
+          onStart={() => {
+            void jumpToPhase(sessionId, pendingPhase.id)
+            setPendingPhaseId(null)
+          }}
+        />
+      )
+    }
     return (
       <div
         className="flex min-h-dvh flex-col gap-6"
@@ -175,7 +201,7 @@ export function HostView() {
         <PickerGrid
           bundle={demoBundle}
           played={played}
-          onPick={(phaseId) => jumpToPhase(sessionId, phaseId)}
+          onPick={(phaseId) => setPendingPhaseId(phaseId)}
           onEndSession={() => endSession(sessionId)}
         />
       </div>
@@ -217,12 +243,20 @@ export function HostView() {
       {meta.status === 'live' &&
         phase &&
         (isModular ? (
-          <button
-            onClick={() => endLevel(sessionId, phase.id)}
-            className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
-          >
-            Akhiri Level
-          </button>
+          phase.content.type === 'minigame' ? (
+            <MinigameHostAction
+              sessionId={sessionId}
+              timer={timer}
+              onEndLevel={() => endLevel(sessionId, phase.id)}
+            />
+          ) : (
+            <button
+              onClick={() => endLevel(sessionId, phase.id)}
+              className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+            >
+              Akhiri Level
+            </button>
+          )
         ) : (
           (() => {
             const order = demoBundle.phaseOrder
@@ -239,6 +273,64 @@ export function HostView() {
           })()
         ))}
     </div>
+  )
+}
+
+// Matches PickerGrid's own numbering: 1-indexed position among non-idle
+// phases in phaseOrder (idle is the picker anchor, never a card/level itself).
+function levelNumberFor(phaseId: string): number {
+  const nonIdle = demoBundle.phaseOrder.filter((id) => demoBundle.phases[id]?.type !== 'idle')
+  return nonIdle.indexOf(phaseId) + 1
+}
+
+// Minigame phases occupy the page's bottom action slot with a button that
+// changes meaning over the round's lifetime, rather than a static "Akhiri
+// Level": SortOrder's reveal gate is literally `timer.expired` (see
+// Minigames/SortOrder/lib.ts's isRevealReady) — reading the SAME timer
+// subscription HostView already holds keeps this generic across whatever
+// future minigame templates share that timer-driven reveal convention,
+// without importing any one template's own hooks into this page shell.
+function MinigameHostAction({
+  sessionId,
+  timer,
+  onEndLevel,
+}: {
+  sessionId: string
+  timer: TimerState
+  onEndLevel: () => void
+}) {
+  const [confirmReveal, setConfirmReveal] = useState(false)
+
+  if (!timer.active || timer.expired) {
+    return (
+      <button
+        onClick={onEndLevel}
+        className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+      >
+        Akhiri Level
+      </button>
+    )
+  }
+
+  return (
+    <>
+      <GradientButton onClick={() => setConfirmReveal(true)} className="w-full py-4 text-base">
+        Perlihatkan Skor
+      </GradientButton>
+      {confirmReveal && (
+        <ConfirmDialog
+          title="Perlihatkan skor?"
+          message="Waktu level masih panjang, apakah kamu yakin memperlihatkan skor sekarang?"
+          confirmLabel="Perlihatkan"
+          cancelLabel="Kembali"
+          onCancel={() => setConfirmReveal(false)}
+          onConfirm={() => {
+            setConfirmReveal(false)
+            void forceExpireTimer(sessionId)
+          }}
+        />
+      )}
+    </>
   )
 }
 

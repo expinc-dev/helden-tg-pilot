@@ -2,6 +2,8 @@ import { Icon } from '@iconify/react'
 
 import { type ChoiceOption, useDistribution } from '../../lib'
 
+const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
+
 // Host-only option list: lettered badges, no color/shape icons (those are
 // player/central-facing). Pre-reveal it's just badge + label (no live
 // distribution, so the host can't spoil results by reading the screen).
@@ -35,10 +37,11 @@ export function AnswerOptionsList({
         return (
           <div
             key={opt.id}
-            className="flex items-center gap-3 rounded-lg border px-4 py-3"
+            className="flex items-center gap-3 px-4 py-3"
             style={{
-              borderColor: isCorrect ? '#26890C' : '#2a2a2a',
-              background: isCorrect ? '#26890C1a' : 'transparent',
+              borderRadius: 8,
+              border: isCorrect ? strokeContainer : '1px solid #2a2a2a',
+              background: isCorrect ? 'rgba(81, 206, 146, 0.16)' : 'transparent',
             }}
           >
             <div

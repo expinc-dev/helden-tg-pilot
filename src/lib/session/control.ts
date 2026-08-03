@@ -253,6 +253,38 @@ export async function jumpToPhase(sessionId: string, phaseId: string) {
   await openPhase(sessionId, phase)
 }
 
+// Host-only "reveal now" for phases whose reveal gate is the raw server timer
+// (SortOrder's isRevealReady is literally `timerExpired` — unlike Quiz, which
+// has its own centralStep/stage flag decoupled from the timer). Overwrites
+// endsAt to "now" rather than removing the node, so `timer.active` stays true
+// and every reader's `expired` flips true on its next tick — removing the node
+// instead would make `active` false and `expired` reset to false (see
+// useTimer.ts), the opposite of what a manual reveal needs.
+export async function forceExpireTimer(sessionId: string) {
+  requireHostUid()
+  const offset = await serverOffsetOnce()
+  await update(ref(rtdb, `sessions/${sessionId}/timer`), { endsAt: Date.now() + offset })
+}
+
+// Testing aid — host-only "replay this phase from scratch" for manual QA, so
+// resetting doesn't require creating a new session. Does NOT touch
+// phasePointer or played/* — the phase stays the active one, it just looks
+// freshly opened.
+//
+// Deliberately does NOT delete players/{id}/answers/{phaseId} directly:
+// database.rules.json scopes every write under players/{id} to that id's
+// registered owner (sessions/{id}/playerOwners/{id} === auth.uid, see
+// session/presence.ts#claimOwnership) — the host's auth.uid is never that
+// owner, so a host-side remove() 403s. Instead this only re-stamps the
+// timer/secrets/videoPlayback; each player's own template watches that same
+// timer node and clears its OWN answer in response (a write it's always
+// allowed to make), which is how e.g. SortOrder's player component re-arms
+// itself after a reset.
+export async function resetPhase(sessionId: string, phase: Phase) {
+  requireHostUid()
+  await openPhase(sessionId, phase)
+}
+
 // endLevel: modular flow. Called from the host when a played phase is done.
 // Flushes durable results (once), marks the phase as played, then either
 // returns to the picker anchor (idle) or auto-ends the session if every
