@@ -25,7 +25,11 @@ export function HostNew() {
     try {
       const { sessionId } = await createSession({
         name,
-        maxPlayers: Number(maxPlayers) || undefined,
+        // ponytail: multiplayer field is "Jumlah Tim" — derive the actual player cap as teams * maxMembers.
+        maxPlayers:
+          mode === 'multiplayer'
+            ? (Number(maxPlayers) || 0) * (Number(maxMembers) || 0) || undefined
+            : Number(maxPlayers) || undefined,
         maxCentralScreens: Number(maxCentralScreens) || undefined,
         // ponytail: Multiplayer implies team mode; Single Player disables it. Wire real single-player flow later.
         allowTeams: mode === 'multiplayer',
@@ -76,8 +80,8 @@ export function HostNew() {
         <Field label="Nama Sesi" placeholder="Nama Sesi" value={name} onChange={setName} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label="Jumlah Pemain"
-            placeholder="Jumlah Pemain"
+            label={mode === 'single' ? 'Jumlah Pemain' : 'Jumlah Tim'}
+            placeholder={mode === 'single' ? 'Jumlah Pemain' : 'Jumlah Tim'}
             value={maxPlayers}
             onChange={setMaxPlayers}
             inputMode="numeric"

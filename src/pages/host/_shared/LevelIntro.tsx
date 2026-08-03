@@ -1,9 +1,14 @@
 import { assets } from '@/assets'
 import type { Phase } from '@helden-inc/tg-schema'
 
+import { resolveTimers } from '@/phases/Quiz/lib'
+
+import { Header } from './Header'
 import { HostBadge } from './HostBadge'
 
 const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
+
+type Stat = { label: string; value: string }
 
 // Picked level's config isn't typed generically on Phase (minigame configs are
 // per-template, see PhaseRouter's registry lookup) — this is a display-only
@@ -12,6 +17,27 @@ function minigameItemCount(phase: Phase): number | undefined {
   if (phase.content.type !== 'minigame') return undefined
   const items = (phase.content.config as Record<string, unknown> | undefined)?.items
   return Array.isArray(items) ? items.length : undefined
+}
+
+// Each phase type surfaces different briefing data — quiz cares about
+// question count + reading/answering split, other types just show the
+// generic phase timer (or nothing, e.g. video/content).
+function levelStats(phase: Phase): Stat[] {
+  if (phase.content.type === 'quiz') {
+    const { reading, answering } = resolveTimers(phase.content)
+    return [
+      { label: 'Jumlah Pertanyaan', value: String(phase.content.questions.length) },
+      { label: 'Durasi per soal', value: `${reading + answering}s` },
+    ]
+  }
+
+  const itemCount = minigameItemCount(phase)
+  const stats: Stat[] = []
+  if (itemCount !== undefined) stats.push({ label: 'Jumlah Pertanyaan', value: String(itemCount) })
+  if (phase.timer?.seconds !== undefined) {
+    stats.push({ label: 'Durasi tiap level', value: `${phase.timer.seconds} Detik` })
+  }
+  return stats
 }
 
 // Modular picker's confirm step: host taps a level card, sees this "brief the
@@ -29,8 +55,7 @@ export function LevelIntro({
   gameType: string
   onStart: () => void
 }) {
-  const itemCount = minigameItemCount(phase)
-  const seconds = phase.timer?.seconds
+  const stats = levelStats(phase)
 
   return (
     <div
@@ -42,6 +67,7 @@ export function LevelIntro({
         backgroundRepeat: 'no-repeat',
       }}
     >
+      <Header />
       <div
         className="flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto p-4 sm:p-6"
         style={{ borderRadius: 16, border: strokeContainer, background: 'rgba(8,8,8,0.20)' }}
@@ -58,31 +84,30 @@ export function LevelIntro({
           </p>
         </div>
 
-        {(itemCount !== undefined || seconds !== undefined) && (
-          <div
-            className="grid w-full max-w-xl grid-cols-2 gap-3 p-3 sm:p-4"
-            style={{ borderRadius: 4, border: strokeContainer }}
-          >
-            {itemCount !== undefined && (
-              <StatBox label="Jumlah Pertanyaan" value={String(itemCount)} />
-            )}
-            {seconds !== undefined && (
-              <StatBox label="Durasi tiap level" value={`${seconds} Detik`} />
-            )}
-          </div>
-        )}
-
         <div
-          className="w-full max-w-xl flex-1 bg-cover bg-center"
-          style={{
-            borderRadius: 8,
-            border: strokeContainer,
-            background: 'rgba(0,0,0,0.08)',
-            backgroundImage: `url(${assets.images.presentation.classroomExample})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
+          className="flex w-full flex-1 flex-col items-center gap-3 overflow-y-auto py-3"
+          style={{ borderRadius: 4, border: strokeContainer }}
+        >
+          {stats.length > 0 && (
+            <div className="grid w-full max-w-xl grid-cols-2 gap-3">
+              {stats.map((s) => (
+                <StatBox key={s.label} label={s.label} value={s.value} />
+              ))}
+            </div>
+          )}
+
+          <div
+            className="w-full max-w-xl flex-1 bg-cover bg-center"
+            style={{
+              borderRadius: 8,
+              border: strokeContainer,
+              background: 'rgba(0,0,0,0.08)',
+              backgroundImage: `url(${assets.images.presentation.classroomExample})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        </div>
       </div>
 
       <button

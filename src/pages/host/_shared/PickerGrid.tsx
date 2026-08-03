@@ -40,10 +40,10 @@ export function PickerGrid({
   const gameType = useGameType()
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col">
+    <div className="mx-auto flex w-full max-w-3xl flex-col px-5 py-3">
       <Header />
 
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto rounded-2xl border border-white/5 bg-[#12121299] px-8 py-3">
+      <div className="mt-3 flex flex-1 flex-col gap-6 overflow-y-auto rounded-2xl border border-white/5 bg-[#12121299] px-8 py-3">
         <HostBadge pageName={gameType} />
 
         <div className="text-center">

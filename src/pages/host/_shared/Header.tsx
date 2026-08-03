@@ -4,11 +4,19 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 import { useFullscreen } from '@/lib/useFullscreen'
 
-export const Header = () => {
+interface HeaderProps {
+  isShowLogo?: boolean
+}
+
+export const Header = ({ isShowLogo = false }: HeaderProps) => {
   const { isFullscreen, toggle } = useFullscreen()
   return (
-    <header className="flex items-center justify-between">
-      <DotLottieReact src={assets.lotties.heldenLogo} autoplay loop className="h-20 w-auto" />
+    <header
+      className={`flex items-center ${isShowLogo ? 'justify-between' : 'justify-end'} w-full`}
+    >
+      {isShowLogo && (
+        <DotLottieReact src={assets.lotties.heldenLogo} autoplay loop className="h-20 w-auto" />
+      )}
       <button
         type="button"
         onClick={toggle}

@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { assets } from '@/assets'
-import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
-import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 import { MessageModal } from '@/components/MessageModal'
+import { Header } from '@/pages/host/_shared/Header'
 
 import { createTeam, joinTeam } from '@/lib/session/teams'
 import { useTeams } from '@/lib/sync/useTeams'
@@ -56,9 +55,7 @@ export function TeamLobby({
         backgroundPosition: 'center',
       }}
     >
-      <FullscreenToggle position="absolute" />
-
-      <HeldenLogoLotties className="h-6 w-auto self-start" />
+      <Header isShowLogo={true} />
 
       <div className="mt-auto flex w-full flex-col gap-4">
         <h1 className="text-center text-lg font-semibold text-white">Pick a team</h1>

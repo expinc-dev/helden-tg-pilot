@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
-import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
-import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 import { InvalidCodeModal } from '@/components/InvalidCodeModal'
+import { Header } from '@/pages/host/_shared/Header'
 
 import { loadIdentity, loadLastSession } from '@/lib/identity'
 import { resolveJoinCode } from '@/lib/session/join'
@@ -61,9 +60,7 @@ export function PlayerJoin() {
         backgroundPosition: 'center',
       }}
     >
-      <FullscreenToggle position="absolute" />
-
-      <HeldenLogoLotties className="h-6 w-auto self-start" />
+      <Header isShowLogo={true} />
 
       <form onSubmit={joinByCode} className="mt-auto flex w-full flex-col gap-4">
         <div
