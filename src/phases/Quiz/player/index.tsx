@@ -10,8 +10,6 @@ import { useTimer } from '@/lib/sync/useTimer'
 
 import { type QuizContent, questionOptions, resolveTimers, usePlayerScore } from '../lib'
 import { AnsweringStage } from './components/AnsweringStage'
-import { PreparationStage } from './components/PreparationStage'
-import { ReadingStage } from './components/ReadingStage'
 import { RevealStage } from './components/RevealStage'
 
 export function PlayerQuiz({
@@ -76,14 +74,6 @@ export function PlayerQuiz({
   }
 
   const canAnswer = quizStep.stage === 'answering' && !timer.expired && !submitted && !submitting
-
-  if (quizStep.stage === 'preparation') {
-    return <PreparationStage step={quizStep.step} total={content.questions.length} />
-  }
-
-  if (quizStep.stage === 'reading') {
-    return <ReadingStage timer={timer} />
-  }
 
   if (quizStep.stage === 'answering') {
     return (

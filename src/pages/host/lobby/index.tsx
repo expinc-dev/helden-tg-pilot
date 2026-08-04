@@ -209,7 +209,13 @@ export function HostView() {
 
   return (
     <div
-      className="flex min-h-dvh w-full flex-col gap-3 px-8 py-3"
+      // h-dvh + overflow-hidden (not min-h-dvh) so this shell never grows
+      // taller than the visible frame — at lg+ TabletFrame caps the real
+      // viewport into a fixed ~1024px box, and min-h-dvh would size against
+      // the raw (often taller) browser viewport instead, pushing anything
+      // pinned to the bottom (e.g. the quiz's per-stage action button) below
+      // the visible area. lg:h-full matches that capped box exactly.
+      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-8 py-3 lg:h-full"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -222,7 +228,7 @@ export function HostView() {
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
       {meta.status === 'live' && phase && (
-        <div className="relative flex flex-1 flex-col gap-4 rounded-2xl border border-white/20 bg-[#12121299]">
+        <div className="relative flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/20 bg-[#12121299]">
           <PhaseRouter
             phase={phase}
             phaseStartMs={pointer?.changedAt}

@@ -449,7 +449,6 @@ const quiz: Phase = {
     type: 'quiz',
     mode: 'central_prompt',
     revealAnswers: true,
-    readingTimerSeconds: 0,
     answeringTimerSeconds: 920,
     questions: [
       {

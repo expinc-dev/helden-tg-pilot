@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref, set } from 'firebase/database'
+import { onValue, ref } from 'firebase/database'
 
 import { rtdb } from '@/lib/firebase'
 
@@ -39,7 +39,6 @@ export function questionOptions(q: unknown): ChoiceOption[] {
 
 export function resolveTimers(content: QuizContent) {
   return {
-    reading: content.readingTimerSeconds ?? 8,
     answering: content.answeringTimerSeconds ?? content.perQuestionTimerSeconds ?? 20,
   }
 }
@@ -108,23 +107,6 @@ export function useScoresMap(sessionId: string | undefined, phase: Phase): Recor
     })
   }, [sessionId, path])
   return scores
-}
-
-// Host writes, central listens — scoped to the quiz phase only (Q1/Q2): the
-// host clears it back to false whenever the question advances.
-export function useLeaderboardOpen(sessionId: string | undefined): boolean {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/leaderboardOpen`), (s) => {
-      setOpen(!!s.val())
-    })
-  }, [sessionId])
-  return open
-}
-
-export function writeLeaderboardOpen(sessionId: string, open: boolean) {
-  return set(ref(rtdb, `sessions/${sessionId}/leaderboardOpen`), open)
 }
 
 // Cumulative correct/wrong counts per player (or team), scoped per quiz phase

@@ -4,8 +4,9 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { LeaderboardRows } from '../../components/LeaderboardRows'
 import { type QuizContent } from '../../lib'
 
-// Full-bleed override shown on central when the host toggles "Leaderboard"
-// during a quiz phase (see useLeaderboardOpen in ../../lib).
+// Full-bleed screen shown on central when the quiz's centralStep enters the
+// 'leaderboard' stage — its own dedicated step, not an overlay that can show
+// mid-reveal (see QuizStage in @/lib/sync/useQuizStep).
 export function LeaderboardScreen({
   sessionId,
   phase,

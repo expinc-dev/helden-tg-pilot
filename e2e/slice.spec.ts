@@ -197,8 +197,10 @@ test('full slice: Idle -> Microlearning -> Quiz -> Code across host/central/play
   await clickEndLevel(hostPage)
 
   // ── Quiz ──────────────────────────────────────────────────────────────────
+  // No more "Bersiap!"/reading-only step — central shows the question with its
+  // answer choices immediately.
   await playAvailableLevel(hostPage)
-  await expect(centralPage.getByText('Bersiap!')).toBeVisible()
+  await expect(centralPage.getByText('Data rahasia perusahaan sebaiknya...')).toBeVisible()
   await clickEndLevel(hostPage)
 
   // ── Video briefing: not named in this ticket, forced past via playAvailableLevel ──

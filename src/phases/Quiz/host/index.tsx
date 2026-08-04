@@ -12,6 +12,7 @@ import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
 
 import { TimerRing } from '../TimerRing'
+import { LeaderboardRows } from '../components/LeaderboardRows'
 import {
   type QuizContent,
   promptText,
@@ -19,10 +20,8 @@ import {
   resolveTimers,
   useAnsweredCount,
   useTotalPlayers,
-  writeLeaderboardOpen,
 } from '../lib'
 import { AnswerOptionsList } from './components/AnswerOptionsList'
-import { LeaderboardPanel } from './components/LeaderboardPanel'
 
 export function HostQuiz({
   content,
@@ -35,49 +34,27 @@ export function HostQuiz({
   phaseId: string
   phase: Phase
 }) {
-  const { quizStep, write, startTimer, clearTimer } = useQuizStep(sessionId)
+  const { quizStep, started, write, startTimer, clearTimer } = useQuizStep(sessionId)
   const timer = useTimer(sessionId, phase)
   const q = content.questions[quizStep.step]
   const answeredCount = useAnsweredCount(sessionId, `${phaseId}_q${quizStep.step}`)
   const totalPlayers = useTotalPlayers(sessionId)
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [confirmReveal, setConfirmReveal] = useState(false)
   const scoredRef = useRef<string | null>(null)
 
   const isLastQuestion = quizStep.step >= content.questions.length - 1
   const timers = resolveTimers(content)
 
-  const closeLeaderboard = useCallback(() => {
-    setLeaderboardOpen(false)
-    void writeLeaderboardOpen(sessionId, false)
-  }, [sessionId])
-
-  const toggleLeaderboard = useCallback(() => {
-    setLeaderboardOpen((o) => {
-      const next = !o
-      void writeLeaderboardOpen(sessionId, next)
-      return next
-    })
-  }, [sessionId])
-
-  const handlePreparation = useCallback(
-    (step: number) => {
+  // Question and answer choices show together from the start — no separate
+  // "Bersiap!"/reading-only step, straight into the answering timer.
+  const handleStartQuestion = useCallback(
+    async (step: number) => {
       scoredRef.current = null
-      closeLeaderboard()
-      void write({ step, stage: 'preparation', correctId: undefined })
+      await startTimer(phaseId, timers.answering)
+      await write({ step, stage: 'answering', correctId: undefined })
     },
-    [write, closeLeaderboard]
+    [write, startTimer, phaseId, timers.answering]
   )
-
-  const handleStartReading = useCallback(async () => {
-    await startTimer(phaseId, timers.reading)
-    await write({ step: quizStep.step, stage: 'reading' })
-  }, [write, startTimer, phaseId, timers.reading, quizStep.step])
-
-  const handleStartAnswering = useCallback(async () => {
-    await startTimer(phaseId, timers.answering)
-    await write({ step: quizStep.step, stage: 'answering' })
-  }, [write, startTimer, phaseId, timers.answering, quizStep.step])
 
   const handleReveal = useCallback(async () => {
     await clearTimer()
@@ -107,69 +84,46 @@ export function HostQuiz({
     }
   }, [timer.active, timer.expired, handleReveal])
 
+  const handleShowLeaderboard = useCallback(() => {
+    void write({ step: quizStep.step, stage: 'leaderboard' })
+  }, [write, quizStep.step])
+
   const handleNext = useCallback(() => {
     if (isLastQuestion) {
-      closeLeaderboard()
       const isModular = (demoBundle.flowMode ?? 'sequential') !== 'sequential'
       void (isModular ? endLevel(sessionId, phaseId) : nextPhase(sessionId, phaseId))
     } else {
-      handlePreparation(quizStep.step + 1)
+      void handleStartQuestion(quizStep.step + 1)
     }
-  }, [isLastQuestion, sessionId, phaseId, quizStep.step, handlePreparation, closeLeaderboard])
+  }, [isLastQuestion, sessionId, phaseId, quizStep.step, handleStartQuestion])
 
   useEffect(() => {
     if (!timer.active || !timer.expired) return
-    if (quizStep.stage === 'reading') {
-      handleStartAnswering()
-    } else if (quizStep.stage === 'answering') {
-      handleReveal()
-    }
-  }, [quizStep.stage, timer.active, timer.expired, handleStartAnswering, handleReveal])
+    if (quizStep.stage === 'answering') handleReveal()
+  }, [quizStep.stage, timer.active, timer.expired, handleReveal])
 
-  // Skip the "Bersiap!" staging screen — jump straight into reading as soon as
-  // a question is staged, instead of waiting for the host to tap "Mulai".
+  // Bootstrap question 0: centralStep is unset right after openPhase() opens
+  // this quiz, so kick off the first question instead of waiting on a step
+  // the host never explicitly takes.
   useEffect(() => {
-    if (quizStep.stage === 'preparation') {
-      void handleStartReading()
-    }
-  }, [quizStep.stage, handleStartReading])
+    if (!started) void handleStartQuestion(0)
+  }, [started, handleStartQuestion])
 
   if (!q) return null
 
   const text = promptText(q)
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <div className="flex items-center justify-between border-b border-white/20 px-10 py-3">
         <div className="text-2xl">
           <span className="text-helden-yellow font-bold">{quizStep.step + 1}</span>
           <span className="font-thin text-white">/{content.questions.length}</span>
         </div>
-        <button
-          type="button"
-          onClick={toggleLeaderboard}
-          aria-label="Leaderboard"
-          className="bg-helden-yellow-gradient flex size-8 items-center justify-center rounded-lg text-black shadow transition hover:brightness-110"
-        >
-          <Icon icon="material-symbols:leaderboard-outline-rounded" className="size-4" />
-        </button>
       </div>
 
-      {quizStep.stage === 'reading' && (
-        <div className="mt-12 flex flex-1 flex-col items-center justify-center gap-5">
-          {timer.active && (
-            <TimerRing
-              remainingSec={timer.remainingSec}
-              totalSec={timers.reading}
-              expired={false}
-              size={120}
-            />
-          )}
-        </div>
-      )}
-
       {quizStep.stage === 'answering' && (
-        <div className="flex flex-1 flex-col items-center gap-4">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-4">
           {timer.active && (
             <TimerRing
               remainingSec={timer.remainingSec}
@@ -210,7 +164,7 @@ export function HostQuiz({
             </div>
           </div>
 
-          <div className="absolute bottom-10 flex w-full flex-col gap-3 px-10">
+          <div className="mt-auto flex w-full flex-col gap-3 px-10 pb-10">
             <GradientButton onClick={handleRevealClick} className="w-full px-6 py-3 text-base">
               Perlihatkan Jawaban
             </GradientButton>
@@ -218,14 +172,12 @@ export function HostQuiz({
         </div>
       )}
 
-      {quizStep.stage !== 'preparation' && quizStep.stage !== 'answering' && (
-        <div className="px-12 py-10">
-          <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
-        </div>
-      )}
-
       {quizStep.stage === 'reveal' && (
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="px-12 py-10">
+            <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+          </div>
+
           <AnswerOptionsList
             sessionId={sessionId}
             phaseId={phaseId}
@@ -235,10 +187,29 @@ export function HostQuiz({
             correctId={quizStep.correctId}
           />
 
-          <div className="absolute bottom-10 mt-auto flex w-full flex-col gap-3 px-10">
+          <div className="mt-auto flex w-full flex-col gap-3 px-10 pb-10">
+            <GradientButton
+              onClick={handleShowLeaderboard}
+              className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+            >
+              <Icon icon="material-symbols:leaderboard-outline-rounded" className="size-5" /> Lihat
+              Leaderboard
+            </GradientButton>
+          </div>
+        </div>
+      )}
+
+      {quizStep.stage === 'leaderboard' && (
+        <div className="flex min-h-0 flex-1 flex-col gap-4 px-10">
+          <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20">
+            <LeaderboardRows sessionId={sessionId} phase={phase} content={content} />
+          </div>
+
+          <div className="flex w-full flex-col gap-3 pb-10">
             <GradientButton
               onClick={handleNext}
-              className="mt-auto flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+              className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
             >
               {isLastQuestion ? (
                 <>
@@ -250,15 +221,6 @@ export function HostQuiz({
             </GradientButton>
           </div>
         </div>
-      )}
-
-      {leaderboardOpen && (
-        <LeaderboardPanel
-          sessionId={sessionId}
-          phase={phase}
-          content={content}
-          onClose={closeLeaderboard}
-        />
       )}
 
       {confirmReveal && (

@@ -24,10 +24,10 @@ function minigameItemCount(phase: Phase): number | undefined {
 // generic phase timer (or nothing, e.g. video/content).
 function levelStats(phase: Phase): Stat[] {
   if (phase.content.type === 'quiz') {
-    const { reading, answering } = resolveTimers(phase.content)
+    const { answering } = resolveTimers(phase.content)
     return [
       { label: 'Jumlah Pertanyaan', value: String(phase.content.questions.length) },
-      { label: 'Durasi per soal', value: `${reading + answering}s` },
+      { label: 'Durasi per soal', value: `${answering}s` },
     ]
   }
 

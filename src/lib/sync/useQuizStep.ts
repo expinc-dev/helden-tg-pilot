@@ -7,7 +7,7 @@ import { rtdb } from '@/lib/firebase'
 
 import { serverOffsetOnce } from '../session/control'
 
-export type QuizStage = 'preparation' | 'reading' | 'answering' | 'reveal'
+export type QuizStage = 'answering' | 'reveal' | 'leaderboard'
 
 export interface QuizStep {
   step: number
@@ -15,10 +15,15 @@ export interface QuizStep {
   correctId?: string
 }
 
-const DEFAULT: QuizStep = { step: 0, stage: 'preparation' }
+const DEFAULT: QuizStep = { step: 0, stage: 'answering' }
 
 export function useQuizStep(sessionId: string | undefined) {
   const [quizStep, setQuizStep] = useState<QuizStep>(DEFAULT)
+  // Whether centralStep has ever been written for this phase — false right
+  // after openPhase() removes the node, distinguishing "genuinely unstarted"
+  // from "legitimately sitting at step 0 answering" (both look like DEFAULT).
+  // The host uses this to bootstrap question 0 without a dedicated stage.
+  const [started, setStarted] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -26,11 +31,13 @@ export function useQuizStep(sessionId: string | undefined) {
       const val = s.val()
       if (!val) {
         setQuizStep(DEFAULT)
+        setStarted(false)
         return
       }
+      setStarted(true)
       setQuizStep({
         step: typeof val.step === 'number' ? val.step : 0,
-        stage: val.stage ?? 'preparation',
+        stage: val.stage ?? 'answering',
         correctId: val.correctId,
       })
     })
@@ -63,5 +70,5 @@ export function useQuizStep(sessionId: string | undefined) {
     return remove(ref(rtdb, `sessions/${sessionId}/timer`))
   }, [sessionId])
 
-  return { quizStep, write, startTimer, clearTimer }
+  return { quizStep, started, write, startTimer, clearTimer }
 }
