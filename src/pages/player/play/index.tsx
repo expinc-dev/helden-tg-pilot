@@ -6,7 +6,7 @@ import { EndScreen } from '@/pages/extra/end-screen'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 
-import { demoBundle } from '@/lib/demoBundle'
+import { demoBundlePlayerSafe as demoBundle } from '@/lib/demoBundlePlayerSafe'
 import { saveLastSession } from '@/lib/identity'
 import { joinPresence } from '@/lib/session/presence'
 import { joinTeam } from '@/lib/session/teams'
