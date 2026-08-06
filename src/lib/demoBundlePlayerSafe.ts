@@ -18,6 +18,8 @@ function stripQuestion(q: Question): Question {
       return { ...q, prompt, correctId: undefined }
     case 'multi_choice':
       return { ...q, prompt, correctIds: undefined }
+    case 'short_answer':
+      return { ...q, prompt, acceptedAnswers: undefined }
     default:
       return { ...q, prompt }
   }
