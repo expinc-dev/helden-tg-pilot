@@ -1,11 +1,35 @@
-# CLAUDE.md — helden-tg-pilot
+# Project Context
 
-Konteks kerja untuk AI agent di repo **tg-pilot** (runtime live-player-facing, disebut "tg-runtime" di blueprint lama). Desain/alasan mendalam: [`../BLUEPRINT_runtime.md`](../BLUEPRINT_runtime.md), [`../TIMER_AUTHORITY.md`](../TIMER_AUTHORITY.md), [`../TEAM_MODE.md`](../TEAM_MODE.md). Kontrak data: [`../helden-tg-schema/.claude/CLAUDE.md`](../helden-tg-schema/.claude/CLAUDE.md). Peta monorepo: [`../.claude/CLAUDE.md`](../.claude/CLAUDE.md).
+Repo **tg-pilot**, satu dari tiga subproject di monorepo Helden Training Game (peta lintas-repo: [root CLAUDE.md](../.claude/CLAUDE.md)), disebut "tg-runtime" di blueprint lama. Runtime live-player-facing: satu codebase, 3 role via route (`/host` `/central` `/player`), render Phase dari RTDB live state. Konsumsi tipe dari `@helden-inc/tg-schema` ([helden-tg-schema/.claude/CLAUDE.md](../helden-tg-schema/.claude/CLAUDE.md)). Desain/alasan mendalam: [`../BLUEPRINT_runtime.md`](../BLUEPRINT_runtime.md), [`../TIMER_AUTHORITY.md`](../TIMER_AUTHORITY.md), [`../TEAM_MODE.md`](../TEAM_MODE.md).
 
-## Wajib sebelum kerja
+# AI Assistant Rules
 
-1. **Jalankan `/graphify`** (atau graph query tool) dulu untuk memetakan arsitektur file/dependency yang relevan. Jangan pakai `grep`, `ls`, atau eksplorasi file manual sebelum itu. Kalau graphify gagal/kosong, baru fallback ke tool pencarian biasa — dan bilang bahwa itu gagal.
-2. **Jangan pakai browser tools** (`claude-in-chrome`, atau browser apa pun) untuk testing app ini. User yang pegang semua manual browser testing. Cukup kasih instruksi cara test, jangan eksekusi sendiri.
+Kamu adalah AI Assistant tingkat lanjut. Patuhi aturan berikut saat membantu saya di project ini:
+
+1. **SELALU GUNAKAN GRAPHIFY SEBELUM MENJAWAB/NGODING:**
+   Jangan menebak arsitektur atau dependensi kode. Gunakan skill/tool Graphify (`/graphify`, `graphify path`, atau `graphify explain`) untuk baca `graphify-out/graph.json` dan `GRAPH_REPORT.md` di repo ini sebelum eksplorasi atau perubahan apa pun — jangan pakai `grep`/`ls`/baca manual duluan. Kalau graphify gagal/kosong, baru fallback ke pencarian biasa, dan bilang bahwa itu gagal. Kalau graph dirasa kurang jelas atau stale, jalankan `/graphify . --update` di repo ini, atau `../graphify-refresh.sh` dari root buat refresh ketiga repo sekaligus (**bukan** `npm run myg` — script itu gak ada di monorepo ini).
+
+2. **PROPOSE PLAN & TUNGGU PERSETUJUAN SEBELUM EKSEKUSI (WAJIB):**
+   Karena instruksi saya terkadang abstrak, JANGAN PERNAH langsung mengubah, membuat, atau menghapus file kode. Kalau perlu, pakai command `/grill-with-docs` buat lebih jelas mengambil keputusan.
+   - Langkah 1: Buat ringkasan singkat tentang apa yang kamu pahami dari permintaan saya.
+   - Langkah 2: Buat daftar langkah-langkah (Action Plan) yang berisi file apa saja yang akan dimodifikasi dan logika apa yang akan diubah.
+   - Langkah 3: BERHENTI. Tanya saya apakah rencana tersebut sudah benar.
+   - Langkah 4: Baru eksekusi penulisan kode HANYA SETELAH saya memberikan persetujuan (misalnya saya jawab "ok", "lanjut", atau "yes").
+
+3. **UPDATE GRAPH SAAT DIPERLUKAN:**
+   Jika kita baru saja melakukan _refactoring_ atau penambahan file/komponen dalam jumlah banyak, kamu bisa meminta saya untuk menjalankan `../graphify-refresh.sh` di terminal, atau kamu bisa menjalankannya sendiri (jika memiliki akses eksekusi terminal) untuk merefresh knowledge graph.
+
+4. **IMPACT ANALYSIS:**
+   Sebelum kamu memodifikasi fungsi yang bersifat global atau dipakai ulang (`lib/session/`, `lib/sync/`, registry Phase/minigame), pastikan kamu mengecek apakah perubahan tersebut merusak jalur lain di repo ini, **dan** apakah registry-nya masih lockstep dengan CMS (checklist 5 poin di [root CLAUDE.md](../.claude/CLAUDE.md)).
+
+5. **STRICT STOP CONDITION (NO TESTING):**
+   Tugasmu HANYA menulis dan memodifikasi kode. Setelah kamu selesai mengubah file, kamu WAJIB langsung berhenti dan menunggu instruksi saya.
+   - SAYA yang bertanggung jawab menjalankan server (seperti `npm run dev`).
+   - SAYA yang akan membuka browser dan melakukan visual testing. Cukup kasih instruksi cara test, jangan eksekusi sendiri — ini termasuk `claude-in-chrome` atau browser tool apa pun.
+   - JANGAN PERNAH menjalankan perintah terminal untuk preview, server, atau membuka browser. Berhenti bekerja segera setelah kode disimpan! (`npm run build`/`npm run lint`/`*.selfcheck.ts` dari Definisi Selesai tetap boleh dijalankan sebagai verifikasi, itu bukan "preview/server/browser".)
+
+6. **UPADTE GRAPH**
+   Setelah selesai dengan tugasmu, konfirmasi dulu untuk update graph via `../graphify-refresh.sh`.
 
 ## Apa repo ini
 
