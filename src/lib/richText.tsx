@@ -84,6 +84,44 @@ export function renderRichText(
   return renderSegments(parseBlocks(markdown), opts)
 }
 
+// Same markdown parse as renderRichText, but bullet lists render as a
+// numbered stack — each item prefixed by a gold-filled circle badge holding
+// its 1-based index. Paragraphs (no `-`/`*` prefix) fall back to plain
+// rendering with default typography, so a caption that isn't bulleted still
+// looks right. Used by the microlearning image-block "contained" variant to
+// match the numbered-rule design; other consumers stay on renderRichText.
+export function renderNumberedList(
+  markdown: string,
+  opts?: { paragraphClassName?: string; itemTextClassName?: string }
+): ReactNode {
+  const segments = parseBlocks(markdown)
+  const itemTextClass = opts?.itemTextClassName ?? 'text-sm'
+  return segments.map((seg, i) => {
+    if (seg.type === 'paragraph') {
+      return (
+        <p key={i} className={opts?.paragraphClassName}>
+          {renderInline(seg.text)}
+        </p>
+      )
+    }
+    return (
+      <ol key={i} className="flex flex-col gap-3">
+        {seg.items.map((item, j) => (
+          <li key={j} className="flex items-start gap-3">
+            <span
+              className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold text-black"
+              style={{ background: '#FCDC07' }}
+            >
+              {j + 1}
+            </span>
+            <span className={`flex-1 text-white/85 ${itemTextClass}`}>{renderInline(item)}</span>
+          </li>
+        ))}
+      </ol>
+    )
+  })
+}
+
 // A question prompt's text blocks, inline-formatted and joined — rendered
 // as a single heading line (SectionHeading), so no list/paragraph splitting
 // here, just bold/italic/underline within the line.

@@ -1,18 +1,20 @@
 import type { Block, Phase } from '@helden-inc/tg-schema'
 
-import { renderInline, renderRichText } from '@/lib/richText'
+import { renderInline, renderNumberedList, renderRichText } from '@/lib/richText'
 
 import { BlockView } from './Blocks'
 
 // A step's own content: if it opens with an image block, that image renders
-// as a hero bleeding to the step card's own edges (gradient fade, corner
-// accent) with the rest of the blocks flowing normally, padded, below it —
-// otherwise every block just flows in the normal padded column.
+// as a hero — either "bleed" (Presentation's projected-slide treatment:
+// edge-to-edge fill with gradient + corner accent + heading overlay) or
+// "contained" (Microlearning's step card: 4:3 rounded frame, no overlays,
+// title + numbered caption stacked below the image). Non-image leading
+// blocks flow in the normal padded column either way.
 //
 // Microlearning paginates one block per screen, so PlayerPane passes a
 // single-element array. Presentation slides carry many blocks per slide.
 // Either way this component takes Block[] and renders the whole array in one
-// scroll column, with a leading image treated as a hero.
+// scroll column.
 export function StepBody({
   stepId,
   blocks,
@@ -25,6 +27,7 @@ export function StepBody({
   phase,
   playerId,
   fullBleed = false,
+  imageVariant = 'bleed',
 }: {
   stepId: string
   blocks: Block[]
@@ -43,8 +46,14 @@ export function StepBody({
   playerId: string
   // Presentation's central/host screen wants the hero to fill the whole
   // available height (a projected slide), not the fixed-height card treatment
-  // Microlearning's scrolling step view uses — see HeroImage below.
+  // Microlearning's scrolling step view uses — only meaningful when
+  // imageVariant='bleed'.
   fullBleed?: boolean
+  // 'bleed' (default) = Presentation-style edge-to-edge hero with overlays.
+  // 'contained' = Microlearning's design: 4:3 rounded frame with padded
+  // margins, no gradient/triangle/heading overlays, title + numbered caption
+  // rendered below the image.
+  imageVariant?: 'bleed' | 'contained'
 }) {
   const hero = blocks[0]?.kind === 'image' ? blocks[0] : undefined
   const rest = hero ? blocks.slice(1) : blocks
@@ -52,9 +61,10 @@ export function StepBody({
 
   // Only the first heading gets pulled onto the hero image as an overlay
   // badge — a second one (rare) just falls through and renders inline via
-  // BlockView's plain fallback. No hero, no overlay: heading blocks always
-  // render inline when there's no image to sit on top of.
-  const heroHeadingIndex = hero ? rest.findIndex((b) => b.kind === 'heading') : -1
+  // BlockView's plain fallback. Contained variant has no overlay, so the
+  // heading always stays inline.
+  const heroHeadingIndex =
+    hero && imageVariant === 'bleed' ? rest.findIndex((b) => b.kind === 'heading') : -1
   const heroHeading =
     heroHeadingIndex >= 0
       ? (rest[heroHeadingIndex] as Extract<Block, { kind: 'heading' }>)
@@ -62,7 +72,12 @@ export function StepBody({
 
   return (
     <>
-      {hero && <HeroImage block={hero} heading={heroHeading?.text} fullBleed={fullBleed} />}
+      {hero &&
+        (imageVariant === 'contained' ? (
+          <ContainedHeroImage block={hero} />
+        ) : (
+          <HeroImage block={hero} heading={heroHeading?.text} fullBleed={fullBleed} />
+        ))}
       <div className="flex flex-col gap-5 p-4 sm:p-6">
         {header}
         {rest.map((block, i) => {
@@ -145,5 +160,36 @@ function HeroImage({
         </p>
       )}
     </>
+  )
+}
+
+// Microlearning variant: image sits in a 4:3 rounded frame with padded
+// margins, title centered gold below the image, caption below the title as a
+// numbered gold-circle list. Falls back to plain paragraph rendering when
+// the caption has no bullet lines.
+function ContainedHeroImage({ block }: { block: Extract<Block, { kind: 'image' }> }) {
+  return (
+    <div className="flex flex-col gap-5 px-4 pt-4 sm:px-6 sm:pt-6">
+      <div
+        className="aspect-[4/3] w-full overflow-hidden rounded-2xl border"
+        style={{ borderColor: '#353535', background: '#111' }}
+      >
+        <img
+          src={block.url}
+          alt={block.caption ?? block.title ?? ''}
+          className="size-full object-cover"
+        />
+      </div>
+      {block.title && (
+        <p className="text-center text-2xl font-bold text-[#FFB800] sm:text-3xl">
+          {renderInline(block.title)}
+        </p>
+      )}
+      {block.caption && (
+        <div>
+          {renderNumberedList(block.caption, { itemTextClassName: 'text-base sm:text-lg' })}
+        </div>
+      )}
+    </div>
   )
 }

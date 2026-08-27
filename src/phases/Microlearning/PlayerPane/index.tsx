@@ -15,7 +15,7 @@ import { useMyTeamId } from '@/lib/sync/useTeams'
 import { StepBody } from './StepBody'
 import { StepPickerGrid } from './StepPicker'
 import { isDraftValid } from './isDraftValid'
-import { ActionButton, BackToPicker } from './shared'
+import { ActionButton } from './shared'
 
 export function PlayerPane({
   content,
@@ -196,7 +196,7 @@ export function PlayerPane({
         <StepBody
           stepId={step.id}
           blocks={step.blocks}
-          header={<BackToPicker onBack={() => setViewingIndex(null)} />}
+          header={null}
           answers={{}}
           drafts={{}}
           onDraftChange={() => {}}
@@ -204,6 +204,7 @@ export function PlayerPane({
           sessionId={sessionId}
           phase={phase}
           playerId={playerId}
+          imageVariant="contained"
         />
       </StepShell>
     )
@@ -229,18 +230,12 @@ export function PlayerPane({
         stepId={`${current.id}-${blockIndex}`}
         blocks={currentBlock ? [currentBlock] : []}
         header={
-          <>
-            <BackToPicker onBack={() => setViewingIndex(null)} />
-            <p className="mb-4 text-xs text-white/30">
-              Step {bounded + 1}/{content.steps.length}
-              {current.blocks.length > 1 && ` · ${blockIndex + 1}/${current.blocks.length}`}
-              {/* canWrite, not teamRole — team_collaborative members are
-              still 'member' but have full independent control, unlike
-              team_leader_only members who only mirror the leader
-              (canWrite: false). */}
-              {!canWrite && ' · following your team leader'}
-            </p>
-          </>
+          // canWrite, not teamRole — team_collaborative members are still
+          // 'member' but have full independent control, unlike team_leader_only
+          // members who only mirror the leader (canWrite: false).
+          !canWrite ? (
+            <p className="mb-2 text-xs text-white/40">Following your team leader</p>
+          ) : null
         }
         answers={answers[blockIndex] !== undefined ? { 0: answers[blockIndex] } : {}}
         drafts={drafts[blockIndex] !== undefined ? { 0: drafts[blockIndex] } : {}}
@@ -249,6 +244,7 @@ export function PlayerPane({
         sessionId={sessionId}
         phase={phase}
         playerId={playerId}
+        imageVariant="contained"
       />
     </StepShell>
   )
