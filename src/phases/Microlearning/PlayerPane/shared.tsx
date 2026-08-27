@@ -46,7 +46,7 @@ export function ActionButton({
 
 // A short accent tick + heading, reused above both text-block headings and
 // question prompts so the two read as the same visual "card title" language.
-export function SectionHeading({ text }: { text: string }) {
+export function SectionHeading({ text }: { text: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="h-1 w-8 rounded-full bg-[#FFB800]" />

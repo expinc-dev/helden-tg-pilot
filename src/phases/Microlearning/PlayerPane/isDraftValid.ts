@@ -13,5 +13,15 @@ export function isDraftValid(question: Question, draft: unknown): boolean {
   if (question.qType === 'image_sequence') {
     return Array.isArray(draft) && draft.length > 0 && draft.every((v) => v !== null)
   }
+  if (question.qType === 'qr_scan' || question.qType === 'pattern_scan') {
+    // Unlike every other qType here, "answered" isn't just "has a value" —
+    // microlearning is otherwise ungraded, but a scan genuinely has to match
+    // (see ScanQuestion.tsx), not merely have been attempted.
+    return (
+      typeof draft === 'object' &&
+      draft !== null &&
+      (draft as { matched?: boolean }).matched === true
+    )
+  }
   return typeof draft === 'string' && draft.trim().length > 0
 }

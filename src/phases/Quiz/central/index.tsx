@@ -2,6 +2,7 @@ import { assets } from '@/assets'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
+import { renderPromptBlocks } from '@/lib/richText'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
 
@@ -10,7 +11,6 @@ import {
   OPTION_COLORS,
   OPTION_ICONS,
   type QuizContent,
-  promptText,
   questionOptions,
   resolveTimers,
   useAnsweredCount,
@@ -65,7 +65,7 @@ export function CentralQuiz({
 
   if (!q) return null
 
-  const text = promptText(q)
+  const text = renderPromptBlocks(q.prompt)
   const answeredPct = totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0
 
   return (

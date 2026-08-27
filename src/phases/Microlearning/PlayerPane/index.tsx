@@ -144,6 +144,9 @@ export function PlayerPane({
           drafts={{}}
           onDraftChange={() => {}}
           disabled
+          sessionId={sessionId}
+          phase={phase}
+          playerId={playerId}
         />
       </StepShell>
     )
@@ -181,6 +184,9 @@ export function PlayerPane({
         drafts={drafts}
         onDraftChange={(i, value) => setDrafts((prev) => ({ ...prev, [i]: value }))}
         disabled={!canWrite || advancing}
+        sessionId={sessionId}
+        phase={phase}
+        playerId={playerId}
       />
     </StepShell>
   )
