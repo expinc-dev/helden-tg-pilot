@@ -8,6 +8,11 @@ import { BlockView } from './Blocks'
 // as a hero bleeding to the step card's own edges (gradient fade, corner
 // accent) with the rest of the blocks flowing normally, padded, below it —
 // otherwise every block just flows in the normal padded column.
+//
+// Microlearning paginates one block per screen, so PlayerPane passes a
+// single-element array. Presentation slides carry many blocks per slide.
+// Either way this component takes Block[] and renders the whole array in one
+// scroll column, with a leading image treated as a hero.
 export function StepBody({
   stepId,
   blocks,

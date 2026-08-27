@@ -1,9 +1,9 @@
 import type { PublishedGame } from '@helden-inc/tg-schema'
 
 export const demoBundle: PublishedGame = {
-  id: '01a04286-471d-701e-9833-4a4f9a930782',
+  id: '01a042cb-3e44-7717-a666-c610361e9a81',
   gameId: '019f8845-5b6f-70bd-97fe-a4ec6f8c5f2d',
-  schemaVersion: '3.9.0',
+  schemaVersion: '4.0.1',
   title: 'Sowan Tembok Ratapan',
   phaseOrder: ['019f8a7c-9d57-739d-bd80-490fc346d76c', '019f8a5b-da92-77e8-a608-7b2ffea1aff9'],
   flowMode: 'modular-progressive',
@@ -71,6 +71,8 @@ export const demoBundle: PublishedGame = {
                     },
                   ],
                   targetMediaId: '01a04248-fc11-710f-894f-357752726039',
+                  targetUrl:
+                    'https://expinc-cdn.azureedge.net/lexibe/1787818474408-Pattern%20-%202.webp',
                   points: {
                     correct: 10,
                     wrongPenalty: 10,
@@ -78,6 +80,10 @@ export const demoBundle: PublishedGame = {
                 },
               },
             ],
+            thumbnailMediaId: '019f8a5d-13cd-70da-9259-3e3507551991',
+            thumbnailUrl:
+              'https://expinc-cdn.azureedge.net/lexibe/1784732783304-JPEG%20image-4AD0-8999-32-0.webp',
+            title: 'Puzzle 1',
           },
         ],
       },
@@ -200,6 +206,6 @@ export const demoBundle: PublishedGame = {
       },
     },
   },
-  publishedAt: 1787822491423,
+  publishedAt: 1787827011147,
   publishedBy: 'naufal@expinc.io',
 }

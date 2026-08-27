@@ -172,19 +172,26 @@ function StepCard({
   status: StepStatus
   onSelect: () => void
 }) {
-  const imageBlock = step.blocks.find(
+  // Card label: authored `step.title` first, else scrape heading from the
+  // first text block, else the first image block's title, else "Langkah N".
+  // Card thumbnail: explicit `step.thumbnailUrl` first, else the first image
+  // block's url — decorative artwork, independent of a hero image inside the
+  // step, so a text/question-only step still gets a card that isn't a flat
+  // black square.
+  const firstImageBlock = step.blocks.find(
     (b): b is Extract<Block, { kind: 'image' }> => b.kind === 'image'
   )
-  const textBlock = step.blocks.find(
+  const firstTextBlock = step.blocks.find(
     (b): b is Extract<Block, { kind: 'text' }> => b.kind === 'text'
   )
-  const label = (textBlock && parseTextBlock(textBlock.markdown).heading) ?? `Langkah ${index + 1}`
+  const label =
+    step.title ??
+    (firstTextBlock ? parseTextBlock(firstTextBlock.markdown).heading : undefined) ??
+    firstImageBlock?.title ??
+    `Langkah ${index + 1}`
   const locked = status === 'locked'
-  // Steps without their own image block (most text/question-only steps) still
-  // get a decorative thumbnail here so the card isn't a flat black square —
-  // this is purely card artwork, independent of the step's actual content, so
-  // it must NOT also appear as a hero image inside the step's own detail view.
-  const thumbnail = imageBlock?.mediaId ?? assets.images.presentation.classroomExample
+  const thumbnail =
+    step.thumbnailUrl ?? firstImageBlock?.url ?? assets.images.presentation.classroomExample
 
   return (
     <button
