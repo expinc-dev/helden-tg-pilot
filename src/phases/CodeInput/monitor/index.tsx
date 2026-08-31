@@ -95,10 +95,21 @@ export function CentralCodeInput({
   const solvedCount = rows.filter((r) => r.st?.solved).length
 
   const [popup, setPopup] = useState<'solved' | 'wrong' | null>(null)
+  const hydratedRef = useRef(false)
   const prevAttemptsRef = useRef(totalAttempts)
   const prevSolvedRef = useRef(anySolved)
 
   useEffect(() => {
+    // First effect run after rows hydrate = baseline snapshot, not a state
+    // change — a central joining mid-phase (reconnect, late mount) must not
+    // fire solved/wrong popups for attempts that happened before it arrived.
+    if (!hydratedRef.current) {
+      hydratedRef.current = true
+      prevAttemptsRef.current = totalAttempts
+      prevSolvedRef.current = anySolved
+      return
+    }
+
     if (anySolved && !prevSolvedRef.current) {
       setPopup('solved')
     } else if (!anySolved && totalAttempts > prevAttemptsRef.current) {
