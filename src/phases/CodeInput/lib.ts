@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { CodeInputContent, Phase } from '@helden-inc/tg-schema'
-import { onValue, ref, runTransaction, update } from 'firebase/database'
+import { onValue, runTransaction, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 import { normalizeCode } from '../codecheck'
 
@@ -26,7 +26,7 @@ function codeInputPath(sessionId: string, teamId: string | undefined, phaseId: s
 export function useCodeInputState(sessionId: string, teamId: string | undefined, phaseId: string) {
   const [state, setState] = useState<CodeInputState>({ attempts: 0, solved: false })
   useEffect(() => {
-    return onValue(ref(rtdb, codeInputPath(sessionId, teamId, phaseId)), (s) =>
+    return onValue(eref(codeInputPath(sessionId, teamId, phaseId)), (s) =>
       setState(s.val() ?? { attempts: 0, solved: false })
     )
   }, [sessionId, teamId, phaseId])
@@ -52,7 +52,7 @@ export async function submitCode(
   input: string,
   content: CodeInputContent
 ): Promise<boolean> {
-  const node = ref(rtdb, codeInputPath(sessionId, teamId, phaseId))
+  const node = eref(codeInputPath(sessionId, teamId, phaseId))
   const guess = normalizeCode(input, content.caseSensitive)
 
   const tx = await runTransaction(node, (cur: CodeInputState | null) => {
@@ -92,7 +92,7 @@ export function useCodeInputAllSolved(
   const [roomSolved, setRoomSolved] = useState(false)
   useEffect(() => {
     if (!sessionId || !phaseId || !wantsAdvance || allowTeams) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/codeinput/${phaseId}/solved`), (s) =>
+    return onValue(eref(`sessions/${sessionId}/codeinput/${phaseId}/solved`), (s) =>
       setRoomSolved(!!s.val())
     )
   }, [sessionId, phaseId, wantsAdvance, allowTeams])
@@ -102,7 +102,7 @@ export function useCodeInputAllSolved(
   useEffect(() => {
     if (!sessionId || !phaseId || !wantsAdvance || !allowTeams) return
     const unsubs = teamIds.map((teamId) =>
-      onValue(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/codeinput/${phaseId}/solved`), (s) =>
+      onValue(eref(`sessions/${sessionId}/teams/${teamId}/codeinput/${phaseId}/solved`), (s) =>
         setTeamSolved((prev) => ({ ...prev, [teamId]: !!s.val() }))
       )
     )

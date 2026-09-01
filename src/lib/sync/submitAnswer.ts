@@ -1,6 +1,6 @@
-import { increment, ref, serverTimestamp, set, update } from 'firebase/database'
+import { increment, serverTimestamp, set, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // Aggregate-write path. Players never write `scores`/`teamScores` directly
 // (BLUEPRINT_runtime §5 + BLUEPRINT_schema §7). They may only bump answeredCount
@@ -24,7 +24,7 @@ export async function submitAnswer(opts: {
   optionId?: string
 }): Promise<void> {
   const { sessionId, playerId, keyId, qId, value, optionId } = opts
-  await set(ref(rtdb, `sessions/${sessionId}/players/${playerId}/answers/${qId}`), {
+  await set(eref(`sessions/${sessionId}/players/${playerId}/answers/${qId}`), {
     value,
     submittedAt: serverTimestamp(),
   })
@@ -34,7 +34,7 @@ export async function submitAnswer(opts: {
   }
   if (optionId) patch[`distribution/${qId}/${optionId}`] = increment(1)
   try {
-    await update(ref(rtdb, `sessions/${sessionId}/aggregates`), patch)
+    await update(eref(`sessions/${sessionId}/aggregates`), patch)
   } catch (err) {
     // Duplicate submit → answeredBy .validate rejects → whole update atomically
     // rolls back. Swallow: the player's raw answer is already saved above, and

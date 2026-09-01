@@ -1,7 +1,8 @@
 import type { SessionConfig, SessionMeta } from '@helden-inc/tg-schema'
-import { ref, set } from 'firebase/database'
+import { set } from 'firebase/database'
 
-import { auth, rtdb } from '@/lib/firebase'
+import { demoBundle } from '@/lib/demoBundle'
+import { auth, eref } from '@/lib/firebase'
 import { newId, newJoinCode } from '@/lib/ids'
 
 // hostUid is now the REAL auth.uid of whoever creates the session — App.tsx
@@ -29,7 +30,9 @@ export async function createSession(
 
   const trimmedName = opts.name?.trim()
   const meta: SessionMeta = {
-    gameVersionId: 'pilot-demo',
+    // Real identity from the pasted bundle — this deploy plays exactly this game.
+    // gameId is the eventId (games/{eventId}); paths are already event-scoped via eref.
+    gameVersionId: demoBundle.id,
     hostUid,
     status: 'lobby',
     createdAt: now,
@@ -45,9 +48,9 @@ export async function createSession(
   }
 
   await Promise.all([
-    set(ref(rtdb, `sessions/${sessionId}/meta`), meta),
-    set(ref(rtdb, `sessions/${sessionId}/config`), config),
-    set(ref(rtdb, `joinCodes/${joinCode}`), sessionId),
+    set(eref(`sessions/${sessionId}/meta`), meta),
+    set(eref(`sessions/${sessionId}/config`), config),
+    set(eref(`joinCodes/${joinCode}`), sessionId),
   ])
 
   return { sessionId, joinCode }

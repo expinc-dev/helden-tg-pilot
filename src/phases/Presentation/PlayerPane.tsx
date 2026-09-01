@@ -4,13 +4,13 @@ import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 import type { Phase, PresentationContent } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
 import { QuestionView } from '@/phases/Microlearning/PlayerPane/QuestionView'
 import { isDraftValid } from '@/phases/Microlearning/PlayerPane/isDraftValid'
 import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { submitAnswer } from '@/lib/sync/submitAnswer'
 import { useCentralStep } from '@/lib/sync/useCentralStep'
 
@@ -57,7 +57,7 @@ export function PresentationPlayerPane({
     if (questionIndex < 0) return
     const qId = `${phaseId}_${slide.id}_${questionIndex}`
     return onValue(
-      ref(rtdb, `sessions/${sessionId}/players/${playerId}/answers/${qId}`),
+      eref(`sessions/${sessionId}/players/${playerId}/answers/${qId}`),
       (s) => {
         if (s.val()) setAnswer(s.val().value)
       },

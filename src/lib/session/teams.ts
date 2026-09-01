@@ -1,7 +1,7 @@
 import type { Team } from '@helden-inc/tg-schema'
-import { get, ref, serverTimestamp, set, update } from 'firebase/database'
+import { get, serverTimestamp, set, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { newId } from '@/lib/ids'
 
 import { addMember } from './teamroster'
@@ -30,16 +30,16 @@ export async function createTeam(
   // "!data.exists() && you own the playerId you're naming as owner"). Once
   // that's committed, every other field's rule can check it via root.child(),
   // reading ALREADY-persisted data instead of introspecting a value mid-write.
-  await set(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/ownerPlayerId`), ownerPlayerId)
+  await set(eref(`sessions/${sessionId}/teams/${teamId}/ownerPlayerId`), ownerPlayerId)
 
   const rest: Omit<Team, 'codeinput' | 'ownerPlayerId'> = {
     memberIds: { [ownerPlayerId]: true }, // owner is member #1; always fits
     createdAt: Date.now(),
     ...(teamName.trim() ? { teamName: teamName.trim() } : {}),
   }
-  await update(ref(rtdb, `sessions/${sessionId}/teams/${teamId}`), rest)
+  await update(eref(`sessions/${sessionId}/teams/${teamId}`), rest)
 
-  await update(ref(rtdb, `sessions/${sessionId}/players/${ownerPlayerId}`), {
+  await update(eref(`sessions/${sessionId}/players/${ownerPlayerId}`), {
     teamId,
     lastSeen: serverTimestamp(),
   })
@@ -52,19 +52,19 @@ export async function joinTeam(
   teamId: string
 ): Promise<JoinTeamResult> {
   // Roster cap; missing config → no cap (fail-open, nothing authored).
-  const cfg = await get(ref(rtdb, `sessions/${sessionId}/config`))
+  const cfg = await get(eref(`sessions/${sessionId}/config`))
   const max = (cfg.val()?.maxMembers as number | undefined) ?? Infinity
 
-  const membersSnap = await get(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/memberIds`))
+  const membersSnap = await get(eref(`sessions/${sessionId}/teams/${teamId}/memberIds`))
   const reserved = addMember(membersSnap.val() as Record<string, true> | null, playerId, max)
   if (!reserved) return { ok: false, reason: 'full' }
 
   // Write only this player's own child — rules scope memberIds/$memberPlayerId
   // to auth.uid === owner-or-self, so this never touches (or re-validates) any
   // other member's entry.
-  await set(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/memberIds/${playerId}`), true)
+  await set(eref(`sessions/${sessionId}/teams/${teamId}/memberIds/${playerId}`), true)
 
-  await update(ref(rtdb, `sessions/${sessionId}/players/${playerId}`), {
+  await update(eref(`sessions/${sessionId}/players/${playerId}`), {
     teamId,
     lastSeen: serverTimestamp(),
   })

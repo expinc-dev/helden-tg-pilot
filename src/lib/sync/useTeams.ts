@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { Team } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 export type TeamRow = Team & { id: string; memberCount: number }
 
@@ -14,7 +14,7 @@ export function useTeams(sessionId: string | undefined): TeamRow[] {
 
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/teams`), (s) => setTeams(s.val() ?? {}))
+    return onValue(eref(`sessions/${sessionId}/teams`), (s) => setTeams(s.val() ?? {}))
   }, [sessionId])
 
   return Object.entries(teams).map(([id, t]) => ({
@@ -28,7 +28,7 @@ export function useMyTeamId(sessionId: string | undefined, playerId: string): st
   const [teamId, setTeamId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/players/${playerId}/teamId`), (s) =>
+    return onValue(eref(`sessions/${sessionId}/players/${playerId}/teamId`), (s) =>
       setTeamId(s.val() ?? undefined)
     )
   }, [sessionId, playerId])

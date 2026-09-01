@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react'
 import { assets } from '@/assets'
 import { GradientButton } from '@/components/GradientButton'
 import { Icon } from '@iconify/react'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { submitAnswer } from '@/lib/sync/submitAnswer'
 
 import type { ReflectionAnswer, ReflectionContent } from '../lib'
@@ -56,7 +56,7 @@ export function PlayerReflection({
   // on the "thanks" screen instead of a blank form.
   useEffect(() => {
     return onValue(
-      ref(rtdb, `sessions/${sessionId}/players/${playerId}/answers/${phaseId}`),
+      eref(`sessions/${sessionId}/players/${playerId}/answers/${phaseId}`),
       (s) => {
         const val = s.val()
         if (val?.value) setSubmitted(val.value as ReflectionAnswer)

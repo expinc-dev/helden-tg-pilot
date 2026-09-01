@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import type { SessionTimer } from '@helden-inc/tg-schema'
-import { onValue, ref, remove, set, update } from 'firebase/database'
+import { onValue, remove, set, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 import { serverOffsetOnce } from '../session/control'
 
@@ -27,7 +27,7 @@ export function useQuizStep(sessionId: string | undefined) {
 
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/centralStep`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/centralStep`), (s) => {
       const val = s.val()
       if (!val) {
         setQuizStep(DEFAULT)
@@ -50,7 +50,7 @@ export function useQuizStep(sessionId: string | undefined) {
       const clean = Object.fromEntries(
         Object.entries(patch).map(([k, v]) => [k, v === undefined ? null : v])
       )
-      return update(ref(rtdb, `sessions/${sessionId}/centralStep`), clean)
+      return update(eref(`sessions/${sessionId}/centralStep`), clean)
     },
     [sessionId]
   )
@@ -60,14 +60,14 @@ export function useQuizStep(sessionId: string | undefined) {
       if (!sessionId) return
       const offset = await serverOffsetOnce()
       const timer: SessionTimer = { phaseId, endsAt: Date.now() + offset + seconds * 1000 }
-      await set(ref(rtdb, `sessions/${sessionId}/timer`), timer)
+      await set(eref(`sessions/${sessionId}/timer`), timer)
     },
     [sessionId]
   )
 
   const clearTimer = useCallback(() => {
     if (!sessionId) return
-    return remove(ref(rtdb, `sessions/${sessionId}/timer`))
+    return remove(eref(`sessions/${sessionId}/timer`))
   }, [sessionId])
 
   return { quizStep, started, write, startTimer, clearTimer }

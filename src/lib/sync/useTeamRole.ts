@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 import { useMyTeamId } from './useTeams'
 
@@ -16,7 +16,7 @@ export function useTeamOwner(sessionId: string | undefined, teamId: string | und
   const [ownerPlayerId, setOwnerPlayerId] = useState<string | undefined>(undefined)
   useEffect(() => {
     if (!sessionId || !teamId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/teams/${teamId}/ownerPlayerId`), (s) =>
+    return onValue(eref(`sessions/${sessionId}/teams/${teamId}/ownerPlayerId`), (s) =>
       setOwnerPlayerId(s.val() ?? undefined)
     )
   }, [sessionId, teamId])

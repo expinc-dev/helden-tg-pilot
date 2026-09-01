@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { submitAnswer } from '@/lib/sync/submitAnswer'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
@@ -49,7 +49,7 @@ export function PlayerQuiz({
   useEffect(() => {
     const qId = `${phaseId}_q${quizStep.step}`
     return onValue(
-      ref(rtdb, `sessions/${sessionId}/players/${playerId}/answers/${qId}`),
+      eref(`sessions/${sessionId}/players/${playerId}/answers/${qId}`),
       (s) => {
         if (s.val()) setSubmitted(s.val().value as string)
       },

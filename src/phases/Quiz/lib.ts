@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 export type QuizContent = Extract<Phase['content'], { type: 'quiz' }>
 
@@ -37,7 +37,7 @@ export function useAnsweredCount(sessionId: string | undefined, qId: string): nu
   const [count, setCount] = useState(0)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/answeredCount/${qId}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/answeredCount/${qId}`), (s) => {
       setCount(typeof s.val() === 'number' ? s.val() : 0)
     })
   }, [sessionId, qId])
@@ -51,7 +51,7 @@ export function useDistribution(
   const [dist, setDist] = useState<Record<string, number>>({})
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/distribution/${qId}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/distribution/${qId}`), (s) => {
       setDist((s.val() as Record<string, number>) ?? {})
     })
   }, [sessionId, qId])
@@ -62,7 +62,7 @@ export function useTotalPlayers(sessionId: string | undefined): number {
   const [count, setCount] = useState(0)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/players`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/players`), (s) => {
       setCount(s.val() ? Object.keys(s.val()).length : 0)
     })
   }, [sessionId])
@@ -79,7 +79,7 @@ export function usePlayerScore(
   const [score, setScore] = useState(0)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${path}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/${path}`), (s) => {
       setScore(typeof s.val() === 'number' ? s.val() : 0)
     })
   }, [sessionId, path])
@@ -92,7 +92,7 @@ export function useScoresMap(sessionId: string | undefined, phase: Phase): Recor
   const [scores, setScores] = useState<Record<string, number>>({})
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${path}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/${path}`), (s) => {
       setScores((s.val() as Record<string, number>) ?? {})
     })
   }, [sessionId, path])
@@ -114,14 +114,14 @@ export function useAnswerTally(
 
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${base}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/${base}`), (s) => {
       setCorrect((s.val() as Record<string, number>) ?? {})
     })
   }, [sessionId, base])
 
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${wrongBase}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/${wrongBase}`), (s) => {
       setWrong((s.val() as Record<string, number>) ?? {})
     })
   }, [sessionId, wrongBase])
@@ -133,7 +133,7 @@ export function usePlayerNames(sessionId: string | undefined): Record<string, st
   const [names, setNames] = useState<Record<string, string>>({})
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/players`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/players`), (s) => {
       const val = s.val() as Record<string, { name?: string }> | null
       if (!val) return
       const map: Record<string, string> = {}

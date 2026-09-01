@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import type { SyncMode } from '@helden-inc/tg-schema'
-import { onValue, ref, update } from 'firebase/database'
+import { onValue, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // Runtime contract hook: reads/writes the RIGHT step node for a phase's syncMode.
 // lockstep  -> sessions/{id}/playerSharedStep (one shared step; host is the usual
@@ -34,7 +34,7 @@ export function usePlayerStep(
 
   useEffect(() => {
     if (!path) return
-    return onValue(ref(rtdb, path), (s) => {
+    return onValue(eref(path), (s) => {
       setStep(typeof s.val() === 'number' ? s.val() : 0)
     })
   }, [path])
@@ -43,10 +43,10 @@ export function usePlayerStep(
     (n: number) => {
       if (!sessionId) return
       if (syncMode === 'lockstep') {
-        return update(ref(rtdb, `sessions/${sessionId}/playerSharedStep`), { step: n })
+        return update(eref(`sessions/${sessionId}/playerSharedStep`), { step: n })
       }
       if (!playerId) return
-      return update(ref(rtdb, `sessions/${sessionId}/players/${playerId}`), { selfStep: n })
+      return update(eref(`sessions/${sessionId}/players/${playerId}`), { selfStep: n })
     },
     [sessionId, playerId, syncMode]
   )
@@ -59,7 +59,7 @@ export function usePlayerBoard(sessionId: string | undefined) {
   const [rows, setRows] = useState<PlayerRow[]>([])
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/players`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/players`), (s) => {
       const out: PlayerRow[] = []
       s.forEach((c) => {
         const v = c.val() ?? {}

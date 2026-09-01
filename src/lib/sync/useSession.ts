@@ -6,15 +6,15 @@ import type {
   SessionConfig,
   SessionMeta,
 } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 export function useSessionMeta(sessionId: string | undefined) {
   const [meta, setMeta] = useState<SessionMeta | null>(null)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/meta`), (s) => setMeta(s.val()))
+    return onValue(eref(`sessions/${sessionId}/meta`), (s) => setMeta(s.val()))
   }, [sessionId])
   return meta
 }
@@ -23,7 +23,7 @@ export function useSessionConfig(sessionId: string | undefined) {
   const [config, setConfig] = useState<SessionConfig | null>(null)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/config`), (s) => setConfig(s.val()))
+    return onValue(eref(`sessions/${sessionId}/config`), (s) => setConfig(s.val()))
   }, [sessionId])
   return config
 }
@@ -39,12 +39,8 @@ export function usePresence(sessionId: string | undefined) {
   const [centrals, setCentrals] = useState<Record<string, CentralPresence>>({})
   useEffect(() => {
     if (!sessionId) return
-    const off1 = onValue(ref(rtdb, `sessions/${sessionId}/players`), (s) =>
-      setPlayers(s.val() ?? {})
-    )
-    const off2 = onValue(ref(rtdb, `sessions/${sessionId}/centrals`), (s) =>
-      setCentrals(s.val() ?? {})
-    )
+    const off1 = onValue(eref(`sessions/${sessionId}/players`), (s) => setPlayers(s.val() ?? {}))
+    const off2 = onValue(eref(`sessions/${sessionId}/centrals`), (s) => setCentrals(s.val() ?? {}))
     return () => {
       off1()
       off2()

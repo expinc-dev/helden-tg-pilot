@@ -1,0 +1,211 @@
+{
+  "rules": {
+    "events": {
+      "$eventId": {
+        "joinCodes": {
+          "$code": {
+            ".read": true,
+            ".write": "auth != null && !data.exists()"
+          }
+        },
+        "stats": {
+          "players": {
+            ".read": "auth != null",
+            ".write": "auth != null",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() === (data.exists() ? data.val() : 0) + 1"
+          }
+        },
+        "sessions": {
+          "$sessionId": {
+            "meta": {
+              ".read": true,
+              ".write": "auth != null && !data.exists()",
+              "hostUid": {
+                ".write": "auth != null && !data.exists()"
+              },
+              "status": {
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+              }
+            },
+            "config": {
+              ".read": true,
+              ".write": "auth != null && !data.exists()"
+            },
+            "playerOwners": {
+              ".read": "auth != null",
+              "$playerId": {
+                ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+              }
+            },
+            "centralOwners": {
+              ".read": "auth != null",
+              "$centralId": {
+                ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+              }
+            },
+            "players": {
+              ".read": "auth != null",
+              ".write": "auth != null",
+              "$playerId": {
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + $playerId).val()",
+                ".validate": "auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + $playerId).val()"
+              }
+            },
+            "centrals": {
+              ".read": "auth != null",
+              ".write": "auth != null",
+              "$centralId": {
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/centralOwners/' + $centralId).val()",
+                ".validate": "auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/centralOwners/' + $centralId).val()"
+              }
+            },
+            "teams": {
+              ".read": "auth != null",
+              "$teamId": {
+                "ownerPlayerId": {
+                  ".write": "auth != null && !data.exists() && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + newData.val()).val()"
+                },
+                "createdAt": {
+                  ".write": "auth != null && !data.exists()"
+                },
+                "teamName": {
+                  ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + root.child('events/' + $eventId + '/sessions/' + $sessionId + '/teams/' + $teamId + '/ownerPlayerId').val()).val()"
+                },
+                "memberIds": {
+                  ".write": "auth != null",
+                  "$memberPlayerId": {
+                    ".write": "auth != null && (auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + root.child('events/' + $eventId + '/sessions/' + $sessionId + '/teams/' + $teamId + '/ownerPlayerId').val()).val() || auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + $memberPlayerId).val())",
+                    ".validate": "newData.val() === true && (auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + root.child('events/' + $eventId + '/sessions/' + $sessionId + '/teams/' + $teamId + '/ownerPlayerId').val()).val() || auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + $memberPlayerId).val())"
+                  }
+                },
+                "codeinput": {
+                  "$phaseId": {
+                    ".write": "auth != null",
+                    "solved": {
+                      ".validate": "newData.val() !== true || data.val() === true || newData.parent().child('lastGuessNormalized').val() === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/secrets/' + $phaseId).val()"
+                    }
+                  }
+                },
+                "codepiece": {
+                  "$phaseId": {
+                    "fragmentOrder": {
+                      ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+                    }
+                  }
+                }
+              }
+            },
+            "codepiece": {
+              "$phaseId": {
+                ".read": true,
+                "fragmentOrder": {
+                  ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+                }
+              }
+            },
+            "codeinput": {
+              "$phaseId": {
+                ".read": true,
+                ".write": "auth != null",
+                "solved": {
+                  ".validate": "newData.val() !== true || data.val() === true || newData.parent().child('lastGuessNormalized').val() === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/secrets/' + $phaseId).val()"
+                }
+              }
+            },
+            "secrets": {
+              "$phaseId": {
+                ".read": false,
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+              }
+            },
+            "phasePointer": {
+              ".read": true,
+              ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+            },
+            "timer": {
+              ".read": true,
+              ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+            },
+            "centralStep": {
+              ".read": true,
+              ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+            },
+            "playerSharedStep": {
+              ".read": true,
+              ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+            },
+            "videoPlayback": {
+              ".read": true,
+              ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()",
+              ".validate": "newData.hasChildren(['state', 'updatedAt'])",
+              "state": {
+                ".validate": "newData.isString() && (newData.val() === 'playing' || newData.val() === 'paused')"
+              },
+              "updatedAt": {
+                ".validate": "newData.isNumber()"
+              },
+              "positionSec": {
+                ".validate": "newData.isNumber() && newData.val() >= 0"
+              },
+              "$other": {
+                ".validate": false
+              }
+            },
+            "played": {
+              ".read": true,
+              "$phaseId": {
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()",
+                ".validate": "newData.val() === true"
+              }
+            },
+            "aggregates": {
+              ".read": "auth != null",
+              ".write": "auth != null",
+              "answeredCount": {
+                "$qId": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 1"
+                }
+              },
+              "answeredBy": {
+                "$qId": {
+                  "$keyId": {
+                    ".validate": "newData.val() === true && !data.exists()"
+                  }
+                }
+              },
+              "distribution": {
+                "$qId": {
+                  "$optionId": {
+                    ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 1"
+                  }
+                }
+              },
+              "scores": {
+                "$playerId": {
+                  ".validate": "newData.isNumber()"
+                }
+              },
+              "teamScores": {
+                "$teamId": {
+                  ".validate": "newData.isNumber()"
+                }
+              }
+            },
+            "results": {
+              "$playerId": {
+                ".read": "auth != null && (auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val() || auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + $playerId).val())",
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+              }
+            },
+            "teamResults": {
+              "$teamId": {
+                ".read": "auth != null",
+                ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

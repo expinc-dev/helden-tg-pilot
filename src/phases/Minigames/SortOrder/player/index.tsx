@@ -20,12 +20,12 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
-import { onValue, ref, remove, serverTimestamp, set } from 'firebase/database'
+import { onValue, remove, serverTimestamp, set } from 'firebase/database'
 
 import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 import { TimerRing } from '@/phases/Quiz/TimerRing'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 
 import { isRevealReady, useSortOrderAnswers, useSortOrderRoster } from '../lib'
@@ -199,21 +199,18 @@ export function SortOrderPlayerActive({
   // reshuffle and drop back into the draggable view instead of staying stuck
   // showing the old (now-deleted) result.
   useEffect(() => {
-    return onValue(
-      ref(rtdb, `sessions/${sessionId}/players/${writerId}/answers/${phaseId}`),
-      (s) => {
-        const v = s.val()
-        if (v && Array.isArray(v.value)) {
-          hadSubmittedRef.current = true
-          setSubmittedIds(v.value as string[])
-        } else if (hadSubmittedRef.current) {
-          hadSubmittedRef.current = false
-          autoSubmittedRef.current = false
-          setOrder(shuffled(config.items.map((i) => i.id)))
-          setSubmittedIds(null)
-        }
+    return onValue(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), (s) => {
+      const v = s.val()
+      if (v && Array.isArray(v.value)) {
+        hadSubmittedRef.current = true
+        setSubmittedIds(v.value as string[])
+      } else if (hadSubmittedRef.current) {
+        hadSubmittedRef.current = false
+        autoSubmittedRef.current = false
+        setOrder(shuffled(config.items.map((i) => i.id)))
+        setSubmittedIds(null)
       }
-    )
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, writerId, phaseId])
 
@@ -227,13 +224,13 @@ export function SortOrderPlayerActive({
   // genuinely has no timer", so the very first snapshot never fires a delete.
   const lastEndsAtRef = useRef<number | null | undefined>(undefined)
   useEffect(() => {
-    return onValue(ref(rtdb, `sessions/${sessionId}/timer`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/timer`), (s) => {
       const v = s.val() as { phaseId?: string; endsAt?: number } | null
       if (!v || v.phaseId !== phaseId) return
       const prevEndsAt = lastEndsAtRef.current
       lastEndsAtRef.current = v.endsAt ?? null
       if (prevEndsAt !== undefined && v.endsAt !== prevEndsAt && hadSubmittedRef.current) {
-        remove(ref(rtdb, `sessions/${sessionId}/players/${writerId}/answers/${phaseId}`))
+        remove(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`))
       }
     })
   }, [sessionId, writerId, phaseId])
@@ -251,7 +248,7 @@ export function SortOrderPlayerActive({
 
   const submit = async () => {
     setBusy(true)
-    await set(ref(rtdb, `sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
+    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
       value: order,
       submittedAt: serverTimestamp(),
     })
