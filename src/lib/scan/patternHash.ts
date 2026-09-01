@@ -1,13 +1,21 @@
-// Difference hash (dHash): tolerant to lighting/scale/minor rotation, cheap
-// (vanilla canvas, no library) — good enough for comparing a photographed
-// physical puzzle against its authored reference image.
-const HASH_WIDTH = 9 // 8 diff bits per row
-const HASH_HEIGHT = 8
+// Average hash (aHash): each grid cell compared to the image's own mean
+// brightness, not to a neighbor pixel. Switched from dHash (gradient-based)
+// because sharp diagonal cuts in this pattern's flat two-tone art shift
+// which grid column a boundary falls into on downsampling, flipping many
+// gradient bits even when the photo visually matches — dHash is tuned for
+// photographic content, not hard-edged line art. aHash only cares whether a
+// region is mostly-black or mostly-white, so minor misalignment matters far
+// less. Still vanilla canvas, no library.
+const HASH_SIZE = 16 // 16x16 grid = 256 bits, finer than the old 9x8 (only
+// ~2 samples per tile column across this pattern's 4-column grid)
 
-// Below this Hamming distance (out of 64 bits), two hashes are considered a
-// match. Tunable — needs real-device calibration once this is testable
-// on an actual phone camera (see helden-tg-pilot/todo.md).
-export const MATCH_THRESHOLD = 12
+// Below this Hamming distance (out of 256 bits), two hashes are considered a
+// match. ScannerPopup crops the capture to its centered guide box, so this
+// only has to absorb lighting/scale/minor-rotation noise, not framing
+// mismatch — but the number itself is still a guess. Tunable — needs
+// real-device calibration once this is testable on an actual phone camera
+// (see helden-tg-pilot/todo.md).
+export const MATCH_THRESHOLD = 40
 
 // A captured camera frame arrives as raw ImageData (from canvas
 // getImageData), not a drawImage-able CanvasImageSource — normalize it onto
@@ -41,17 +49,14 @@ function toGrayscaleResized(source: HashSource, width: number, height: number): 
   return gray
 }
 
-// Resizes to a 9x8 grayscale grid, compares each pixel to its right
-// neighbor — 64 comparison bits packed into a bigint.
-export function computeDHash(source: HashSource): bigint {
-  const gray = toGrayscaleResized(source, HASH_WIDTH, HASH_HEIGHT)
+// Resizes to a 16x16 grayscale grid, compares each cell to the grid's own
+// mean brightness — 256 comparison bits packed into a bigint.
+export function computeHash(source: HashSource): bigint {
+  const gray = toGrayscaleResized(source, HASH_SIZE, HASH_SIZE)
+  const mean = gray.reduce((sum, v) => sum + v, 0) / gray.length
   let hash = 0n
-  for (let y = 0; y < HASH_HEIGHT; y++) {
-    for (let x = 0; x < HASH_WIDTH - 1; x++) {
-      const left = gray[y * HASH_WIDTH + x]
-      const right = gray[y * HASH_WIDTH + x + 1]
-      hash = (hash << 1n) | (left > right ? 1n : 0n)
-    }
+  for (let i = 0; i < gray.length; i++) {
+    hash = (hash << 1n) | (gray[i] > mean ? 1n : 0n)
   }
   return hash
 }
