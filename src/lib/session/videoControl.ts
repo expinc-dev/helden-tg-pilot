@@ -1,7 +1,7 @@
 import type { VideoPlayback } from '@helden-inc/tg-schema'
-import { ref, set } from 'firebase/database'
+import { set } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // Host-only writers for sessions/{id}/videoPlayback. Enforcement is at the
 // rules layer (only auth.uid === meta.hostUid); these helpers just wrap the
@@ -16,7 +16,7 @@ export function setVideoPlayback(
   positionSec: number
 ): Promise<void> {
   const value: VideoPlayback = { state, updatedAt: Date.now(), positionSec }
-  return set(ref(rtdb, `sessions/${sessionId}/videoPlayback`), value)
+  return set(eref(`sessions/${sessionId}/videoPlayback`), value)
 }
 
 export function playVideo(sessionId: string, positionSec: number): Promise<void> {

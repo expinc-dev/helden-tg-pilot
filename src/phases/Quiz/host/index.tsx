@@ -7,7 +7,7 @@ import { Icon } from '@iconify/react'
 
 import { demoBundle } from '@/lib/demoBundle'
 import { renderPromptBlocks } from '@/lib/richText'
-import { endLevel, nextPhase, quizAnswerKeys } from '@/lib/session/control'
+import { endLevel, nextPhase } from '@/lib/session/control'
 import { scoreQuizQuestion } from '@/lib/session/quizScoring'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
@@ -58,7 +58,9 @@ export function HostQuiz({
 
   const handleReveal = useCallback(async () => {
     await clearTimer()
-    const correctId = quizAnswerKeys[phaseId]?.[quizStep.step] ?? ''
+    // correctId comes from the (full) bundle question — the host has it; the
+    // player-safe bundle strips it, so players only learn it via this reveal write.
+    const correctId = content.questions[quizStep.step]?.correctId ?? ''
     await write({ step: quizStep.step, stage: 'reveal', correctId })
 
     const scoreKey = `${phaseId}_q${quizStep.step}`
@@ -72,7 +74,7 @@ export function HostQuiz({
         timerSeconds: timers.answering,
       })
     }
-  }, [clearTimer, write, sessionId, phaseId, quizStep.step, phase, timers.answering])
+  }, [clearTimer, write, sessionId, phaseId, quizStep.step, phase, content, timers.answering])
 
   // Manual reveal before time's up needs confirmation; the automatic reveal
   // on timer expiry (the effect below) already implies the host is fine with it.

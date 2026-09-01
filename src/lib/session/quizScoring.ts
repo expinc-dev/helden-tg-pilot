@@ -1,7 +1,7 @@
 import type { Phase } from '@helden-inc/tg-schema'
-import { get, ref, update } from 'firebase/database'
+import { get, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { scoreAnswer } from '@/lib/scoring/score'
 
 // Host-only. Called on reveal: reads all player answers for the current question,
@@ -19,8 +19,8 @@ export async function scoreQuizQuestion(opts: {
   const phaseDurationMs = timerSeconds * 1000
 
   const [playersSnap, pointerSnap] = await Promise.all([
-    get(ref(rtdb, `sessions/${sessionId}/players`)),
-    get(ref(rtdb, `sessions/${sessionId}/phasePointer`)),
+    get(eref(`sessions/${sessionId}/players`)),
+    get(eref(`sessions/${sessionId}/phasePointer`)),
   ])
   const players = (playersSnap.val() ?? {}) as Record<
     string,
@@ -69,10 +69,10 @@ export async function scoreQuizQuestion(opts: {
     // team_leader_only: leader's score = team score
     // team_collaborative: majority vote determines correctness, earliest majority timestamp for speed
     const [teamsSnap, priorSnap, priorCorrectSnap, priorWrongSnap] = await Promise.all([
-      get(ref(rtdb, `sessions/${sessionId}/teams`)),
-      get(ref(rtdb, `sessions/${sessionId}/aggregates/teamScores`)),
-      get(ref(rtdb, `sessions/${sessionId}/aggregates/teamCorrectCount/${phase.id}`)),
-      get(ref(rtdb, `sessions/${sessionId}/aggregates/teamWrongCount/${phase.id}`)),
+      get(eref(`sessions/${sessionId}/teams`)),
+      get(eref(`sessions/${sessionId}/aggregates/teamScores`)),
+      get(eref(`sessions/${sessionId}/aggregates/teamCorrectCount/${phase.id}`)),
+      get(eref(`sessions/${sessionId}/aggregates/teamWrongCount/${phase.id}`)),
     ])
     const teams = (teamsSnap.val() ?? {}) as Record<string, { ownerPlayerId?: string }>
     const prior = (priorSnap.val() ?? {}) as Record<string, number>
@@ -123,9 +123,9 @@ export async function scoreQuizQuestion(opts: {
   } else {
     // individual mode
     const [priorSnap, priorCorrectSnap, priorWrongSnap] = await Promise.all([
-      get(ref(rtdb, `sessions/${sessionId}/aggregates/scores`)),
-      get(ref(rtdb, `sessions/${sessionId}/aggregates/correctCount/${phase.id}`)),
-      get(ref(rtdb, `sessions/${sessionId}/aggregates/wrongCount/${phase.id}`)),
+      get(eref(`sessions/${sessionId}/aggregates/scores`)),
+      get(eref(`sessions/${sessionId}/aggregates/correctCount/${phase.id}`)),
+      get(eref(`sessions/${sessionId}/aggregates/wrongCount/${phase.id}`)),
     ])
     const prior = (priorSnap.val() ?? {}) as Record<string, number>
     const priorCorrect = (priorCorrectSnap.val() ?? {}) as Record<string, number>
@@ -141,6 +141,6 @@ export async function scoreQuizQuestion(opts: {
   }
 
   if (Object.keys(patch).length > 0) {
-    await update(ref(rtdb, `sessions/${sessionId}/aggregates`), patch)
+    await update(eref(`sessions/${sessionId}/aggregates`), patch)
   }
 }

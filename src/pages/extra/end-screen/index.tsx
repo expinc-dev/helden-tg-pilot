@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { useTeams } from '@/lib/sync/useTeams'
 
 // Rendered when meta.status === 'ended'. Reads the boundary-flushed aggregate
@@ -19,7 +19,7 @@ function useAggregates(sessionId: string | undefined): Aggregates {
   const [agg, setAgg] = useState<Aggregates>({})
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates`), (s) => setAgg(s.val() ?? {}))
+    return onValue(eref(`sessions/${sessionId}/aggregates`), (s) => setAgg(s.val() ?? {}))
   }, [sessionId])
   return agg
 }

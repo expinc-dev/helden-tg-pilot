@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { onValue, ref, update } from 'firebase/database'
+import { onValue, update } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // One shared slide/step index for a phase, driven by whichever role owns
 // content.controlledBy (host for presentation, per this ticket) and watched
@@ -13,7 +13,7 @@ export function useCentralStep(sessionId: string | undefined) {
 
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/centralStep/step`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/centralStep/step`), (s) => {
       setStep(typeof s.val() === 'number' ? s.val() : 0)
     })
   }, [sessionId])
@@ -21,7 +21,7 @@ export function useCentralStep(sessionId: string | undefined) {
   const write = useCallback(
     (n: number) => {
       if (!sessionId) return
-      return update(ref(rtdb, `sessions/${sessionId}/centralStep`), { step: n })
+      return update(eref(`sessions/${sessionId}/centralStep`), { step: n })
     },
     [sessionId]
   )

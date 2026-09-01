@@ -1,6 +1,6 @@
-import { get, onDisconnect, ref, serverTimestamp, set, update } from 'firebase/database'
+import { get, onDisconnect, runTransaction, serverTimestamp, set, update } from 'firebase/database'
 
-import { auth, rtdb } from '@/lib/firebase'
+import { auth, eref } from '@/lib/firebase'
 
 import { type Member, reserveSlot } from './capacity'
 
@@ -25,7 +25,7 @@ const ownersPath = (sessionId: string, role: Role) =>
 async function claimOwnership(sessionId: string, role: Role, id: string): Promise<void> {
   const uid = auth.currentUser?.uid
   if (!uid) throw new Error('claimOwnership called before anonymous sign-in resolved')
-  await update(ref(rtdb, ownersPath(sessionId, role)), { [id]: uid })
+  await update(eref(ownersPath(sessionId, role)), { [id]: uid })
 }
 
 // A device only remembers ONE player identity per session (lib/identity.ts's
@@ -39,7 +39,7 @@ async function claimOwnership(sessionId: string, role: Role, id: string): Promis
 export async function findPlayerIdByName(sessionId: string, name: string): Promise<string | null> {
   const trimmed = name.trim()
   if (!trimmed) return null
-  const snap = await get(ref(rtdb, `sessions/${sessionId}/players`))
+  const snap = await get(eref(`sessions/${sessionId}/players`))
   const players = (snap.val() ?? {}) as Record<string, { name?: string } | null>
   for (const [id, p] of Object.entries(players)) {
     if (p?.name === trimmed) return id
@@ -72,7 +72,7 @@ export async function joinPresence(
   opts: { isNew: boolean; name?: string }
 ): Promise<JoinResult> {
   const collPath = `sessions/${sessionId}/${role === 'player' ? 'players' : 'centrals'}`
-  const node = ref(rtdb, `${collPath}/${id}`)
+  const node = eref(`${collPath}/${id}`)
 
   // Must land before anything below — rules for players/{id} and centrals/{id}
   // check this ownership map, so an unclaimed id can't be written at all yet.
@@ -80,10 +80,10 @@ export async function joinPresence(
 
   // Read the cap; missing config → no cap to enforce (fail-open, nothing authored).
   const maxField = role === 'player' ? 'maxPlayers' : 'maxCentralScreens'
-  const cfg = await get(ref(rtdb, `sessions/${sessionId}/config`))
+  const cfg = await get(eref(`sessions/${sessionId}/config`))
   const max = (cfg.val()?.[maxField] as number | undefined) ?? Infinity
 
-  const collSnap = await get(ref(rtdb, collPath))
+  const collSnap = await get(eref(collPath))
   const reserved = reserveSlot(collSnap.val() as Record<string, Member> | null, id, max)
   if (!reserved) return { ok: false, reason: 'full' }
 
@@ -97,6 +97,12 @@ export async function joinPresence(
 
   if (opts.isNew) {
     await set(node, role === 'player' ? { ...base, joinedAt: serverTimestamp() } : base)
+    // Cumulative player counter for the CMS dashboard. eref namespaces this under
+    // events/{EVENT_ID}/stats/players, so it's this event's own total inside the
+    // client RTDB. Only a real first join bumps it. Fire-and-forget: a failed
+    // counter must never fail the join.
+    // ponytail: a client could re-increment to inflate this; pilot-scale, accept.
+    if (role === 'player') void runTransaction(eref('stats/players'), (n) => (n ?? 0) + 1)
   } else {
     await update(node, base)
   }

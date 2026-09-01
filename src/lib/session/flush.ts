@@ -1,9 +1,9 @@
 import type { Phase } from '@helden-inc/tg-schema'
-import { get, ref, serverTimestamp, update } from 'firebase/database'
+import { get, serverTimestamp, update } from 'firebase/database'
 
 import { minigameRegistry } from '@/phases/Minigames/registry'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
 
 import { type Contribution, aggregateForPhase } from './flushAggregate'
@@ -103,9 +103,9 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
   }
 
   const [playersSnap, teamsSnap, pointerSnap] = await Promise.all([
-    get(ref(rtdb, `sessions/${sessionId}/players`)),
-    get(ref(rtdb, `sessions/${sessionId}/teams`)),
-    get(ref(rtdb, `sessions/${sessionId}/phasePointer`)),
+    get(eref(`sessions/${sessionId}/players`)),
+    get(eref(`sessions/${sessionId}/teams`)),
+    get(eref(`sessions/${sessionId}/phasePointer`)),
   ])
   const players = (playersSnap.val() ?? {}) as Record<string, PlayerLiveNode>
   const teams = (teamsSnap.val() ?? {}) as Record<string, TeamNode>
@@ -158,7 +158,7 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
     })
   }
   if (Object.keys(durablePatch).length > 0) {
-    await update(ref(rtdb, `sessions/${sessionId}`), durablePatch)
+    await update(eref(`sessions/${sessionId}`), durablePatch)
   }
 
   // Live aggregate map — same store, different subtree. Accumulates ACROSS
@@ -171,7 +171,7 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
   // Boundary-only for pilot; for a live leaderboard, add per-submit tx on
   // aggregates/scores|teamScores.
   const aggKey = keyBy === 'playerId' ? 'scores' : 'teamScores'
-  const priorSnap = await get(ref(rtdb, `sessions/${sessionId}/aggregates/${aggKey}`))
+  const priorSnap = await get(eref(`sessions/${sessionId}/aggregates/${aggKey}`))
   const prior = (priorSnap.val() ?? {}) as Record<string, number>
   const patch: Record<string, number> = {}
   for (const [keyId, r] of Object.entries(results)) {
@@ -180,7 +180,7 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
     }
   }
   if (Object.keys(patch).length > 0) {
-    await update(ref(rtdb, `sessions/${sessionId}/aggregates`), patch)
+    await update(eref(`sessions/${sessionId}/aggregates`), patch)
   }
 }
 
@@ -215,7 +215,7 @@ async function flushQuizFromAggregates(sessionId: string, phase: Phase): Promise
   const collection = isTeam ? 'teamResults' : 'results'
   const keyBy = isTeam ? 'teamId' : 'playerId'
 
-  const scoresSnap = await get(ref(rtdb, `sessions/${sessionId}/aggregates/${aggKey}`))
+  const scoresSnap = await get(eref(`sessions/${sessionId}/aggregates/${aggKey}`))
   const scores = (scoresSnap.val() ?? {}) as Record<string, number>
 
   const durablePatch: Record<string, unknown> = {}
@@ -228,6 +228,6 @@ async function flushQuizFromAggregates(sessionId: string, phase: Phase): Promise
     }
   }
   if (Object.keys(durablePatch).length > 0) {
-    await update(ref(rtdb, `sessions/${sessionId}`), durablePatch)
+    await update(eref(`sessions/${sessionId}`), durablePatch)
   }
 }

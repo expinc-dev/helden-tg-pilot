@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { PlayerPresence } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // Narrow, per-member reads — one listener per known teammate id, never the
 // whole players/ tree (that's usePresence, host/central-only; see
@@ -21,7 +21,7 @@ export function useTeamMembersPresence(
     if (!sessionId || !key) return
     const ids = key.split(',')
     const offs = ids.map((id) =>
-      onValue(ref(rtdb, `sessions/${sessionId}/players/${id}`), (s) => {
+      onValue(eref(`sessions/${sessionId}/players/${id}`), (s) => {
         const v = s.val() as PlayerPresence | null
         setMembers((prev) => {
           if (!v) {

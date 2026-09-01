@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import type { Phase, SessionTimer } from '@helden-inc/tg-schema'
 import { onValue, ref } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref, rtdb } from '@/lib/firebase'
 
 import { remainingMs } from './timermath'
 
@@ -12,6 +12,7 @@ export { remainingMs }
 // RTDB built-in: estimated (serverTime - localTime) in ms. 0 until it resolves.
 export function useServerOffset(): number {
   const [offset, setOffset] = useState(0)
+  // .info/* is a Firebase root built-in — never event-scoped, so bare rtdb ref.
   useEffect(() => onValue(ref(rtdb, '.info/serverTimeOffset'), (s) => setOffset(s.val() ?? 0)), [])
   return offset
 }
@@ -33,7 +34,7 @@ export function useTimer(sessionId: string | undefined, phase: Phase | null): Ti
 
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/timer`), (s) => setTimer(s.val()))
+    return onValue(eref(`sessions/${sessionId}/timer`), (s) => setTimer(s.val()))
   }, [sessionId])
 
   const active = !!phase && !!timer && timer.phaseId === phase.id

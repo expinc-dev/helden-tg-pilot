@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { assets } from '@/assets'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
 import { useTeams } from '@/lib/sync/useTeams'
 
@@ -40,7 +40,7 @@ function useRows(
 
   useEffect(() => {
     if (allowTeams) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/codeinput/${phaseId}`), (s) =>
+    return onValue(eref(`sessions/${sessionId}/codeinput/${phaseId}`), (s) =>
       setRoomState(s.val() ?? null)
     )
   }, [allowTeams, sessionId, phaseId])

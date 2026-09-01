@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
 
 // Live-derive a team's score for a codeinput phase, client-side, from
@@ -49,7 +49,7 @@ export function useTeamLiveScore(
 
   useEffect(() => {
     if (!subKey || !path) return
-    return onValue(ref(rtdb, path), (s) => setEntry({ key: subKey, state: s.val() ?? null }))
+    return onValue(eref(path), (s) => setEntry({ key: subKey, state: s.val() ?? null }))
   }, [subKey, path])
 
   if (!phase || !subKey) return 0

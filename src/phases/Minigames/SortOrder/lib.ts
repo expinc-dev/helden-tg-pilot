@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
 import { usePresence } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
@@ -48,7 +48,7 @@ export function useSortOrderAnswers(
   useEffect(() => {
     if (!sessionId) return
     const unsubs = roster.map((r) =>
-      onValue(ref(rtdb, `sessions/${sessionId}/players/${r.writerId}/answers/${phaseId}`), (s) => {
+      onValue(eref(`sessions/${sessionId}/players/${r.writerId}/answers/${phaseId}`), (s) => {
         const v = s.val()
         setAnswers((prev) => ({
           ...prev,
@@ -77,7 +77,7 @@ export function useCumulativeScores(
   const [scores, setScores] = useState<Record<string, number>>({})
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${path}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/${path}`), (s) => {
       setScores((s.val() as Record<string, number>) ?? {})
     })
   }, [sessionId, path])

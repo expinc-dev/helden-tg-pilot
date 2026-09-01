@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import type { CodePieceContent } from '@helden-inc/tg-schema'
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // Frozen at phase-open (control.ts#openPhaseFragmentOrder) — room-scoped
 // when there's no teamId to scope to, per-team otherwise. Mirrors
@@ -18,7 +18,7 @@ export function useFragmentOrder(
     const path = teamId
       ? `sessions/${sessionId}/teams/${teamId}/codepiece/${phaseId}/fragmentOrder`
       : `sessions/${sessionId}/codepiece/${phaseId}/fragmentOrder`
-    return onValue(ref(rtdb, path), (s) => setOrder(Array.isArray(s.val()) ? s.val() : []))
+    return onValue(eref(path), (s) => setOrder(Array.isArray(s.val()) ? s.val() : []))
   }, [sessionId, teamId, phaseId])
   return order
 }

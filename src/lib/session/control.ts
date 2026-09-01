@@ -10,7 +10,7 @@ import { get, onValue, ref, remove, set, update } from 'firebase/database'
 import { normalizeCode } from '@/phases/codecheck'
 
 import { demoBundle } from '@/lib/demoBundle'
-import { auth, rtdb } from '@/lib/firebase'
+import { auth, eref, rtdb } from '@/lib/firebase'
 
 import { flushPhaseResults } from './flush'
 
@@ -35,7 +35,7 @@ export function serverOffsetOnce(): Promise<number> {
 // (offset-corrected endsAt) if the phase has a server timer, else clear any stale
 // one. Written ONCE here — devices only read it. See sync/useTimer.ts.
 async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
-  const node = ref(rtdb, `sessions/${sessionId}/timer`)
+  const node = eref(`sessions/${sessionId}/timer`)
   const t = phase?.timer
   if (!phase || !t || t.authority !== 'server' || t.seconds <= 0) {
     await remove(node)
@@ -54,31 +54,17 @@ async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
 // — the secret itself was never hidden, but after this it's only ever compared
 // server-side, inside a database.rules.json .validate rule the player's device
 // has no read access to. See phases/CodeInput.tsx for the guess-side of this.
-// Quiz answer keys — kept here (host-only call site) so they never leak via
-// the phase content that every client imports from demoBundle. The keys map
-// phaseId → questionIndex → correctOptionId.
-// Exported for HostQuiz's reveal — the host reads the key from here directly
-// (rules keep secrets/* read-denied for everyone; only .validate compares it).
-export const quizAnswerKeys: Record<string, Record<number, string>> = {
-  'p-quiz': {
-    0: 'b',
-    1: 'c',
-    2: 'b',
-    3: 'a',
-    4: 'c',
-  },
-}
-
+// Quiz answer keys are NOT seeded here: the host grades quiz reveal directly
+// from the (full) bundle's question.correctId, and the player-safe bundle
+// strips it — so quiz correctness never needs a server-side secret.
 async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
   if (!phase) return
   if (phase.content.type === 'codeinput') {
     const { expected, caseSensitive } = phase.content
     await set(
-      ref(rtdb, `sessions/${sessionId}/secrets/${phase.id}`),
+      eref(`sessions/${sessionId}/secrets/${phase.id}`),
       normalizeCode(expected, caseSensitive)
     )
-  } else if (phase.content.type === 'quiz' && quizAnswerKeys[phase.id]) {
-    await set(ref(rtdb, `sessions/${sessionId}/secrets/${phase.id}`), quizAnswerKeys[phase.id])
   }
 }
 
@@ -92,7 +78,7 @@ function requireHostUid(): string {
 // Host-only write per RTDB rules; readable by everyone. Used by endLevel to
 // decide when to auto-end the session.
 export async function readPlayedPhases(sessionId: string): Promise<Record<string, true>> {
-  const snap = await get(ref(rtdb, `sessions/${sessionId}/played`))
+  const snap = await get(eref(`sessions/${sessionId}/played`))
   return (snap.val() ?? {}) as Record<string, true>
 }
 
@@ -117,7 +103,7 @@ function pickerAnchorId(): string {
 // host both start from a known "paused at 0" state. Cleared on non-video
 // phases to keep a stale playing/paused flag from bleeding across phase types.
 async function openPhaseVideoPlayback(sessionId: string, phase: Phase | undefined) {
-  const node = ref(rtdb, `sessions/${sessionId}/videoPlayback`)
+  const node = eref(`sessions/${sessionId}/videoPlayback`)
   if (!phase || phase.content.type !== 'video') {
     await remove(node)
     return
@@ -139,9 +125,9 @@ async function openPhaseFragmentOrder(sessionId: string, phase: Phase | undefine
   if (!phase || phase.content.type !== 'codepiece') return
 
   const [playersSnap, teamsSnap, configSnap] = await Promise.all([
-    get(ref(rtdb, `sessions/${sessionId}/players`)),
-    get(ref(rtdb, `sessions/${sessionId}/teams`)),
-    get(ref(rtdb, `sessions/${sessionId}/config`)),
+    get(eref(`sessions/${sessionId}/players`)),
+    get(eref(`sessions/${sessionId}/teams`)),
+    get(eref(`sessions/${sessionId}/config`)),
   ])
   const players = (playersSnap.val() ?? {}) as Record<string, { joinedAt?: number } | null>
   const teams = (teamsSnap.val() ?? {}) as Record<
@@ -160,12 +146,12 @@ async function openPhaseFragmentOrder(sessionId: string, phase: Phase | undefine
         team.memberIds ?? {}
       ).sort(byJoinedAt)
     }
-    if (Object.keys(patch).length > 0) await update(ref(rtdb, `sessions/${sessionId}`), patch)
+    if (Object.keys(patch).length > 0) await update(eref(`sessions/${sessionId}`), patch)
     return
   }
 
   const order = Object.keys(players).sort(byJoinedAt)
-  await set(ref(rtdb, `sessions/${sessionId}/codepiece/${phase.id}/fragmentOrder`), order)
+  await set(eref(`sessions/${sessionId}/codepiece/${phase.id}/fragmentOrder`), order)
 }
 
 async function openPhase(sessionId: string, phase: Phase | undefined) {
@@ -181,7 +167,7 @@ async function openPhase(sessionId: string, phase: Phase | undefined) {
     openPhaseFragmentOrder(sessionId, phase).catch((e) =>
       console.error('openPhaseFragmentOrder failed for', phase?.id, e)
     ),
-    remove(ref(rtdb, `sessions/${sessionId}/centralStep`)),
+    remove(eref(`sessions/${sessionId}/centralStep`)),
   ])
 }
 
@@ -193,7 +179,7 @@ export async function startSession(sessionId: string) {
     changedAt: Date.now(),
     changedBy: hostUid,
   }
-  await update(ref(rtdb, `sessions/${sessionId}`), {
+  await update(eref(`sessions/${sessionId}`), {
     'meta/status': 'live',
     phasePointer: pointer,
   })
@@ -223,13 +209,13 @@ export async function nextPhase(sessionId: string, currentPhaseId: string | unde
     // Last phase done → end the session. Flush already ran above; timer cleared
     // so useTimer doesn't show a stale phase deadline on the end screen.
     await Promise.all([
-      update(ref(rtdb, `sessions/${sessionId}/meta`), { status: 'ended' }),
-      remove(ref(rtdb, `sessions/${sessionId}/timer`)),
+      update(eref(`sessions/${sessionId}/meta`), { status: 'ended' }),
+      remove(eref(`sessions/${sessionId}/timer`)),
     ])
     return { done: true as const }
   }
   const pointer: PhasePointer = { activePhaseId: next, changedAt: Date.now(), changedBy: hostUid }
-  await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
+  await update(eref(`sessions/${sessionId}`), { phasePointer: pointer })
   await openPhase(sessionId, demoBundle.phases[next])
   return { done: false as const, activePhaseId: next }
 }
@@ -249,7 +235,7 @@ export async function jumpToPhase(sessionId: string, phaseId: string) {
     changedAt: Date.now(),
     changedBy: hostUid,
   }
-  await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
+  await update(eref(`sessions/${sessionId}`), { phasePointer: pointer })
   await openPhase(sessionId, phase)
 }
 
@@ -263,7 +249,7 @@ export async function jumpToPhase(sessionId: string, phaseId: string) {
 export async function forceExpireTimer(sessionId: string) {
   requireHostUid()
   const offset = await serverOffsetOnce()
-  await update(ref(rtdb, `sessions/${sessionId}/timer`), { endsAt: Date.now() + offset })
+  await update(eref(`sessions/${sessionId}/timer`), { endsAt: Date.now() + offset })
 }
 
 // Testing aid — host-only "replay this phase from scratch" for manual QA, so
@@ -300,7 +286,7 @@ export async function endLevel(sessionId: string, currentPhaseId: string) {
   } catch (e) {
     console.error('flushPhaseResults failed for', currentPhaseId, e)
   }
-  await set(ref(rtdb, `sessions/${sessionId}/played/${currentPhaseId}`), true)
+  await set(eref(`sessions/${sessionId}/played/${currentPhaseId}`), true)
 
   const played = await readPlayedPhases(sessionId)
   const playable = b.phaseOrder.filter((id) => b.phases[id]?.type !== 'idle')
@@ -318,7 +304,7 @@ export async function endLevel(sessionId: string, currentPhaseId: string) {
     changedAt: Date.now(),
     changedBy: hostUid,
   }
-  await update(ref(rtdb, `sessions/${sessionId}`), { phasePointer: pointer })
+  await update(eref(`sessions/${sessionId}`), { phasePointer: pointer })
   await openPhase(sessionId, b.phases[anchor])
   return { done: false as const }
 }
@@ -331,7 +317,7 @@ export async function endSession(
   opts: { flushCurrent?: boolean } = { flushCurrent: true }
 ) {
   if (opts.flushCurrent) {
-    const pointerSnap = await get(ref(rtdb, `sessions/${sessionId}/phasePointer`))
+    const pointerSnap = await get(eref(`sessions/${sessionId}/phasePointer`))
     const activeId = (pointerSnap.val() as PhasePointer | null)?.activePhaseId
     const active = activeId ? bundle().phases[activeId] : undefined
     if (active && active.type !== 'idle') {
@@ -343,7 +329,7 @@ export async function endSession(
     }
   }
   await Promise.all([
-    update(ref(rtdb, `sessions/${sessionId}/meta`), { status: 'ended' }),
-    remove(ref(rtdb, `sessions/${sessionId}/timer`)),
+    update(eref(`sessions/${sessionId}/meta`), { status: 'ended' }),
+    remove(eref(`sessions/${sessionId}/timer`)),
   ])
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import { onValue, ref } from 'firebase/database'
+import { onValue } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 // Runtime contract hook (BLUEPRINT_runtime §5): one numeric aggregate value,
 // narrowly scoped to exactly the path given — never subscribe to the whole
@@ -13,7 +13,7 @@ export function useAggregate(sessionId: string | undefined, path: string): numbe
   const [value, setValue] = useState(0)
   useEffect(() => {
     if (!sessionId) return
-    return onValue(ref(rtdb, `sessions/${sessionId}/aggregates/${path}`), (s) => {
+    return onValue(eref(`sessions/${sessionId}/aggregates/${path}`), (s) => {
       setValue(typeof s.val() === 'number' ? s.val() : 0)
     })
   }, [sessionId, path])

@@ -1,12 +1,12 @@
 import type { PublishedGame } from '@helden-inc/tg-schema'
 
 export const demoBundle: PublishedGame = {
-  id: '01a042cb-3e44-7717-a666-c610361e9a81',
+  id: '01a05dd2-9b87-71b7-99de-803c8ffa6e61',
   gameId: '019f8845-5b6f-70bd-97fe-a4ec6f8c5f2d',
   schemaVersion: '4.0.1',
   title: 'Sowan Tembok Ratapan',
   phaseOrder: ['019f8a7c-9d57-739d-bd80-490fc346d76c', '019f8a5b-da92-77e8-a608-7b2ffea1aff9'],
-  flowMode: 'modular-progressive',
+  flowMode: 'sequential',
   phases: {
     '019f8a7c-9d57-739d-bd80-490fc346d76c': {
       id: '019f8a7c-9d57-739d-bd80-490fc346d76c',
@@ -62,17 +62,17 @@ export const demoBundle: PublishedGame = {
               {
                 kind: 'question',
                 question: {
-                  qType: 'pattern_scan',
+                  qType: 'qr_scan',
                   prompt: [
                     {
                       kind: 'text',
-                      markdown:
-                        '# Level 2: Teka-Teki\nPelajari cara merakit balok kinetik agar sesuai dengan pola target dibawah.',
+                      markdown: '# Level 2: Teka-Teki\nScan QR Code yg benar',
                     },
                   ],
-                  targetMediaId: '01a04248-fc11-710f-894f-357752726039',
-                  targetUrl:
+                  referenceMediaId: '01a04248-fc11-710f-894f-357752726039',
+                  referenceUrl:
                     'https://expinc-cdn.azureedge.net/lexibe/1787818474408-Pattern%20-%202.webp',
+                  expectedValue: 'HEI ANTEK ANTEK ASEENNGGGG!!!!!',
                   points: {
                     correct: 10,
                     wrongPenalty: 10,
@@ -206,6 +206,6 @@ export const demoBundle: PublishedGame = {
       },
     },
   },
-  publishedAt: 1787827011147,
+  publishedAt: 1788280478602,
   publishedBy: 'naufal@expinc.io',
 }
