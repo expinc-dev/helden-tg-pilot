@@ -7,10 +7,11 @@ runtime scanner qr_scan/pattern_scan) sudah selesai diimplementasi.
 
 - **Kalibrasi dHash** (`src/lib/scan/patternHash.ts`, `MATCH_THRESHOLD = 12`)
   — perlu dites di device fisik beneran (kamera HP, lighting real, puzzle
-  fisik sungguhan). Kalau kebanyakan false-positive (pola beda ke-detect
+  fisik sungguhan). Guide-box crop di `ScannerPopup` udah nutup gap framing
+  (foto mentah dulu ikut background meja/tray, gak pernah match reference
+  yang di-crop rapat). Kalau kebanyakan false-positive (pola beda ke-detect
   cocok) → turunin threshold. Kalau kebanyakan false-negative (pola benar
-  ditolak) → naikin threshold atau bikin alignment guide di `ScannerPopup`
-  lebih strict.
+  ditolak) → naikin threshold.
 - **`BarcodeDetector` availability** — native di Chrome/Edge/Safari 17+,
   fallback `jsQR` buat browser lain. Belum dites device nyata mana pun.
 - **Kamera permission flow** (`ScannerPopup.tsx`) — belum dites behavior

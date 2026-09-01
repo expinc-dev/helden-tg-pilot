@@ -44,13 +44,24 @@ export function ScannerPopup({
   const capture = () => {
     const video = videoRef.current
     if (!video || !video.videoWidth) return
+    // Crop to the centered square shown by the guide box below, not the
+    // whole frame — otherwise background around the subject (table, hands,
+    // tray edge) dominates the resized hash and a correctly-built pattern
+    // never matches the tightly-cropped reference image.
+    // ponytail: assumes the video's on-screen object-cover crop is itself
+    // ~centered-square (true for the portrait phone-in-hand case this is
+    // built for). If a device shows a very different video aspect than its
+    // container, add real CSS↔video-pixel mapping via getBoundingClientRect.
+    const size = Math.min(video.videoWidth, video.videoHeight)
+    const sx = (video.videoWidth - size) / 2
+    const sy = (video.videoHeight - size) / 2
     const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    canvas.width = size
+    canvas.height = size
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    ctx.drawImage(video, 0, 0)
-    onCapture(ctx.getImageData(0, 0, canvas.width, canvas.height))
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size)
+    onCapture(ctx.getImageData(0, 0, size, size))
   }
 
   return (
@@ -77,7 +88,12 @@ export function ScannerPopup({
             {error}
           </div>
         ) : (
-          <video ref={videoRef} autoPlay playsInline muted className="size-full object-cover" />
+          <>
+            <video ref={videoRef} autoPlay playsInline muted className="size-full object-cover" />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-8">
+              <div className="aspect-square w-full max-w-[min(80vw,80vh)] rounded-xl border-4 border-white/80" />
+            </div>
+          </>
         )}
       </div>
 

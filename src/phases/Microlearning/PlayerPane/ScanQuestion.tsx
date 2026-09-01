@@ -6,6 +6,7 @@ import type { Phase, ScanPoints } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { playCorrectSound, playWrongSound } from '@/lib/scan/feedbackSound'
+import { MATCH_THRESHOLD } from '@/lib/scan/patternHash'
 import { awardScanPoints } from '@/lib/session/scanScoring'
 
 import { ActionButton, SectionHeading } from './shared'
@@ -34,7 +35,7 @@ export function ScanQuestion({
   prompt: React.ReactNode
   imageUrl: string | undefined
   points: ScanPoints | undefined
-  detect: (frame: ImageData) => Promise<boolean>
+  detect: (frame: ImageData) => Promise<{ matched: boolean; distance?: number }>
   answer: unknown
   draft: unknown
   onDraftChange: (value: unknown) => void
@@ -52,12 +53,14 @@ export function ScanQuestion({
     committed?.matched === true ? 'correct' : null
   )
   const [checking, setChecking] = useState(false)
+  const [lastDistance, setLastDistance] = useState<number | undefined>(undefined)
 
   const handleCapture = async (frame: ImageData) => {
     setPopupOpen(false)
     setChecking(true)
-    const matched = await detect(frame)
+    const { matched, distance } = await detect(frame)
     setChecking(false)
+    setLastDistance(distance)
     if (matched) {
       setResult('correct')
       onDraftChange({ matched: true } satisfies ScanDraft)
@@ -98,6 +101,11 @@ export function ScanQuestion({
             skormu.
           </p>
           <p className="text-xs text-white/60">Coba lagi menyusun balok sesuai target!</p>
+          {lastDistance !== undefined && (
+            <p className="text-xs text-white/40">
+              Debug: jarak {lastDistance}/256 (batas {MATCH_THRESHOLD})
+            </p>
+          )}
         </div>
       ) : (
         <div className="flex items-start justify-between gap-3">

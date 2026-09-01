@@ -56,16 +56,21 @@ export function CodeInputPlayer({
   if (state.solved) {
     return (
       <CodeInputShell title={phase.title} timerLabel={timerLabel}>
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#26890C]/20">
-          <Icon icon="mdi:check-circle" className="size-10 text-[#26890C]" />
+        <div className="flex flex-col items-center gap-4 py-6">
+          <div className="flex size-20 items-center justify-center rounded-full border border-[#26890C]/40 bg-[#26890C]/20 shadow-[0_0_24px_rgba(38,137,12,0.3)]">
+            <Icon icon="mdi:check-circle" className="size-10 text-[#26890C]" />
+          </div>
+          <p className="text-2xl font-bold text-[#26890C]">Solved! ✓</p>
+          <p className="text-sm text-white/60">
+            {teamId ? 'Your team cracked the code.' : 'The room cracked the code.'}
+          </p>
+          <div className="mt-2 rounded-xl border border-white/10 bg-[#121214] px-8 py-3 text-center shadow-inner">
+            <span className="block text-xs text-white/40">Skor Tim</span>
+            <span className="font-mono text-3xl font-bold text-[#FDDB00] tabular-nums">
+              {Math.round(score)} pts
+            </span>
+          </div>
         </div>
-        <p className="text-2xl font-semibold text-[#26890C]">Solved! ✓</p>
-        <p className="text-sm text-white/50">
-          {teamId ? 'Your team cracked the code.' : 'The room cracked the code.'}
-        </p>
-        <p className="mt-2 text-3xl font-bold text-[#FFB800] tabular-nums">
-          {Math.round(score)} pts
-        </p>
       </CodeInputShell>
     )
   }
@@ -73,7 +78,7 @@ export function CodeInputPlayer({
   return (
     <CodeInputShell title={phase.title} timerLabel={timerLabel}>
       <form onSubmit={submit} className="flex w-full flex-col items-center gap-4">
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-white/70">
           {teamId
             ? 'Assemble the code with your team and enter it.'
             : 'Assemble the code with the room and enter it.'}
@@ -83,7 +88,7 @@ export function CodeInputPlayer({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Combined code"
           disabled={lockedOut || busy}
-          className="w-full rounded-xl border border-white/10 bg-[#1C1C1E] px-3 py-3 text-center font-mono text-lg tracking-widest text-white placeholder:text-white/30 focus:outline-none disabled:opacity-40"
+          className="w-full rounded-xl border border-white/15 bg-[#121214] px-4 py-3.5 text-center font-mono text-xl tracking-widest text-[#FDDB00] uppercase shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] placeholder:text-white/30 focus:border-[#FDDB00] focus:ring-1 focus:ring-[#FDDB00] focus:outline-none disabled:opacity-40"
         />
         {lockedOut ? (
           <button
@@ -97,13 +102,23 @@ export function CodeInputPlayer({
           <GradientButton
             type="submit"
             disabled={busy || !input.trim()}
-            className="w-full py-3.5 text-sm"
+            className="w-full py-3.5 text-sm font-bold shadow-lg"
           >
             {busy ? 'Checking…' : 'Submit'}
           </GradientButton>
         )}
-        {wrong && !lockedOut && <p className="text-sm text-[#E21B3C]">Not quite — try again.</p>}
-        {lockedOut && <p className="text-sm text-[#E21B3C]">Out of attempts.</p>}
+        {wrong && !lockedOut && (
+          <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E21B3C]/30 bg-[#E21B3C]/10 px-3 py-2 text-sm text-[#FF5A5A]">
+            <Icon icon="mdi:alert-circle" className="size-4 shrink-0" />
+            <span>Not quite — try again.</span>
+          </div>
+        )}
+        {lockedOut && (
+          <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#E21B3C]/30 bg-[#E21B3C]/10 px-3 py-2 text-sm text-[#FF5A5A]">
+            <Icon icon="mdi:lock" className="size-4 shrink-0" />
+            <span>Out of attempts.</span>
+          </div>
+        )}
         {remaining !== null && !lockedOut && (
           <p className="text-xs text-white/40">
             {remaining} attempt(s) left · shared with {teamId ? 'your team' : 'the room'}
@@ -128,17 +143,21 @@ function CodeInputShell({
 }) {
   return (
     <div
-      className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-cover bg-top p-6 text-center"
+      className="flex min-h-dvh flex-col items-center justify-center bg-cover bg-top p-4 sm:p-6"
       style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
     >
-      {timerLabel && (
-        <span className="rounded-full bg-white/5 px-3 py-1 font-mono text-lg text-[#FFB800] tabular-nums">
-          {timerLabel}
-        </span>
-      )}
-      <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-      <h1 className="text-xl font-bold text-[#FFB800]">{title}</h1>
-      {children}
+      <div className="w-full max-w-md rounded-2xl border border-[#353535] bg-black/50 p-6 shadow-2xl backdrop-blur-md">
+        <div className="mb-6 flex flex-col items-center text-center">
+          {timerLabel && (
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-1 font-mono text-sm text-[#FDDB00] tabular-nums">
+              <Icon icon="mdi:clock-outline" className="size-4" />
+              <span>{timerLabel}</span>
+            </div>
+          )}
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h1>
+        </div>
+        {children}
+      </div>
     </div>
   )
 }
