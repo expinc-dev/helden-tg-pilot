@@ -15,7 +15,7 @@ import { useMyTeamId } from '@/lib/sync/useTeams'
 import { StepBody } from './StepBody'
 import { StepPickerGrid } from './StepPicker'
 import { isDraftValid } from './isDraftValid'
-import { ActionButton, BackToPicker } from './shared'
+import { ActionButton } from './shared'
 
 export function PlayerPane({
   content,
@@ -44,19 +44,23 @@ export function PlayerPane({
   const [step, setStep] = usePlayerStep(sessionId, targetPlayerId, phase.syncMode)
   const bounded = Math.min(step, content.steps.length - 1)
   const current = content.steps[bounded]
-  const isLast = bounded === content.steps.length - 1
+  const isLastStep = bounded === content.steps.length - 1
   const gated = stepRequiresAnswer(current)
-  const questionBlockIndices = current.blocks.reduce<number[]>(
-    (acc, b, i) => (b.kind === 'question' ? [...acc, i] : acc),
-    []
-  )
+
+  // Within-step pagination: one block per screen. blockIndex is local, not
+  // synced — reconnect drops back to blockIndex=0 within the current step
+  // (persisting mid-step position would need another RTDB write path;
+  // deferred, and cheap to skip because steps are short).
+  const [blockIndex, setBlockIndex] = useState(0)
+  const currentBlock = current.blocks[blockIndex]
+  const isLastBlock = blockIndex >= current.blocks.length - 1
 
   // `answers` = server-committed values, recovered on reconnect (below) — the
   // source of truth for "already answered". `drafts` = local, uncommitted
   // in-progress input (a tapped choice, typed text, a dragged slider) that the
-  // single "Selanjutnya" button both commits and advances past on click — the
-  // design has exactly one action per card, not a separate submit step.
-  // Both keyed by block index: a step can carry more than one question block.
+  // single "Selanjutnya" button both commits and advances past on click.
+  // Both keyed by block index within the current step — the answer key on
+  // RTDB is `${phase.id}_${step.id}_${blockIndex}`.
   const [answers, setAnswers] = useState<Record<number, unknown>>({})
   const [drafts, setDrafts] = useState<Record<number, unknown>>({})
   const [advancing, setAdvancing] = useState(false)
@@ -68,11 +72,17 @@ export function PlayerPane({
   // per-step answers, only the current step's).
   const [viewingIndex, setViewingIndex] = useState<number | null>(null)
 
+  const questionBlockIndices = current.blocks.reduce<number[]>(
+    (acc, b, i) => (b.kind === 'question' ? [...acc, i] : acc),
+    []
+  )
+
   useEffect(() => {
     if (bounded !== lastStepRef.current) {
       lastStepRef.current = bounded
       setAnswers({})
       setDrafts({})
+      setBlockIndex(0)
     }
   }, [bounded])
 
@@ -94,19 +104,64 @@ export function PlayerPane({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, targetPlayerId, bounded])
 
+  // Gate applies only when advancing OUT of the step (past the last block).
+  // Within-step Next is always enabled unless the current block itself is a
+  // question that's not yet answered — a bare Next past an unanswered
+  // question inside a gated step would let the player skip it.
+  const currentQuestionAnswered =
+    !currentBlock || currentBlock.kind !== 'question'
+      ? true
+      : answers[blockIndex] !== undefined || isDraftValid(currentBlock.question, drafts[blockIndex])
+
   const allQuestionsAnswered = questionBlockIndices.every((i) => {
     if (answers[i] !== undefined) return true
     const block = current.blocks[i]
     return block.kind === 'question' && isDraftValid(block.question, drafts[i])
   })
-  const nextDisabled = isLast || advancing || (gated && !allQuestionsAnswered)
+
+  const nextDisabled =
+    advancing ||
+    !currentQuestionAnswered ||
+    (isLastBlock && isLastStep) ||
+    (isLastBlock && gated && !allQuestionsAnswered)
+
+  // Commit the CURRENT block's draft (if it's a question with a pending draft)
+  // before we leave it. Called on every Next click — advancing within a step
+  // also gets the answer submitted, so the server has it even if the player
+  // never reaches the last block this session.
+  const commitCurrentDraft = async () => {
+    if (!targetPlayerId) return
+    if (!currentBlock || currentBlock.kind !== 'question') return
+    if (answers[blockIndex] !== undefined) return
+    const draft = drafts[blockIndex]
+    if (draft === undefined) return
+    const question = currentBlock.question
+    const optionId = question.qType === 'single_choice' ? String(draft) : undefined
+    const qId = `${phase.id}_${current.id}_${blockIndex}`
+    await submitAnswer({
+      sessionId,
+      playerId: targetPlayerId,
+      keyId: targetPlayerId,
+      qId,
+      value: draft,
+      optionId,
+    })
+  }
 
   const handleNext = async () => {
     if (!targetPlayerId || advancing) return
     setAdvancing(true)
-    // Commit any not-yet-committed drafts before advancing — one click does
-    // both, matching the design's single "Selanjutnya" action per card.
+    await commitCurrentDraft()
+    if (!isLastBlock) {
+      setBlockIndex(blockIndex + 1)
+      setAdvancing(false)
+      return
+    }
+    // Leaving the step: mop up any as-yet-uncommitted drafts on earlier
+    // question blocks the player back-scrolled past (rare with pure forward
+    // pagination, but cheap safety).
     for (const i of questionBlockIndices) {
+      if (i === blockIndex) continue
       if (answers[i] !== undefined || drafts[i] === undefined) continue
       const block = current.blocks[i]
       if (block.kind !== 'question') continue
@@ -132,29 +187,39 @@ export function PlayerPane({
   }
 
   if (viewingIndex !== bounded) {
-    // Reviewing an already-completed step.
+    // Reviewing an already-completed step — show its full block list at once
+    // (no per-block pagination in review mode; the player already walked
+    // through it interactively, this is just a scrollable snapshot).
     const step = content.steps[viewingIndex]
     return (
       <StepShell>
         <StepBody
           stepId={step.id}
           blocks={step.blocks}
-          header={<BackToPicker onBack={() => setViewingIndex(null)} />}
+          header={null}
           answers={{}}
           drafts={{}}
           onDraftChange={() => {}}
           disabled
+          sessionId={sessionId}
+          phase={phase}
+          playerId={playerId}
+          imageVariant="contained"
         />
       </StepShell>
     )
   }
 
+  // Live/interactive step: paginate one block per screen. StepBody accepts
+  // Block[] because Presentation shares this component; passing a
+  // single-element array shows exactly one block per Next click.
+  const nextLabel = isLastBlock && isLastStep ? 'Selesai' : 'Selanjutnya'
   return (
     <StepShell
       footer={
         canWrite ? (
           <ActionButton disabled={nextDisabled} onClick={handleNext}>
-            {isLast ? 'Selesai' : 'Selanjutnya'}
+            {nextLabel}
           </ActionButton>
         ) : (
           <p className="text-center text-xs text-white/40">Your team leader controls Next.</p>
@@ -162,25 +227,24 @@ export function PlayerPane({
       }
     >
       <StepBody
-        stepId={current.id}
-        blocks={current.blocks}
+        stepId={`${current.id}-${blockIndex}`}
+        blocks={currentBlock ? [currentBlock] : []}
         header={
-          <>
-            <BackToPicker onBack={() => setViewingIndex(null)} />
-            <p className="mb-4 text-xs text-white/30">
-              Step {bounded + 1}/{content.steps.length}
-              {/* canWrite, not teamRole — team_collaborative members are
-              still 'member' but have full independent control, unlike
-              team_leader_only members who only mirror the leader
-              (canWrite: false). */}
-              {!canWrite && ' · following your team leader'}
-            </p>
-          </>
+          // canWrite, not teamRole — team_collaborative members are still
+          // 'member' but have full independent control, unlike team_leader_only
+          // members who only mirror the leader (canWrite: false).
+          !canWrite ? (
+            <p className="mb-2 text-xs text-white/40">Following your team leader</p>
+          ) : null
         }
-        answers={answers}
-        drafts={drafts}
-        onDraftChange={(i, value) => setDrafts((prev) => ({ ...prev, [i]: value }))}
+        answers={answers[blockIndex] !== undefined ? { 0: answers[blockIndex] } : {}}
+        drafts={drafts[blockIndex] !== undefined ? { 0: drafts[blockIndex] } : {}}
+        onDraftChange={(_i, value) => setDrafts((prev) => ({ ...prev, [blockIndex]: value }))}
         disabled={!canWrite || advancing}
+        sessionId={sessionId}
+        phase={phase}
+        playerId={playerId}
+        imageVariant="contained"
       />
     </StepShell>
   )

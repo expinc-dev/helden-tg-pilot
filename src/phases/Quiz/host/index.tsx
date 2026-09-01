@@ -6,6 +6,7 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { demoBundle } from '@/lib/demoBundle'
+import { renderPromptBlocks } from '@/lib/richText'
 import { endLevel, nextPhase, quizAnswerKeys } from '@/lib/session/control'
 import { scoreQuizQuestion } from '@/lib/session/quizScoring'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
@@ -15,7 +16,6 @@ import { TimerRing } from '../TimerRing'
 import { LeaderboardRows } from '../components/LeaderboardRows'
 import {
   type QuizContent,
-  promptText,
   questionOptions,
   resolveTimers,
   useAnsweredCount,
@@ -111,7 +111,7 @@ export function HostQuiz({
 
   if (!q) return null
 
-  const text = promptText(q)
+  const text = renderPromptBlocks(q.prompt)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">

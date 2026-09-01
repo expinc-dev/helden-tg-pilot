@@ -114,6 +114,9 @@ export function PresentationRenderer({
         drafts={{}}
         onDraftChange={() => {}}
         disabled
+        sessionId={sessionId}
+        phase={phase}
+        playerId={playerId ?? ''}
         fullBleed
       />
     </div>

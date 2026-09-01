@@ -18,16 +18,6 @@ export const OPTION_ICONS = ['mdi:circle', 'mdi:rhombus', 'mdi:triangle', 'mdi:s
 
 export type ChoiceOption = { id: string; label: string }
 
-export function promptText(q: { prompt: unknown[] }): string {
-  return q.prompt
-    .map((b) =>
-      typeof b === 'object' && b !== null && 'markdown' in b
-        ? (b as { markdown?: string }).markdown
-        : ''
-    )
-    .join(' ')
-}
-
 export function questionOptions(q: unknown): ChoiceOption[] {
   return q &&
     typeof q === 'object' &&

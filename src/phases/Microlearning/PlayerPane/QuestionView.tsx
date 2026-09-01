@@ -1,12 +1,12 @@
-import type { Block, Question } from '@helden-inc/tg-schema'
+import type { Phase, Question } from '@helden-inc/tg-schema'
+
+import { renderPromptBlocks } from '@/lib/richText'
 
 import { ImageSequenceView } from './ImageSequenceQuestion'
 import { OrderQuestionView } from './OrderQuestion'
+import { ScanQuestion } from './ScanQuestion'
 import { SectionHeading } from './shared'
-
-function blockPromptText(prompt: Block[]): string {
-  return prompt.map((b) => (b.kind === 'text' ? b.markdown : '')).join(' ')
-}
+import { usePatternDetector, useQrDetector } from './useScanDetector'
 
 // Selectable row shared by single/multi choice — dark bordered card with a
 // radio-style dot on the left. The Figma uses the same round indicator for
@@ -48,29 +48,47 @@ function OptionRow({
   )
 }
 
-// Ungraded, formative check — microlearning has no answer key / scoring path
-// (that's Quiz's job). Fully controlled by the parent: `draft` is the
-// uncommitted local pick/text/slider value, `answer` is the server-committed
-// one (set after reconnect recovery or once the outer "Selanjutnya" commits
-// it). No submit button here — the design has exactly one action per card,
-// so committing happens when the parent's Next button fires.
+// Ungraded, formative check for every qType except qr_scan/pattern_scan
+// (those two DO have an answer key + scoring, checked client-side against a
+// physical puzzle — see ScanQuestion/scanScoring.ts). Fully controlled by
+// the parent: `draft` is the uncommitted local pick/text/slider value,
+// `answer` is the server-committed one (set after reconnect recovery or once
+// the outer "Selanjutnya" commits it). No submit button here — the design
+// has exactly one action per card, so committing happens when the parent's
+// Next button fires (except the scan retry loop, which is self-contained).
 export function QuestionView({
   question,
   answer,
   draft,
   onDraftChange,
   disabled,
+  sessionId,
+  phase,
+  playerId,
 }: {
   question: Question
   answer: unknown
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
+  // Only consumed by qr_scan/pattern_scan (need to write their own score
+  // deltas per attempt — see lib/session/scanScoring.ts) — every other
+  // qType here is ungraded and ignores these.
+  sessionId: string
+  phase: Phase
+  playerId: string
 }) {
-  const prompt = blockPromptText(question.prompt)
+  const prompt = renderPromptBlocks(question.prompt)
   const answered = answer !== null
   const current = answered ? answer : draft
   const locked = disabled || answered
+
+  // Hooks must run unconditionally regardless of which qType branch below
+  // actually uses them (Rules of Hooks) — inert args when not applicable.
+  const qrDetect = useQrDetector(question.qType === 'qr_scan' ? question.expectedValue : '')
+  const patternDetect = usePatternDetector(
+    question.qType === 'pattern_scan' ? question.targetUrl : undefined
+  )
 
   if (question.qType === 'single_choice') {
     return (
@@ -163,6 +181,42 @@ export function QuestionView({
           disabled={locked}
         />
       </div>
+    )
+  }
+
+  if (question.qType === 'qr_scan') {
+    return (
+      <ScanQuestion
+        prompt={prompt}
+        imageUrl={question.referenceUrl}
+        points={question.points}
+        detect={qrDetect}
+        answer={answer}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        disabled={disabled}
+        sessionId={sessionId}
+        phase={phase}
+        playerId={playerId}
+      />
+    )
+  }
+
+  if (question.qType === 'pattern_scan') {
+    return (
+      <ScanQuestion
+        prompt={prompt}
+        imageUrl={question.targetUrl}
+        points={question.points}
+        detect={patternDetect}
+        answer={answer}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        disabled={disabled}
+        sessionId={sessionId}
+        phase={phase}
+        playerId={playerId}
+      />
     )
   }
 
