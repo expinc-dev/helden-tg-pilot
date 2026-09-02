@@ -15,6 +15,13 @@
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() === (data.exists() ? data.val() : 0) + 1"
           }
         },
+        "sessionIds": {
+          ".read": "auth != null",
+          "$sessionId": {
+            ".write": "auth != null && !data.exists()",
+            ".validate": "newData.val() === true"
+          }
+        },
         "sessions": {
           "$sessionId": {
             "meta": {

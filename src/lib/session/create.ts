@@ -51,6 +51,10 @@ export async function createSession(
     set(eref(`sessions/${sessionId}/meta`), meta),
     set(eref(`sessions/${sessionId}/config`), config),
     set(eref(`joinCodes/${joinCode}`), sessionId),
+    // Sibling index — rules can't grant "list the keys under sessions/" without
+    // exposing the whole live tree, so this write-once map is how a reader that
+    // only knows the eventId (CMS dashboard) enumerates this event's sessions.
+    set(eref(`sessionIds/${sessionId}`), true),
   ])
 
   return { sessionId, joinCode }
