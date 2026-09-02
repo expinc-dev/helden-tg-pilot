@@ -204,6 +204,10 @@ export async function nextPhase(sessionId: string, currentPhaseId: string | unde
     } catch (e) {
       console.error('flushPhaseResults failed for', outgoing.id, e)
     }
+    // Sequential flow's counterpart to endLevel's played-marking (modular flow)
+    // — without this, sessions/{id}/played stays empty for the whole session
+    // and nothing (e.g. the CMS dashboard's completion %) can ever see progress.
+    await set(eref(`sessions/${sessionId}/played/${outgoing.id}`), true)
   }
   if (!next) {
     // Last phase done → end the session. Flush already ran above; timer cleared
