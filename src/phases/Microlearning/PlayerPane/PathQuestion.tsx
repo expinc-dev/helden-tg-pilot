@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import type { Phase, Question } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
+import { toast } from 'sonner'
 
 import { renderPromptBlocks } from '@/lib/richText'
 import { submitAnswer } from '@/lib/sync/submitAnswer'
@@ -91,11 +92,24 @@ function CaseTaskView({
   phase: Phase
   playerId: string
   onBack: () => void
-  onSubmit: (text: string) => void
+  // Resolves once the write is confirmed (or has failed and been reported
+  // via toast — see PathQuestionView below); never rejects, so this never
+  // needs its own try/catch.
+  onSubmit: (text: string) => Promise<void>
 }) {
   const [text, setText] = useState(existingAnswer ?? '')
+  const [submitting, setSubmitting] = useState(false)
   const answered = existingAnswer !== undefined
-  const locked = disabled || answered
+  const locked = disabled || answered || submitting
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    await onSubmit(text)
+    // On success the parent unmounts this view (back to the picker) as part
+    // of that same call, so this line only actually matters on failure —
+    // harmless no-op on an already-unmounted component otherwise (React 19).
+    setSubmitting(false)
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -142,8 +156,8 @@ function CaseTaskView({
       />
 
       {!answered && (
-        <ActionButton onClick={() => onSubmit(text)} disabled={locked || text.trim() === ''}>
-          Kirim Jawaban
+        <ActionButton onClick={() => void handleSubmit()} disabled={locked || text.trim() === ''}>
+          {submitting ? 'Mengirim…' : 'Kirim Jawaban'}
         </ActionButton>
       )}
     </div>
@@ -162,7 +176,8 @@ function CaseTaskView({
 // just for the main answer instead of a score side-channel. Reason: this is
 // bonus content a player may poke at then abandon without ever reaching
 // "Next" for the step, so deferring would risk losing every case they
-// answered along the way.
+// answered along the way. Confirm-then-advance, not optimistic — see
+// CaseTaskView's onSubmit above for why.
 //
 // Reveal logic: `visibleCases` is a pure function of the current answers —
 // no "revealed" flag is ever written anywhere (mirrors StepPicker.tsx's
@@ -217,24 +232,30 @@ export function PathQuestionView({
         phase={phase}
         playerId={playerId}
         onBack={() => setOpenCaseId(null)}
-        onSubmit={(text) => {
+        onSubmit={async (text) => {
           const trimmed = text.trim()
           const nextAnswers: CaseAnswers = { ...answers, [openCase.id]: trimmed }
-          // Optimistic local update first — draft flows back down through
-          // PlayerPane's state on next render, so the picker's checkmark
-          // shows instantly without waiting on the round trip. Fire-and-forget
-          // the actual write, same as ScanQuestion's awardScanPoints — no
-          // dedicated error UI exists for a failed submit anywhere in this
-          // app today, so this doesn't invent one just for this qType.
-          onDraftChange(nextAnswers)
-          void submitAnswer({
-            sessionId,
-            playerId,
-            keyId: playerId, // teamMode: individual — no team aggregation here.
-            qId,
-            value: nextAnswers,
-          })
-          setOpenCaseId(null)
+          // Confirm-then-advance, NOT optimistic: an earlier version updated
+          // local draft immediately and fired the RTDB write in the
+          // background, un-awaited. QA caught the real cost of that — a
+          // failed write (e.g. a rules mismatch) looked identical to success
+          // in the current tab, and only surfaced as fully lost progress on
+          // reload. So now the picker's checkmark, and leaving this case,
+          // both wait for the write to actually be confirmed.
+          try {
+            await submitAnswer({
+              sessionId,
+              playerId,
+              keyId: playerId, // teamMode: individual — no team aggregation here.
+              qId,
+              value: nextAnswers,
+            })
+            onDraftChange(nextAnswers)
+            setOpenCaseId(null)
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            toast.error(`Gagal menyimpan jawaban: ${msg}`)
+          }
         }}
       />
     )
