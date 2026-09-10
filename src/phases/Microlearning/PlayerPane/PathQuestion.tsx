@@ -4,6 +4,7 @@ import type { Phase, Question } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { renderPromptBlocks } from '@/lib/richText'
+import { submitAnswer } from '@/lib/sync/submitAnswer'
 
 import { BlockView } from './Blocks'
 import { ActionButton, SectionHeading } from './shared'
@@ -13,8 +14,11 @@ type Case = PathQuestion['cases'][number]
 // One player's progress on this question: which cases they've already
 // answered, keyed by case id, value = their submitted open text. Stored as
 // the single `value` of this block's playerAnswer (same qId convention as
-// every other qType — see submitAnswer.ts), merged in per-case as each one
-// is submitted rather than replaced wholesale (subtask 6).
+// every other qType — see submitAnswer.ts) — but unlike every other qType,
+// which submits one scalar `draft` when the step's outer "Next" is pressed,
+// this `value` is the FULL merged map, re-submitted (not patched) on every
+// case, because submitAnswer does a plain `set()` at `answers/{qId}` — the
+// caller is responsible for merging, not RTDB.
 type CaseAnswers = Record<string, string>
 
 const CARD_GRADIENT = 'linear-gradient(252deg, #565656 -38.22%, #000 41.21%)'
@@ -115,6 +119,11 @@ function CaseTaskView({
             draft={null}
             onDraftChange={() => {}}
             disabled={disabled}
+            // Inert — same reasoning as answer/draft/onDraftChange above:
+            // case.task is authored with allowQuestion off (PathQuestionEditor
+            // in the CMS), so none of these blocks can ever be a 'question'
+            // that would actually read this.
+            qId="path_question_task_content"
             sessionId={sessionId}
             phase={phase}
             playerId={playerId}
@@ -146,24 +155,24 @@ function CaseTaskView({
 // input. Internal `openCaseId` state switches between the picker grid and a
 // case's task view, mirroring ScanQuestion's local popup/result state.
 //
+// Submit timing is deliberately DIFFERENT from every other qType here: those
+// wait for the step's outer "Next" (PlayerPane's deferred commitCurrentDraft).
+// This submits straight to RTDB the moment a case is answered — same
+// architectural choice as ScanQuestion calling awardScanPoints directly,
+// just for the main answer instead of a score side-channel. Reason: this is
+// bonus content a player may poke at then abandon without ever reaching
+// "Next" for the step, so deferring would risk losing every case they
+// answered along the way.
+//
 // Scope note: the hidden-case reveal-after-threshold logic (subtask 7) isn't
 // here yet — `visibleCases` only ever shows non-hidden cases for now.
-// Submitting a case's answer (below) doesn't persist anywhere yet either —
-// it just returns to the picker. The real per-case `submitAnswer` call +
-// RTDB write, merged into the shared answers map, lands in subtask 6.
 export function PathQuestionView({
   question,
   answer,
   draft,
-  // Not wired yet — real per-case submission lands in subtask 6 (direct
-  // submitAnswer call on each case's submit, not this generic callback; see
-  // ScanQuestion's awardScanPoints precedent). `_`-renamed for tsc's
-  // noUnusedParameters (only exempts underscore-prefixed names) + disabled
-  // for eslint (this repo doesn't configure argsIgnorePattern). Drop both
-  // once subtask 6 actually uses it.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onDraftChange: _onDraftChange,
+  onDraftChange,
   disabled,
+  qId,
   sessionId,
   phase,
   playerId,
@@ -173,6 +182,7 @@ export function PathQuestionView({
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
+  qId: string
   sessionId: string
   phase: Phase
   playerId: string
@@ -195,8 +205,23 @@ export function PathQuestionView({
         phase={phase}
         playerId={playerId}
         onBack={() => setOpenCaseId(null)}
-        onSubmit={() => {
-          // subtask 6 wires the real submitAnswer + merged RTDB write here.
+        onSubmit={(text) => {
+          const trimmed = text.trim()
+          const nextAnswers: CaseAnswers = { ...answers, [openCase.id]: trimmed }
+          // Optimistic local update first — draft flows back down through
+          // PlayerPane's state on next render, so the picker's checkmark
+          // shows instantly without waiting on the round trip. Fire-and-forget
+          // the actual write, same as ScanQuestion's awardScanPoints — no
+          // dedicated error UI exists for a failed submit anywhere in this
+          // app today, so this doesn't invent one just for this qType.
+          onDraftChange(nextAnswers)
+          void submitAnswer({
+            sessionId,
+            playerId,
+            keyId: playerId, // teamMode: individual — no team aggregation here.
+            qId,
+            value: nextAnswers,
+          })
           setOpenCaseId(null)
         }}
       />

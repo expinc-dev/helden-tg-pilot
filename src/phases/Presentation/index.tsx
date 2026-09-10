@@ -108,6 +108,12 @@ export function PresentationRenderer({
     <div className="flex w-full flex-1 flex-col overflow-hidden">
       <StepBody
         stepId={slide.id}
+        // Inert — presentation slides always hard-fail publish if they carry
+        // a question block (see helden-tg-cms's registry.ts publishValidate),
+        // so no BlockView here ever actually reaches a 'question' branch that
+        // would read the qId this builds. slide.id is a reasonable stand-in,
+        // same spirit as PathQuestion.tsx's own inert task-content qId.
+        microStepId={slide.id}
         blocks={slide.blocks}
         header={null}
         answers={{}}

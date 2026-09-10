@@ -17,6 +17,7 @@ export function BlockView({
   draft,
   onDraftChange,
   disabled,
+  qId,
   sessionId,
   phase,
   playerId,
@@ -26,6 +27,12 @@ export function BlockView({
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
+  // Only consumed by 'question' blocks whose qType is path_question — the
+  // RTDB key it submits its per-case answers map under (see
+  // QuestionView.tsx / PathQuestion.tsx). Every other qType still gets
+  // committed by PlayerPane's deferred commitCurrentDraft, which computes
+  // its own qId the same way and doesn't need this threaded down.
+  qId: string
   // Only consumed by 'question' blocks whose qType is qr_scan/pattern_scan —
   // see QuestionView.tsx.
   sessionId: string
@@ -98,6 +105,7 @@ export function BlockView({
           draft={draft}
           onDraftChange={onDraftChange}
           disabled={disabled}
+          qId={qId}
           sessionId={sessionId}
           phase={phase}
           playerId={playerId}

@@ -63,6 +63,7 @@ export function QuestionView({
   draft,
   onDraftChange,
   disabled,
+  qId,
   sessionId,
   phase,
   playerId,
@@ -72,6 +73,10 @@ export function QuestionView({
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
+  // Only consumed by path_question, which submits directly per-case instead
+  // of waiting for PlayerPane's deferred commitCurrentDraft — see
+  // PathQuestion.tsx.
+  qId: string
   // Only consumed by qr_scan/pattern_scan (need to write their own score
   // deltas per attempt — see lib/session/scanScoring.ts) — every other
   // qType here is ungraded and ignores these.
@@ -234,6 +239,7 @@ export function QuestionView({
         draft={draft}
         onDraftChange={onDraftChange}
         disabled={disabled}
+        qId={qId}
         sessionId={sessionId}
         phase={phase}
         playerId={playerId}
