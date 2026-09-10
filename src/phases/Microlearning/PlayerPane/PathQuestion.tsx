@@ -25,10 +25,10 @@ const CARD_GRADIENT = 'linear-gradient(252deg, #565656 -38.22%, #000 41.21%)'
 
 // One case's box in the picker grid. Deliberately identical markup/styling
 // for every case regardless of `hidden` — the parent only ever passes cases
-// that are currently meant to be visible (non-hidden, or hidden-and-unlocked
-// once reveal logic lands in subtask 7), so nothing here can tip a player off
-// that a case is "the bonus one". `done` is the only thing that changes the
-// look, same as any other case the player already completed.
+// that are CURRENTLY meant to be visible (non-hidden, or hidden-and-unlocked —
+// see `visibleCases` below), so nothing here can tip a player off that a case
+// is "the bonus one". `done` is the only thing that changes the look, same
+// as any other case the player already completed.
 function CaseCard({
   label,
   index,
@@ -164,8 +164,13 @@ function CaseTaskView({
 // "Next" for the step, so deferring would risk losing every case they
 // answered along the way.
 //
-// Scope note: the hidden-case reveal-after-threshold logic (subtask 7) isn't
-// here yet — `visibleCases` only ever shows non-hidden cases for now.
+// Reveal logic: `visibleCases` is a pure function of the current answers —
+// no "revealed" flag is ever written anywhere (mirrors StepPicker.tsx's
+// stepStatus(), the existing precedent for this kind of derived-not-stored
+// gating in this codebase). Recomputed on every render, so a hidden case
+// appears the instant its threshold is met, no reconnect/refresh needed —
+// and with zero visual distinction from CaseCard's perspective (it's just
+// another entry in the same array), satisfying "no highlight/announcement".
 export function PathQuestionView({
   question,
   answer,
@@ -191,7 +196,14 @@ export function PathQuestionView({
   const answers = ((answer ?? draft) as CaseAnswers | null) ?? {}
   const [openCaseId, setOpenCaseId] = useState<string | null>(null)
 
-  const visibleCases = question.cases.filter((c) => !c.hidden)
+  const nonHiddenCases = question.cases.filter((c) => !c.hidden)
+  const nonHiddenCompletedCount = nonHiddenCases.filter((c) => c.id in answers).length
+  const hiddenCasesUnlocked = nonHiddenCompletedCount >= question.unlockAfterCases
+  // Once unlocked, the FULL authored list shows (hidden cases included, in
+  // their original authored position) — not just the hidden ones appended,
+  // so a hidden case placed mid-list doesn't jump to the end and give itself
+  // away by its position alone.
+  const visibleCases = hiddenCasesUnlocked ? question.cases : nonHiddenCases
   const openCase = question.cases.find((c) => c.id === openCaseId)
 
   if (openCase) {
