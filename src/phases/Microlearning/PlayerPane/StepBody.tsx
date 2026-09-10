@@ -17,6 +17,7 @@ import { BlockView } from './Blocks'
 // scroll column.
 export function StepBody({
   stepId,
+  microStepId,
   blocks,
   header,
   answers,
@@ -30,6 +31,13 @@ export function StepBody({
   imageVariant = 'bleed',
 }: {
   stepId: string
+  // Raw MicroStep.id — distinct from `stepId` above, which is a
+  // React-key-only composite (e.g. `${current.id}-${blockIndex}` in live
+  // mode) never meant for RTDB addressing. Only used to build `qId` for
+  // path_question's direct submitAnswer call (see Blocks.tsx/QuestionView.tsx)
+  // — every other qType still gets its answer committed by PlayerPane's
+  // deferred commitCurrentDraft, which computes qId itself the same way.
+  microStepId: string
   blocks: Block[]
   header: React.ReactNode
   answers: Record<number, unknown>
@@ -94,6 +102,7 @@ export function StepBody({
               draft={drafts[restOffset + i]}
               onDraftChange={(value) => onDraftChange(restOffset + i, value)}
               disabled={disabled}
+              qId={`${phase.id}_${microStepId}_${restOffset + i}`}
               sessionId={sessionId}
               phase={phase}
               playerId={playerId}

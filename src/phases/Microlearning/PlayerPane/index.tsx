@@ -195,6 +195,7 @@ export function PlayerPane({
       <StepShell>
         <StepBody
           stepId={step.id}
+          microStepId={step.id}
           blocks={step.blocks}
           header={null}
           answers={{}}
@@ -228,6 +229,7 @@ export function PlayerPane({
     >
       <StepBody
         stepId={`${current.id}-${blockIndex}`}
+        microStepId={current.id}
         blocks={currentBlock ? [currentBlock] : []}
         header={
           // canWrite, not teamRole — team_collaborative members are still

@@ -4,6 +4,7 @@ import { renderPromptBlocks } from '@/lib/richText'
 
 import { ImageSequenceView } from './ImageSequenceQuestion'
 import { OrderQuestionView } from './OrderQuestion'
+import { PathQuestionView } from './PathQuestion'
 import { ScanQuestion } from './ScanQuestion'
 import { SectionHeading } from './shared'
 import { usePatternDetector, useQrDetector } from './useScanDetector'
@@ -62,6 +63,7 @@ export function QuestionView({
   draft,
   onDraftChange,
   disabled,
+  qId,
   sessionId,
   phase,
   playerId,
@@ -71,6 +73,10 @@ export function QuestionView({
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
+  // Only consumed by path_question, which submits directly per-case instead
+  // of waiting for PlayerPane's deferred commitCurrentDraft — see
+  // PathQuestion.tsx.
+  qId: string
   // Only consumed by qr_scan/pattern_scan (need to write their own score
   // deltas per attempt — see lib/session/scanScoring.ts) — every other
   // qType here is ungraded and ignores these.
@@ -213,6 +219,27 @@ export function QuestionView({
         draft={draft}
         onDraftChange={onDraftChange}
         disabled={disabled}
+        sessionId={sessionId}
+        phase={phase}
+        playerId={playerId}
+      />
+    )
+  }
+
+  if (question.qType === 'path_question') {
+    // Raw `disabled`, not `locked` — `locked` also trips on `answered`
+    // (answer !== null), which fits a single-value qType but would wrongly
+    // freeze the whole picker forever after just the FIRST case is answered.
+    // Same reasoning as qr_scan/pattern_scan above, which also pass raw
+    // `disabled` here for the same multi-attempt reason.
+    return (
+      <PathQuestionView
+        question={question}
+        answer={answer}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        disabled={disabled}
+        qId={qId}
         sessionId={sessionId}
         phase={phase}
         playerId={playerId}
