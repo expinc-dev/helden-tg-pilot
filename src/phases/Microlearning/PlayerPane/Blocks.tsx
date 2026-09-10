@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import type { Block, Phase } from '@helden-inc/tg-schema'
+import { toast } from 'sonner'
 
 import { detectProvider, vimeoEmbedUrl, youtubeEmbedUrl } from '@/phases/Video/lib'
 
@@ -117,8 +118,86 @@ export function BlockView({
       // Fallback only — when a hero image exists, StepBody pulls the heading
       // block out and overlays it instead of rendering it here in the flow.
       return <p className="text-lg font-bold text-[#FFB800]">{block.text}</p>
+    case 'button':
+      return <ButtonBlock block={block} disabled={disabled} />
     default:
       return <p className="text-xs text-white/40">Unsupported block: {block.kind}</p>
+  }
+}
+
+// Bridge to Gemini (or similar): copy a prepared prompt, or open an external
+// link. Two variants share this component because CMS's ButtonBlockEditor
+// mirrors that split (see helden-tg-cms/src/components/blocks/button/).
+function ButtonBlock({
+  block,
+  disabled,
+}: {
+  block: Extract<Block, { kind: 'button' }>
+  disabled: boolean
+}) {
+  const className =
+    'inline-flex items-center gap-2 rounded-lg bg-[#FFB800] px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none'
+
+  if (block.variant === 'external-link') {
+    const href = block.url ?? ''
+    // `pointer-events-none` when disabled or href empty — an <a> without href
+    // is still keyboard-focusable and clickable, so `disabled` alone (an <a>
+    // attribute that doesn't exist) isn't enough.
+    const inert = disabled || !href
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`${className} ${inert ? 'pointer-events-none opacity-40' : ''}`}
+        aria-disabled={inert}
+      >
+        {block.label || 'Buka'}
+        <span aria-hidden>↗</span>
+      </a>
+    )
+  }
+
+  const text = block.text ?? ''
+  const inert = disabled || !text
+  return (
+    <button
+      type="button"
+      disabled={inert}
+      onClick={() => void copyToClipboard(text)}
+      className={className}
+    >
+      {block.label || 'Salin'}
+    </button>
+  )
+}
+
+// ponytail: `navigator.clipboard.writeText` is secure-context-only (HTTPS or
+// localhost) — same trap as `crypto.subtle` we already dodge in lib/ids.ts.
+// Sessions demoed over LAN HTTP (a tablet + phones on wifi hitting the host's
+// IP) land in insecure context, where the property is `undefined`. Fall back
+// to the legacy `execCommand('copy')` there — deprecated but still works in
+// every browser we ship to, and needs no user permission prompt. Upgrade path:
+// once the pilot is only ever served over HTTPS, drop the fallback.
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (!ok) throw new Error('execCommand copy returned false')
+    }
+    toast.success('Disalin ke clipboard')
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    toast.error(`Gagal menyalin: ${msg}`)
   }
 }
 
