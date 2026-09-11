@@ -5,7 +5,7 @@ import { Icon } from '@iconify/react'
 
 import { TimerRing } from '@/phases/Quiz/TimerRing'
 
-import { resetPhase } from '@/lib/session/control'
+import { advanceRound, resetPhase } from '@/lib/session/control'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { useTimer } from '@/lib/sync/useTimer'
 
@@ -60,6 +60,7 @@ export function HostSortOrder({
   const totalSec = phase.timer?.seconds ?? 60
   const submittedCount = roster.filter((r) => answers[r.writerId]).length
   const [resetting, setResetting] = useState(false)
+  const [advancing, setAdvancing] = useState(false)
   const [answersOpen, setAnswersOpen] = useState(false)
   const gameValues: Record<string, number> = Object.fromEntries(
     roster.map((r) => [
@@ -81,6 +82,28 @@ export function HostSortOrder({
       await resetPhase(sessionId, phase)
     } finally {
       setResetting(false)
+    }
+  }
+
+  // TEMPORARY manual trigger (BRIGHT-966 subtask 5) — stands in for the real
+  // QR scan (BRIGHT-967) so round mechanics can be verified end-to-end before
+  // the scan-and-validate flow exists. Deliberately callable at any point
+  // during a round, timer running or not: that's what exercises decision C
+  // (an early advance locks whatever the player was mid-drag on, exactly like
+  // timer expiry). Only rendered for an actual multi-round config, before the
+  // final round is reached - advanceRound() is already a safe no-op past
+  // that, this just keeps the button from being clicked pointlessly.
+  const handleAdvanceRound = async () => {
+    if (advancing) return
+    setAdvancing(true)
+    try {
+      await advanceRound(
+        sessionId,
+        phase.id,
+        config.rounds.map((r) => r.timerSeconds)
+      )
+    } finally {
+      setAdvancing(false)
     }
   }
 
@@ -109,14 +132,26 @@ export function HostSortOrder({
         ) : (
           <span />
         )}
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={resetting}
-          className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 hover:text-white disabled:opacity-40"
-        >
-          {resetting ? 'Mereset…' : 'Reset Level'}
-        </button>
+        <div className="flex items-center gap-2">
+          {config.rounds.length > 0 && !ready && round < totalRounds && (
+            <button
+              type="button"
+              onClick={handleAdvanceRound}
+              disabled={advancing}
+              className="rounded-lg border border-[#FFB800]/40 bg-[#FFB800]/10 px-3 py-1.5 text-xs font-semibold text-[#FFB800] hover:bg-[#FFB800]/20 disabled:opacity-40"
+            >
+              {advancing ? 'Memproses…' : `Ronde Berikutnya (${round}/${totalRounds})`}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={resetting}
+            className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 hover:text-white disabled:opacity-40"
+          >
+            {resetting ? 'Mereset…' : 'Reset Level'}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col items-center gap-4">

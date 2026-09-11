@@ -20,7 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
-import { get, onValue, remove, serverTimestamp, set } from 'firebase/database'
+import { onValue, remove, serverTimestamp, set } from 'firebase/database'
 
 import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 import { TimerRing } from '@/phases/Quiz/TimerRing'
@@ -208,25 +208,24 @@ export function SortOrderPlayerActive({
   // fire, so the listener's own "was submitted, now isn't -> reshuffle from
   // round 1" fallback (meant for host "Reset Level") never fires for what is
   // actually a round advance, not a reset.
-  // Round 1: fresh shuffle. Round>=2: carry the previous round's submitted
-  // order forward (one-shot get, not a subscription — we only need it at the
-  // instant of transition) with that round's diff applied. Pulled out of the
-  // effect below into its own function (same reason `submit` further down
-  // isn't inlined into its effect either) so the effect body itself never
-  // calls setOrder directly.
-  const seedOrderForRound = (r: number, prevRound: number) => {
+  //
+  // BRIGHT-967 decision C: a round-advance trigger (manual test button for
+  // now, the real QR scan later) must lock whatever the player was mid-drag
+  // on for the round being LEFT, exactly like timer expiry already does -
+  // round-advance is just another lock trigger alongside timer.expired, not
+  // a second state machine. So this reads `submittedIds`/`order` from THIS
+  // render's closure (the round the player is leaving) BEFORE reseeding:
+  // already submitted -> lock in that; still mid-drag -> write `order` as
+  // the lock, then seed the next round from whichever one that resolved to.
+  // No RTDB read-back needed - the outgoing order is already known locally,
+  // so there's no roundtrip for a concurrent write to race against.
+  const seedOrderForRound = (r: number, outgoingOrder: string[]) => {
     if (r <= 1) {
       setOrder(shuffled(content.items.map((i) => i.id)))
       return
     }
     const roundDef = config.rounds[r - 2]
-    void get(
-      eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${prevRound}`)
-    ).then((snap) => {
-      const prevValue = (snap.val() as { value?: string[] } | null)?.value
-      const base = prevValue ?? content.items.map((i) => i.id)
-      setOrder(roundDef ? applyRoundDiffToOrder(base, roundDef.diff) : base)
-    })
+    setOrder(roundDef ? applyRoundDiffToOrder(outgoingOrder, roundDef.diff) : outgoingOrder)
   }
 
   const prevRoundRef = useRef(round)
@@ -234,10 +233,20 @@ export function SortOrderPlayerActive({
     if (round === prevRoundRef.current) return
     const prevRound = prevRoundRef.current
     prevRoundRef.current = round
+    const outgoingOrder = submittedIds ?? order
+    const lockOutgoing = submittedIds
+      ? Promise.resolve()
+      : set(
+          eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${prevRound}`),
+          {
+            value: order,
+            submittedAt: serverTimestamp(),
+          }
+        )
     hadSubmittedRef.current = false
     autoSubmittedRef.current = false
     setSubmittedIds(null)
-    seedOrderForRound(round, prevRound)
+    void lockOutgoing.then(() => seedOrderForRound(round, outgoingOrder))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round])
 
