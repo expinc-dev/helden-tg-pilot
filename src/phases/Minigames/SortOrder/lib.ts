@@ -112,9 +112,11 @@ export function previewScore(
 // roster of 1 (solo play/testing) that made it fire the instant the lone
 // player submitted, well before the clock ran out.
 export function isRevealReady(
-  roster: SortOrderParticipant[],
-  answers: Record<string, SortOrderAnswer | undefined>,
+  _roster: SortOrderParticipant[],
+  _answers: Record<string, SortOrderAnswer | undefined>,
   timerExpired: boolean
 ): boolean {
+  // roster/answers kept in the signature so callers stay uniform with the
+  // old every-submitted gate — the params are intentionally unused now.
   return timerExpired
 }

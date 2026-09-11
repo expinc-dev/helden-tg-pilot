@@ -1,3 +1,7 @@
+import { AnalyzeGridRenderer } from './AnalyzeGrid'
+import { analyzeGridConfigSchema, scoreAnalyzeGrid } from './AnalyzeGrid/score'
+import { DoubtSeedRenderer } from './DoubtSeed'
+import { doubtSeedConfigSchema, scoreDoubtSeed } from './DoubtSeed/score'
 import { SortOrderRenderer } from './SortOrder'
 import { scoreSortOrder, sortOrderConfigSchema } from './SortOrder/score'
 import type { MinigameTemplate } from './types'
@@ -17,6 +21,18 @@ const templates: AnyTemplate[] = [
     configSchema: sortOrderConfigSchema,
     Renderer: SortOrderRenderer,
     scorer: scoreSortOrder,
+  },
+  {
+    templateId: 'analyze_grid',
+    configSchema: analyzeGridConfigSchema,
+    Renderer: AnalyzeGridRenderer,
+    scorer: scoreAnalyzeGrid,
+  },
+  {
+    templateId: 'doubt_seed',
+    configSchema: doubtSeedConfigSchema,
+    Renderer: DoubtSeedRenderer,
+    scorer: scoreDoubtSeed,
   },
 ]
 const byId = new Map<string, AnyTemplate>(templates.map((t) => [t.templateId, t]))

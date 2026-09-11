@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import type { Block, Phase } from '@helden-inc/tg-schema'
+import type { Block } from '@helden-inc/tg-schema'
+import { toast } from 'sonner'
 
 import { detectProvider, vimeoEmbedUrl, youtubeEmbedUrl } from '@/phases/Video/lib'
 
-import { renderInline, renderRichText, renderSegments } from '@/lib/richText'
+import { sanitizeHtml } from '@/lib/sanitizeHtml'
 import { mmss } from '@/lib/sync/timermath'
 
 import { QuestionView } from './QuestionView'
@@ -17,30 +18,24 @@ export function BlockView({
   draft,
   onDraftChange,
   disabled,
-  sessionId,
-  phase,
-  playerId,
 }: {
   block: Block
   answer: unknown
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
-  // Only consumed by 'question' blocks whose qType is qr_scan/pattern_scan —
-  // see QuestionView.tsx.
-  sessionId: string
-  phase: Phase
-  playerId: string
 }) {
   switch (block.kind) {
     case 'text': {
-      const { heading, segments } = parseTextBlock(block.markdown)
+      const { heading, paragraphs } = parseTextBlock(block.markdown)
       return (
         <div className="flex flex-col gap-2">
-          {heading && <SectionHeading text={renderInline(heading)} />}
-          {renderSegments(segments, {
-            paragraphClassName: 'text-sm leading-relaxed text-white/70',
-          })}
+          {heading && <SectionHeading text={heading} />}
+          {paragraphs.map((p, i) => (
+            <p key={i} className="text-sm leading-relaxed text-white/70">
+              {p}
+            </p>
+          ))}
         </div>
       )
     }
@@ -56,13 +51,8 @@ export function BlockView({
           ) : (
             <div className="aspect-video w-full rounded-2xl bg-white/5" />
           )}
-          {block.title && (
-            <p className="text-center text-lg font-bold text-[#FFB800]">
-              {renderInline(block.title)}
-            </p>
-          )}
           {block.caption && (
-            <div className="text-xs text-white/40">{renderRichText(block.caption)}</div>
+            <figcaption className="text-xs text-white/40">{block.caption}</figcaption>
           )}
         </figure>
       )
@@ -98,9 +88,6 @@ export function BlockView({
           draft={draft}
           onDraftChange={onDraftChange}
           disabled={disabled}
-          sessionId={sessionId}
-          phase={phase}
-          playerId={playerId}
         />
       )
     case 'timer':
@@ -109,9 +96,69 @@ export function BlockView({
       // Fallback only — when a hero image exists, StepBody pulls the heading
       // block out and overlays it instead of rendering it here in the flow.
       return <p className="text-lg font-bold text-[#FFB800]">{block.text}</p>
-    default:
-      return <p className="text-xs text-white/40">Unsupported block: {block.kind}</p>
+    case 'html':
+      return (
+        <div
+          className="max-w-none [&_img]:max-w-full [&_table]:border-collapse [&_td]:border [&_td]:p-1 [&_th]:border [&_th]:p-1"
+          // Sanitized above — the only dangerouslySetInnerHTML in the app, and
+          // nothing reaches it without passing DOMPurify first.
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }}
+        />
+      )
+    case 'button':
+      return <ButtonView block={block} />
   }
+}
+
+function ButtonView({ block }: { block: Extract<Block, { kind: 'button' }> }) {
+  const isCopy = block.variant === 'copy'
+  const handleCopy = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied!')
+    } catch {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+        toast.success('Copied!')
+      } catch {
+        // Clipboard denied on both paths — surface a manual-copy hint.
+        toast.error('Copy blocked — select and copy manually')
+      }
+    }
+  }, [])
+
+  if (isCopy) {
+    return (
+      <button
+        type="button"
+        onClick={() => handleCopy(block.text ?? '')}
+        className="rounded-lg bg-[#FFB800] px-4 py-2 text-sm font-semibold text-black transition hover:opacity-90"
+      >
+        {block.label || 'Copy'}
+      </button>
+    )
+  }
+  const url = block.url?.trim()
+  return (
+    <a
+      href={url || undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-disabled={!url}
+      className={`inline-block rounded-lg bg-[#FFB800] px-4 py-2 text-sm font-semibold text-black transition ${
+        url ? 'hover:opacity-90' : 'pointer-events-none opacity-50'
+      }`}
+    >
+      {block.label || 'Open link'} ↗
+    </a>
+  )
 }
 
 // Cosmetic, client-local countdown (no server authority, no advance-gating —
