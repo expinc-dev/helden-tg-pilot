@@ -13,6 +13,7 @@ import {
   isRevealReady,
   previewScore,
   useCumulativeScores,
+  useRoundState,
   useSortOrderAnswers,
   useSortOrderRoster,
 } from '../lib'
@@ -32,7 +33,8 @@ export function CentralSortOrder({
   config: SortOrderConfig
 }) {
   const roster = useSortOrderRoster(sessionId, phase)
-  const answers = useSortOrderAnswers(sessionId, roster, phase.id)
+  const { round } = useRoundState(sessionId, phase.id)
+  const answers = useSortOrderAnswers(sessionId, roster, phase.id, round)
   const timer = useTimer(sessionId, phase)
   const totalSec = phase.timer?.seconds ?? 60
   const pointer = usePhasePointer(sessionId)

@@ -74,6 +74,39 @@ function requireHostUid(): string {
   return uid
 }
 
+// Host-only. Seeds sessions/{id}/roundState/{phaseId} = { round: 1 } for
+// sort_order phases (BRIGHT-966 multi-round). Keyed by phaseId like
+// secrets/fragmentOrder above, not a session-singleton like timer/
+// videoPlayback, so no removal branch for other phase types is needed -
+// a different phaseId's answers/{phaseId}/rounds/{round} path (see
+// SortOrder/lib.ts useSortOrderAnswers) simply never collides with this one.
+// Only phase.content.type/templateId are read here (both plain schema
+// fields), not the minigame's local Zod config schema - control.ts stays
+// decoupled from any one template's config shape, same as the codepiece
+// check right below.
+async function openPhaseRoundState(sessionId: string, phase: Phase | undefined) {
+  if (!phase) return
+  const isSortOrder = phase.content.type === 'minigame' && phase.content.templateId === 'sort_order'
+  if (!isSortOrder) return
+  await set(eref(`sessions/${sessionId}/roundState/${phase.id}`), { round: 1 })
+}
+
+// Host-only. Advances sessions/{id}/roundState/{phaseId}.round by one,
+// clamped to maxRound (a sort_order config with N entries in `rounds` tops
+// out at maxRound = N + 1). No-op once already at maxRound. Not called from
+// anywhere yet (BRIGHT-966 subtask 2) - this is the function a temporary
+// manual "next round" test button will call, and later the real QR-trigger
+// (BRIGHT-967) once its scan is validated; only the caller changes between
+// those two, not this function.
+export async function advanceRound(sessionId: string, phaseId: string, maxRound: number) {
+  requireHostUid()
+  const node = eref(`sessions/${sessionId}/roundState/${phaseId}`)
+  const snap = await get(node)
+  const current = (snap.val() as { round?: number } | null)?.round ?? 1
+  if (current >= maxRound) return
+  await set(node, { round: current + 1 })
+}
+
 // Snapshot of the "played" phase-id set — sessions/{id}/played/{phaseId}: true.
 // Host-only write per RTDB rules; readable by everyone. Used by endLevel to
 // decide when to auto-end the session.
@@ -159,6 +192,7 @@ async function openPhase(sessionId: string, phase: Phase | undefined) {
     openPhaseTimer(sessionId, phase),
     openPhaseSecrets(sessionId, phase),
     openPhaseVideoPlayback(sessionId, phase),
+    openPhaseRoundState(sessionId, phase),
     // Caught separately from the others: a permission_denied here (e.g. real
     // deployed rules that predate the codepiece/fragmentOrder path) must not
     // reject this whole Promise.all and silently skip the timer/secrets/

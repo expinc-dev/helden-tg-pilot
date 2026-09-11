@@ -35,12 +35,35 @@ export function useSortOrderRoster(
 
 export type SortOrderAnswer = { value: string[]; submittedAt?: number }
 
-// Narrow per-participant read: only the writer's own answers/{phaseId} node,
-// not players/* broadly — one listener per roster row.
+// Which round of a multi-round sort_order phase is currently active
+// (BRIGHT-966). Reads sessions/{id}/roundState/{phaseId}, seeded by the host
+// on phase-open (see control.ts#openPhaseRoundState) and bumped by
+// advanceRound(). Defaults to round 1 when the node is absent, so a legacy
+// sort_order config (no `rounds` authored) or a phase that hasn't opened yet
+// behaves exactly as before this feature existed.
+export function useRoundState(sessionId: string | undefined, phaseId: string): { round: number } {
+  const [round, setRound] = useState(1)
+  useEffect(() => {
+    if (!sessionId) return
+    return onValue(eref(`sessions/${sessionId}/roundState/${phaseId}`), (s) => {
+      const v = s.val() as { round?: number } | null
+      setRound(v?.round ?? 1)
+    })
+  }, [sessionId, phaseId])
+  return { round }
+}
+
+// Narrow per-participant read: only the writer's own answers/{phaseId}/rounds/{round}
+// node, not players/* broadly — one listener per roster row. Round-scoped
+// (BRIGHT-966) so each round's submission lives at its own path instead of
+// overwriting a single flat answers/{phaseId} node; round 1 of a legacy
+// (non-multi-round) config reads/writes the exact same data it always has,
+// just one path segment deeper.
 export function useSortOrderAnswers(
   sessionId: string | undefined,
   roster: SortOrderParticipant[],
-  phaseId: string
+  phaseId: string,
+  round: number
 ): Record<string, SortOrderAnswer | undefined> {
   const [answers, setAnswers] = useState<Record<string, SortOrderAnswer | undefined>>({})
   const writerKey = roster.map((r) => r.writerId).join(',')
@@ -48,20 +71,23 @@ export function useSortOrderAnswers(
   useEffect(() => {
     if (!sessionId) return
     const unsubs = roster.map((r) =>
-      onValue(eref(`sessions/${sessionId}/players/${r.writerId}/answers/${phaseId}`), (s) => {
-        const v = s.val()
-        setAnswers((prev) => ({
-          ...prev,
-          [r.writerId]:
-            v && Array.isArray(v.value)
-              ? { value: v.value, submittedAt: v.submittedAt }
-              : undefined,
-        }))
-      })
+      onValue(
+        eref(`sessions/${sessionId}/players/${r.writerId}/answers/${phaseId}/rounds/${round}`),
+        (s) => {
+          const v = s.val()
+          setAnswers((prev) => ({
+            ...prev,
+            [r.writerId]:
+              v && Array.isArray(v.value)
+                ? { value: v.value, submittedAt: v.submittedAt }
+                : undefined,
+          }))
+        }
+      )
     )
     return () => unsubs.forEach((u) => u())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, writerKey, phaseId])
+  }, [sessionId, writerKey, phaseId, round])
 
   return answers
 }

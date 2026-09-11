@@ -28,7 +28,7 @@ import { TimerRing } from '@/phases/Quiz/TimerRing'
 import { eref } from '@/lib/firebase'
 import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 
-import { isRevealReady, useSortOrderAnswers, useSortOrderRoster } from '../lib'
+import { isRevealReady, useRoundState, useSortOrderAnswers, useSortOrderRoster } from '../lib'
 import type { SortOrderConfig } from '../score'
 
 // This is a vertical-only reorder list — without this, dnd-kit's default drag
@@ -184,7 +184,8 @@ export function SortOrderPlayerActive({
   const timer = useTimer(sessionId, phase)
   const totalSec = phase.timer?.seconds ?? 60
   const roster = useSortOrderRoster(sessionId, phase)
-  const answers = useSortOrderAnswers(sessionId, roster, phaseId)
+  const { round } = useRoundState(sessionId, phaseId)
+  const answers = useSortOrderAnswers(sessionId, roster, phaseId, round)
   const ready = isRevealReady(roster, answers, timer.expired)
   const [order, setOrder] = useState<string[]>(() => shuffled(config.items.map((i) => i.id)))
   const [busy, setBusy] = useState(false)
@@ -192,27 +193,32 @@ export function SortOrderPlayerActive({
   const autoSubmittedRef = useRef(false)
   const hadSubmittedRef = useRef(false)
 
-  // Rejoin: if writerId already submitted for this phase, restore the locked
+  // Rejoin: if writerId already submitted for this round, restore the locked
   // view. Narrow read — only the writer's answer node, not players/*. Also
   // handles the reverse: a host "Reset Level" removes this same node, so a
   // previously-submitted answer can disappear underneath us. When it does,
   // reshuffle and drop back into the draggable view instead of staying stuck
-  // showing the old (now-deleted) result.
+  // showing the old (now-deleted) result. Round-scoped (BRIGHT-966) — re-subs
+  // when `round` changes so a round advance starts this listener fresh on
+  // the new round's (as yet unanswered) node instead of the old one.
   useEffect(() => {
-    return onValue(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), (s) => {
-      const v = s.val()
-      if (v && Array.isArray(v.value)) {
-        hadSubmittedRef.current = true
-        setSubmittedIds(v.value as string[])
-      } else if (hadSubmittedRef.current) {
-        hadSubmittedRef.current = false
-        autoSubmittedRef.current = false
-        setOrder(shuffled(config.items.map((i) => i.id)))
-        setSubmittedIds(null)
+    return onValue(
+      eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${round}`),
+      (s) => {
+        const v = s.val()
+        if (v && Array.isArray(v.value)) {
+          hadSubmittedRef.current = true
+          setSubmittedIds(v.value as string[])
+        } else if (hadSubmittedRef.current) {
+          hadSubmittedRef.current = false
+          autoSubmittedRef.current = false
+          setOrder(shuffled(config.items.map((i) => i.id)))
+          setSubmittedIds(null)
+        }
       }
-    })
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, writerId, phaseId])
+  }, [sessionId, writerId, phaseId, round])
 
   // Detect the host re-opening this same phase ("Reset Level" → resetPhase →
   // a fresh timer.endsAt for the same phaseId) and, in response, clear OUR
@@ -230,10 +236,17 @@ export function SortOrderPlayerActive({
       const prevEndsAt = lastEndsAtRef.current
       lastEndsAtRef.current = v.endsAt ?? null
       if (prevEndsAt !== undefined && v.endsAt !== prevEndsAt && hadSubmittedRef.current) {
-        remove(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`))
+        // Known gap (BRIGHT-966): clears whatever `round` currently points
+        // to at the moment this fires, not necessarily the round the
+        // player had actually submitted under, if a round advance and a
+        // "Reset Level" race each other. Reset Level is a host-only testing
+        // aid (see control.ts#resetPhase), not a player-facing path, so a
+        // stale rounds/{n} entry surviving a reset during dev testing is a
+        // manual-cleanup annoyance, not a scoring or gameplay bug.
+        remove(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${round}`))
       }
     })
-  }, [sessionId, writerId, phaseId])
+  }, [sessionId, writerId, phaseId, round])
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor))
   const onDragEnd = (e: DragEndEvent) => {
@@ -248,10 +261,13 @@ export function SortOrderPlayerActive({
 
   const submit = async () => {
     setBusy(true)
-    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
-      value: order,
-      submittedAt: serverTimestamp(),
-    })
+    await set(
+      eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${round}`),
+      {
+        value: order,
+        submittedAt: serverTimestamp(),
+      }
+    )
     setBusy(false)
   }
 
