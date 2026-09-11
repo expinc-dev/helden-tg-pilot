@@ -125,6 +125,18 @@
                 ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"
               }
             },
+            "roundState": {
+              "$phaseId": {
+                ".read": true,
+                "round": {
+                  ".write": "auth != null",
+                  ".validate": "auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val() || (newData.val() === data.val() + 1 && newData.parent().child('lastGuessNormalized').val() === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/secrets/' + $phaseId + '/round' + newData.val()).val())"
+                },
+                "lastGuessNormalized": {
+                  ".write": "auth != null"
+                }
+              }
+            },
             "phasePointer": {
               ".read": true,
               ".write": "auth != null && auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/meta/hostUid').val()"

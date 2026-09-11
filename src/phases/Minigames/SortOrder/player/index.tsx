@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
+import { ScannerPopup } from '@/components/scan/ScannerPopup'
 import {
   DndContext,
   type DragEndEvent,
@@ -26,9 +27,11 @@ import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 import { TimerRing } from '@/phases/Quiz/TimerRing'
 
 import { eref } from '@/lib/firebase'
+import { decodeQr } from '@/lib/scan/qrDetect'
 import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 
 import { isRevealReady, useRoundState, useSortOrderAnswers, useSortOrderRoster } from '../lib'
+import { submitRoundTrigger } from '../roundTrigger'
 import { type SortOrderConfig, applyRoundDiffToOrder, roundContentFor } from '../score'
 
 // This is a vertical-only reorder list — without this, dnd-kit's default drag
@@ -194,6 +197,16 @@ export function SortOrderPlayerActive({
   const [submittedIds, setSubmittedIds] = useState<string[] | null>(null)
   const autoSubmittedRef = useRef(false)
   const hadSubmittedRef = useRef(false)
+  // BRIGHT-967: real QR-trigger UI state. `scanWrong` is purely a "that code
+  // didn't work, try again" nudge - this device is never told WHY a scan
+  // failed (bad decode vs. right-shaped-but-wrong code are indistinguishable
+  // here on purpose, see roundTrigger.ts), and success needs no local flag at
+  // all: a correct scan's RTDB write flips `round` itself, which flows back
+  // in through useRoundState like any other round-advance (host button or
+  // otherwise) - this screen just reacts to `round` changing, same as always.
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanChecking, setScanChecking] = useState(false)
+  const [scanWrong, setScanWrong] = useState(false)
 
   // Round transition (BRIGHT-966): re-seed `order` whenever `round` moves
   // forward, skipping the very first render (round starts at 1, and the
@@ -246,6 +259,7 @@ export function SortOrderPlayerActive({
     hadSubmittedRef.current = false
     autoSubmittedRef.current = false
     setSubmittedIds(null)
+    setScanWrong(false)
     void lockOutgoing.then(() => seedOrderForRound(round, outgoingOrder))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round])
@@ -328,6 +342,21 @@ export function SortOrderPlayerActive({
     setBusy(false)
   }
 
+  // BRIGHT-967: capture a frame from the physical QR card, decode it, and try
+  // it as this round's advance code. A `false` result covers BOTH "nothing
+  // decoded" and "decoded fine but the RTDB rule rejected the guess" -
+  // indistinguishable here on purpose (see submitRoundTrigger/roundTrigger.ts
+  // and database.rules.json's roundState/{phaseId}/round rule), so the only
+  // feedback is "didn't work, try again", never a hint about which.
+  const handleScanCapture = async (frame: ImageData) => {
+    setScanOpen(false)
+    setScanChecking(true)
+    const decoded = await decodeQr(frame)
+    const ok = decoded ? await submitRoundTrigger(sessionId, phaseId, round, decoded) : false
+    setScanChecking(false)
+    setScanWrong(!ok)
+  }
+
   // Lock in whatever order the player has dragged to so far the moment the
   // clock hits zero — without this, someone who never hits "Selanjutnya"
   // stays stuck on the draggable view forever, since reveal only renders
@@ -367,6 +396,35 @@ export function SortOrderPlayerActive({
         </div>
         <p className="text-xl font-bold text-[#FFB800]">Jawaban tersimpan!</p>
         <p className="text-sm text-white/50">Menunggu pemain lain menjawab...</p>
+
+        {round < totalRounds && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <p className="text-xs text-white/40">
+              Cari kartu QR fisik untuk membuka ronde berikutnya.
+            </p>
+            <ActionButton
+              disabled={scanChecking}
+              onClick={() => {
+                setScanWrong(false)
+                setScanOpen(true)
+              }}
+            >
+              {scanChecking ? 'Memeriksa…' : 'Pindai QR Ronde Berikutnya'}
+            </ActionButton>
+            {scanWrong && (
+              <p className="text-xs text-[#E21B3C]">Kode belum cocok, coba pindai lagi.</p>
+            )}
+          </div>
+        )}
+
+        {scanOpen && (
+          <ScannerPopup
+            title="Pindai Kartu Ronde Berikutnya"
+            instructions="Arahkan kamera ke kartu QR fisik untuk membuka ronde berikutnya."
+            onCapture={(frame) => void handleScanCapture(frame)}
+            onClose={() => setScanOpen(false)}
+          />
+        )}
       </div>
     )
   }

@@ -171,8 +171,16 @@ const baseItems = [
         diff: { remove: ['c'], add: [{ id: 'e', label: 'E' }] },
         correctOrder: ['a', 'b', 'e'],
         timerSeconds: 60,
+        triggerCode: 'ROUND2',
+        caseSensitive: false,
       },
-      { diff: { remove: [], add: [] }, correctOrder: ['a', 'b', 'e'], timerSeconds: 120 },
+      {
+        diff: { remove: [], add: [] },
+        correctOrder: ['a', 'b', 'e'],
+        timerSeconds: 120,
+        triggerCode: 'ROUND3',
+        caseSensitive: false,
+      },
     ],
   }
   const sets = roundItemSets(cfg)
@@ -201,8 +209,16 @@ const multiRoundConfig = {
       diff: { remove: ['c'], add: [{ id: 'e', label: 'E' }] },
       correctOrder: ['a', 'e', 'b'],
       timerSeconds: 60,
+      triggerCode: 'ROUND2',
+      caseSensitive: false,
     },
-    { diff: { remove: [], add: [] }, correctOrder: ['b', 'a', 'e'], timerSeconds: 120 },
+    {
+      diff: { remove: [], add: [] },
+      correctOrder: ['b', 'a', 'e'],
+      timerSeconds: 120,
+      triggerCode: 'ROUND3',
+      caseSensitive: false,
+    },
   ],
 }
 

@@ -85,14 +85,21 @@ export function HostSortOrder({
     }
   }
 
-  // TEMPORARY manual trigger (BRIGHT-966 subtask 5) — stands in for the real
-  // QR scan (BRIGHT-967) so round mechanics can be verified end-to-end before
-  // the scan-and-validate flow exists. Deliberately callable at any point
-  // during a round, timer running or not: that's what exercises decision C
-  // (an early advance locks whatever the player was mid-drag on, exactly like
-  // timer expiry). Only rendered for an actual multi-round config, before the
-  // final round is reached - advanceRound() is already a safe no-op past
-  // that, this just keeps the button from being clicked pointlessly.
+  // Host-only round-advance override. Started as a BRIGHT-966 subtask 5
+  // temporary test trigger (stood in for the real QR scan while round
+  // mechanics were being verified); now that the real scan (BRIGHT-967,
+  // SortOrder/roundTrigger.ts) exists, this is KEPT deliberately as a live-
+  // event fallback (physical card lost/damaged, bad lighting, camera
+  // trouble) rather than removed, decided with product, see the "Fallback"
+  // label below so a host doesn't reach for it as the default path over the
+  // actual physical cards. Deliberately callable at any point during a
+  // round, timer running or not: that's what exercises decision C (an early
+  // advance locks whatever the player was mid-drag on, exactly like timer
+  // expiry), same underlying advanceRound() a validated QR scan's
+  // equivalent RTDB write triggers, just host-authored instead of
+  // secret-checked. Only rendered for an actual multi-round config, before
+  // the final round is reached - advanceRound() is already a safe no-op
+  // past that, this just keeps the button from being clicked pointlessly.
   const handleAdvanceRound = async () => {
     if (advancing) return
     setAdvancing(true)
@@ -138,9 +145,10 @@ export function HostSortOrder({
               type="button"
               onClick={handleAdvanceRound}
               disabled={advancing}
+              title="Cuma dipakai kalau kartu QR fisik hilang/rusak atau gagal discan - alur utamanya tetap scan kartu"
               className="rounded-lg border border-[#FFB800]/40 bg-[#FFB800]/10 px-3 py-1.5 text-xs font-semibold text-[#FFB800] hover:bg-[#FFB800]/20 disabled:opacity-40"
             >
-              {advancing ? 'Memproses…' : `Ronde Berikutnya (${round}/${totalRounds})`}
+              {advancing ? 'Memproses…' : `Fallback: Ronde Berikutnya (${round}/${totalRounds})`}
             </button>
           )}
           <button

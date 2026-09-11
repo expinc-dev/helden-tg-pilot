@@ -28,10 +28,23 @@ export type SortOrderRoundDiff = z.infer<typeof sortOrderRoundDiffSchema>
 // below). rounds[0] is round 2, rounds[1] is round 3, so the array index is
 // off by one from the human round number, and off by two from "round 3" -
 // worth double-checking any time this is indexed.
+//
+// triggerCode (BRIGHT-967): the plaintext code printed on THIS round's
+// physical QR card (round 2's rounds[0].triggerCode is scanned to advance
+// FROM round 1 INTO round 2, etc). Host-seeded into
+// sessions/{id}/secrets/{phaseId}/round{N} at phase-open (normalized the
+// same way codeinput's `expected` is - see control.ts and
+// database.rules.json) and never sent to a player's client as plaintext;
+// the player's own scan is normalized identically and compared server-side
+// by the RTDB rule, this device never learns whether it guessed right except
+// by whether the write succeeded. caseSensitive mirrors codeinput's field of
+// the same name and default.
 export const sortOrderRoundSchema = z.object({
   diff: sortOrderRoundDiffSchema,
   correctOrder: z.array(z.string()).min(2),
   timerSeconds: z.number().int().min(1),
+  triggerCode: z.string().min(1),
+  caseSensitive: z.boolean().default(false),
 })
 export type SortOrderRound = z.infer<typeof sortOrderRoundSchema>
 

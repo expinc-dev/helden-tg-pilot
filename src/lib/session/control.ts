@@ -7,6 +7,7 @@ import type {
 } from '@helden-inc/tg-schema'
 import { get, onValue, ref, remove, set, update } from 'firebase/database'
 
+import { sortOrderConfigSchema } from '@/phases/Minigames/SortOrder/score'
 import { normalizeCode } from '@/phases/codecheck'
 
 import { demoBundle } from '@/lib/demoBundle'
@@ -57,6 +58,18 @@ async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
 // Quiz answer keys are NOT seeded here: the host grades quiz reveal directly
 // from the (full) bundle's question.correctId, and the player-safe bundle
 // strips it — so quiz correctness never needs a server-side secret.
+//
+// sort_order (BRIGHT-967): same idea, one secret per EXTRA round, at
+// secrets/{phaseId}/round{N} (N=2,3,...), the code printed on that round's
+// physical QR card. This is the one place control.ts parses a minigame's own
+// local config shape (sortOrderConfigSchema) rather than staying at
+// phase.content.type/templateId like openPhaseRoundState below does; that's
+// a deliberate exception, not an inconsistency: this function already reads
+// content-specific fields for codeinput above, seeding secrets from a
+// template's config is the same job, just one layer of templateId dispatch
+// deeper. safeParse + early-return on failure so a malformed/legacy config
+// (no `rounds` authored, or authored before this field existed) never throws,
+// just seeds nothing.
 async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
   if (!phase) return
   if (phase.content.type === 'codeinput') {
@@ -65,6 +78,20 @@ async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
       eref(`sessions/${sessionId}/secrets/${phase.id}`),
       normalizeCode(expected, caseSensitive)
     )
+    return
+  }
+  if (phase.content.type === 'minigame' && phase.content.templateId === 'sort_order') {
+    const parsed = sortOrderConfigSchema.safeParse(phase.content.config)
+    if (!parsed.success) return
+    const entries = parsed.data.rounds.map((round, i) => {
+      const roundNumber = i + 2 // rounds[0] is round 2, see sortOrderRoundSchema's note
+      return [
+        `secrets/${phase.id}/round${roundNumber}`,
+        normalizeCode(round.triggerCode, round.caseSensitive),
+      ] as const
+    })
+    if (entries.length === 0) return
+    await update(eref(`sessions/${sessionId}`), Object.fromEntries(entries))
   }
 }
 
@@ -80,10 +107,10 @@ function requireHostUid(): string {
 // videoPlayback, so no removal branch for other phase types is needed -
 // a different phaseId's answers/{phaseId}/rounds/{round} path (see
 // SortOrder/lib.ts useSortOrderAnswers) simply never collides with this one.
-// Only phase.content.type/templateId are read here (both plain schema
-// fields), not the minigame's local Zod config schema - control.ts stays
-// decoupled from any one template's config shape, same as the codepiece
-// check right below.
+// This particular function only needs phase.content.type/templateId (plain
+// schema fields) to decide whether to run at all - it doesn't need
+// sortOrderConfigSchema itself, unlike openPhaseSecrets above, which does
+// parse it (to seed round trigger-code secrets, BRIGHT-967).
 async function openPhaseRoundState(sessionId: string, phase: Phase | undefined) {
   if (!phase) return
   const isSortOrder = phase.content.type === 'minigame' && phase.content.templateId === 'sort_order'
