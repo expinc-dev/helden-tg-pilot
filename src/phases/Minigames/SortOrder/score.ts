@@ -78,6 +78,42 @@ export function roundItemSets(config: SortOrderConfig): SortOrderItem[][] {
   return sets
 }
 
+// Effective item set + correctOrder for one 1-indexed round of `config`
+// (BRIGHT-966). Round 1 is the base (config.items/correctOrder); round N>=2
+// comes from config.rounds[N-2] (see the off-by-two note on
+// sortOrderRoundSchema) for correctOrder, combined with roundItemSets(config)
+// for the item set (carries labels for added items like E, which config.items
+// alone never has). Falls back to round 1 if `round` is out of range - should
+// not happen since roundState never advances past config.rounds.length + 1,
+// but a display fallback is cheaper than a crash if it ever does.
+export function roundContentFor(
+  config: SortOrderConfig,
+  round: number
+): { items: SortOrderItem[]; correctOrder: string[] } {
+  const extra = round >= 2 ? config.rounds[round - 2] : undefined
+  if (!extra) return { items: config.items, correctOrder: config.correctOrder }
+  const sets = roundItemSets(config)
+  return { items: sets[round - 1] ?? config.items, correctOrder: extra.correctOrder }
+}
+
+// Applies a round's diff to a previously-submitted ANSWER order (bare ids,
+// no labels) rather than an authored item list - used at round-advance time
+// to seed the next round's starting drag order from the player's own
+// previous submission (BRIGHT-966 AC: "starts from previous result"). Same
+// remove/add (insertAt) semantics as applyRoundDiff above, just operating on
+// ids since a submitted answer never carries labels; kept as a separate
+// function rather than reusing applyRoundDiff with placeholder labels, so
+// neither reads as more general than it actually is.
+export function applyRoundDiffToOrder(prevOrder: string[], diff: SortOrderRoundDiff): string[] {
+  const kept = prevOrder.filter((id) => !diff.remove.includes(id))
+  const result = [...kept]
+  for (const item of diff.add) {
+    const at = item.insertAt !== undefined ? Math.min(item.insertAt, result.length) : result.length
+    result.splice(at, 0, item.id)
+  }
+  return result
+}
+
 // Exact-match correctness on the ordered id list. Partial credit not modelled
 // in v1 (blueprint §9 says "correctness + speed", not N-of-M). Clock skew on
 // answerSubmittedAt is clamped to 0 so a stale device can't earn negative time.

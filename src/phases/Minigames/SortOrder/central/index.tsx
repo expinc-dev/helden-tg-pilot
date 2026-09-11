@@ -17,7 +17,7 @@ import {
   useSortOrderAnswers,
   useSortOrderRoster,
 } from '../lib'
-import type { SortOrderConfig } from '../score'
+import { type SortOrderConfig, roundContentFor } from '../score'
 
 type ScoreMode = 'game' | 'total'
 const GAME_ACCENT = '#2FB8FF'
@@ -34,6 +34,7 @@ export function CentralSortOrder({
 }) {
   const roster = useSortOrderRoster(sessionId, phase)
   const { round } = useRoundState(sessionId, phase.id)
+  const content = roundContentFor(config, round)
   const answers = useSortOrderAnswers(sessionId, roster, phase.id, round)
   const timer = useTimer(sessionId, phase)
   const totalSec = phase.timer?.seconds ?? 60
@@ -66,18 +67,18 @@ export function CentralSortOrder({
           <h2 className="mb-10 text-center text-4xl font-bold text-white">
             Correct Order:{' '}
             <span className="tracking-widest text-white/30 select-none">
-              {config.items.map(() => '*').join(' - ')}
+              {content.items.map(() => '*').join(' - ')}
             </span>
           </h2>
           <ol className="flex flex-col gap-5">
-            {config.items.map((item) => (
+            {content.items.map((item) => (
               <li
                 key={item.id}
                 className="flex items-center gap-5 border px-8 py-6 text-2xl text-white"
                 style={{ borderRadius: 8, borderColor: '#99A3AE', background: '#1F1F1F' }}
               >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FDDB00] text-lg font-bold text-black">
-                  {config.correctOrder.indexOf(item.id) + 1}
+                  {content.correctOrder.indexOf(item.id) + 1}
                 </span>
                 <span className="flex-1">{item.label}</span>
               </li>

@@ -20,7 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
-import { onValue, remove, serverTimestamp, set } from 'firebase/database'
+import { get, onValue, remove, serverTimestamp, set } from 'firebase/database'
 
 import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 import { TimerRing } from '@/phases/Quiz/TimerRing'
@@ -29,7 +29,7 @@ import { eref } from '@/lib/firebase'
 import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 
 import { isRevealReady, useRoundState, useSortOrderAnswers, useSortOrderRoster } from '../lib'
-import type { SortOrderConfig } from '../score'
+import { type SortOrderConfig, applyRoundDiffToOrder, roundContentFor } from '../score'
 
 // This is a vertical-only reorder list — without this, dnd-kit's default drag
 // transform follows the pointer on both axes, letting a row slide sideways
@@ -185,6 +185,7 @@ export function SortOrderPlayerActive({
   const totalSec = phase.timer?.seconds ?? 60
   const roster = useSortOrderRoster(sessionId, phase)
   const { round } = useRoundState(sessionId, phaseId)
+  const content = roundContentFor(config, round)
   const answers = useSortOrderAnswers(sessionId, roster, phaseId, round)
   const ready = isRevealReady(roster, answers, timer.expired)
   const [order, setOrder] = useState<string[]>(() => shuffled(config.items.map((i) => i.id)))
@@ -192,6 +193,52 @@ export function SortOrderPlayerActive({
   const [submittedIds, setSubmittedIds] = useState<string[] | null>(null)
   const autoSubmittedRef = useRef(false)
   const hadSubmittedRef = useRef(false)
+
+  // Round transition (BRIGHT-966): re-seed `order` whenever `round` moves
+  // forward, skipping the very first render (round starts at 1, and the
+  // lazy useState initializer above already handles that case). Round 1's
+  // own content never needs this — only round>=2, where the AC says the
+  // starting order carries over from the previous round's submitted answer
+  // with that round's diff applied, not a fresh shuffle.
+  //
+  // Declared BEFORE the rejoin-listener effect below on purpose: its ref
+  // resets (hadSubmittedRef/autoSubmittedRef) run synchronously here, before
+  // that listener's cleanup+resubscribe for the new round's answer node can
+  // fire, so the listener's own "was submitted, now isn't -> reshuffle from
+  // round 1" fallback (meant for host "Reset Level") never fires for what is
+  // actually a round advance, not a reset.
+  // Round 1: fresh shuffle. Round>=2: carry the previous round's submitted
+  // order forward (one-shot get, not a subscription — we only need it at the
+  // instant of transition) with that round's diff applied. Pulled out of the
+  // effect below into its own function (same reason `submit` further down
+  // isn't inlined into its effect either) so the effect body itself never
+  // calls setOrder directly.
+  const seedOrderForRound = (r: number, prevRound: number) => {
+    if (r <= 1) {
+      setOrder(shuffled(content.items.map((i) => i.id)))
+      return
+    }
+    const roundDef = config.rounds[r - 2]
+    void get(
+      eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${prevRound}`)
+    ).then((snap) => {
+      const prevValue = (snap.val() as { value?: string[] } | null)?.value
+      const base = prevValue ?? content.items.map((i) => i.id)
+      setOrder(roundDef ? applyRoundDiffToOrder(base, roundDef.diff) : base)
+    })
+  }
+
+  const prevRoundRef = useRef(round)
+  useEffect(() => {
+    if (round === prevRoundRef.current) return
+    const prevRound = prevRoundRef.current
+    prevRoundRef.current = round
+    hadSubmittedRef.current = false
+    autoSubmittedRef.current = false
+    setSubmittedIds(null)
+    seedOrderForRound(round, prevRound)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round])
 
   // Rejoin: if writerId already submitted for this round, restore the locked
   // view. Narrow read — only the writer's answer node, not players/*. Also
@@ -212,7 +259,7 @@ export function SortOrderPlayerActive({
         } else if (hadSubmittedRef.current) {
           hadSubmittedRef.current = false
           autoSubmittedRef.current = false
-          setOrder(shuffled(config.items.map((i) => i.id)))
+          setOrder(shuffled(content.items.map((i) => i.id)))
           setSubmittedIds(null)
         }
       }
@@ -286,7 +333,7 @@ export function SortOrderPlayerActive({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer.expired, submittedIds])
 
-  const idToLabel = Object.fromEntries(config.items.map((i) => [i.id, i.label]))
+  const idToLabel = Object.fromEntries(content.items.map((i) => [i.id, i.label]))
 
   // Before reveal is ready, don't show the dragged order at all (correct/wrong
   // tinting would leak early) — just confirm the submission and wait, same
@@ -328,7 +375,7 @@ export function SortOrderPlayerActive({
               key={id}
               label={idToLabel[id] ?? id}
               position={i + 1}
-              correct={config.correctOrder[i] === id}
+              correct={content.correctOrder[i] === id}
             />
           ))}
         </ol>

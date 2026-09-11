@@ -9,6 +9,8 @@
 // anything since then.
 import {
   applyRoundDiff,
+  applyRoundDiffToOrder,
+  roundContentFor,
   roundItemSets,
   scoreSortOrder,
 } from '../../../src/phases/Minigames/SortOrder/score'
@@ -186,6 +188,84 @@ const baseItems = [
   ok(
     sets[2].map((i) => i.id).join(',') === 'a,b,e',
     `round 3 set unchanged from round 2 (no-op diff) (got ${sets[2].map((i) => i.id).join(',')})`
+  )
+}
+
+// --- BRIGHT-966: applyRoundDiffToOrder / roundContentFor ---
+
+const multiRoundConfig = {
+  items: baseItems,
+  correctOrder: ['a', 'b', 'c'],
+  rounds: [
+    {
+      diff: { remove: ['c'], add: [{ id: 'e', label: 'E' }] },
+      correctOrder: ['a', 'e', 'b'],
+      timerSeconds: 60,
+    },
+    { diff: { remove: [], add: [] }, correctOrder: ['b', 'a', 'e'], timerSeconds: 120 },
+  ],
+}
+
+// applyRoundDiffToOrder: carries a player's own submitted order forward,
+// applying remove/add the same way applyRoundDiff does for authored items,
+// but on bare ids (an answer has no labels attached).
+{
+  const seeded = applyRoundDiffToOrder(['c', 'b', 'a'], multiRoundConfig.rounds[0].diff)
+  ok(
+    seeded.join(',') === 'b,a,e',
+    `applyRoundDiffToOrder -> c dropped, e appended (got ${seeded.join(',')})`
+  )
+}
+{
+  const seeded = applyRoundDiffToOrder(['c', 'b', 'a'], {
+    remove: ['c'],
+    add: [{ id: 'e', label: 'E', insertAt: 0 }],
+  })
+  ok(
+    seeded.join(',') === 'e,b,a',
+    `applyRoundDiffToOrder w/ insertAt:0 -> e first (got ${seeded.join(',')})`
+  )
+}
+
+// roundContentFor: round 1 is the base; round 2/3 pull correctOrder from
+// config.rounds[round-2] and the item set from roundItemSets, so a newly
+// added item's label is present even though it's absent from config.items.
+{
+  const r1 = roundContentFor(multiRoundConfig, 1)
+  ok(
+    r1.items.map((i) => i.id).join(',') === 'a,b,c',
+    `roundContentFor(1) -> base items (got ${r1.items.map((i) => i.id).join(',')})`
+  )
+  ok(
+    r1.correctOrder.join(',') === 'a,b,c',
+    `roundContentFor(1) -> base correctOrder (got ${r1.correctOrder.join(',')})`
+  )
+
+  const r2 = roundContentFor(multiRoundConfig, 2)
+  ok(
+    r2.items.map((i) => i.id).join(',') === 'a,b,e',
+    `roundContentFor(2) -> post-diff items (got ${r2.items.map((i) => i.id).join(',')})`
+  )
+  ok(
+    r2.items.find((i) => i.id === 'e')?.label === 'E',
+    'roundContentFor(2) -> e has a label even though config.items never carries it'
+  )
+  ok(
+    r2.correctOrder.join(',') === 'a,e,b',
+    `roundContentFor(2) -> round 2's own correctOrder (got ${r2.correctOrder.join(',')})`
+  )
+
+  const r3 = roundContentFor(multiRoundConfig, 3)
+  ok(
+    r3.correctOrder.join(',') === 'b,a,e',
+    `roundContentFor(3) -> round 3's own correctOrder (got ${r3.correctOrder.join(',')})`
+  )
+
+  // Out of range (no rounds[round-2] entry) -> falls back to round 1's content.
+  const r9 = roundContentFor(multiRoundConfig, 9)
+  ok(
+    r9.correctOrder.join(',') === 'a,b,c',
+    `roundContentFor(9) out of range -> falls back to round 1 (got ${r9.correctOrder.join(',')})`
   )
 }
 

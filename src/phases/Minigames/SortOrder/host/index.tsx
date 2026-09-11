@@ -17,7 +17,7 @@ import {
   useSortOrderAnswers,
   useSortOrderRoster,
 } from '../lib'
-import type { SortOrderConfig } from '../score'
+import { type SortOrderConfig, roundContentFor } from '../score'
 import { PlayerAnswersPanel } from './components/PlayerAnswersPanel'
 
 const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
@@ -44,6 +44,7 @@ export function HostSortOrder({
 }) {
   const roster = useSortOrderRoster(sessionId, phase)
   const { round } = useRoundState(sessionId, phase.id)
+  const content = roundContentFor(config, round)
   const answers = useSortOrderAnswers(sessionId, roster, phase.id, round)
   const timer = useTimer(sessionId, phase)
   const pointer = usePhasePointer(sessionId)
@@ -79,14 +80,15 @@ export function HostSortOrder({
     }
   }
 
-  // Pre-reveal: items in authored/display order, plain badges. Post-reveal:
+  // Pre-reveal: items in this round's display order, plain badges (BRIGHT-966:
+  // round-aware via `content`, not always round 1's config.items). Post-reveal:
   // re-sorted into the correct order, each row given the same reveal
   // treatment Quiz's AnswerOptionsList uses for its correct answer.
   const displayItems = ready
-    ? config.correctOrder
-        .map((id) => config.items.find((it) => it.id === id))
+    ? content.correctOrder
+        .map((id) => content.items.find((it) => it.id === id))
         .filter((it): it is SortOrderConfig['items'][number] => !!it)
-    : config.items
+    : content.items
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
