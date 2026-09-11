@@ -1,5 +1,4 @@
 import { type SortOrderAnswer, type SortOrderParticipant } from '../lib'
-import type { SortOrderConfig } from '../score'
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -11,16 +10,19 @@ function initials(name: string): string {
 // Shared row list (rank, avatar initials, name, per-position correctness bar,
 // score) used by both central's full-bleed leaderboard and the host's
 // floating PlayerAnswersPanel — same data, two different chrome wrappers.
+// Takes `correctOrder` directly (BRIGHT-966: the FINAL round's correctOrder,
+// resolved by the caller via roundContentFor) rather than a whole
+// SortOrderConfig, since that's the only field this component ever reads.
 export function PlayerAnswerRows({
   roster,
   answers,
-  config,
+  correctOrder,
   values,
   accent,
 }: {
   roster: SortOrderParticipant[]
   answers: Record<string, SortOrderAnswer | undefined>
-  config: SortOrderConfig
+  correctOrder: string[]
   values: Record<string, number>
   accent: string
 }) {
@@ -40,7 +42,7 @@ export function PlayerAnswerRows({
             </div>
             <span className="w-36 shrink-0 truncate text-white">{r.label}</span>
             <div className="flex flex-1 gap-1">
-              {config.correctOrder.map((id, pos) => (
+              {correctOrder.map((id, pos) => (
                 <span
                   key={pos}
                   className="h-2.5 flex-1 rounded"

@@ -91,20 +91,43 @@ async function openPhaseRoundState(sessionId: string, phase: Phase | undefined) 
   await set(eref(`sessions/${sessionId}/roundState/${phase.id}`), { round: 1 })
 }
 
-// Host-only. Advances sessions/{id}/roundState/{phaseId}.round by one,
-// clamped to maxRound (a sort_order config with N entries in `rounds` tops
-// out at maxRound = N + 1). No-op once already at maxRound. Not called from
-// anywhere yet (BRIGHT-966 subtask 2) - this is the function a temporary
+// Host-only. Advances sessions/{id}/roundState/{phaseId}.round by one and
+// re-arms sessions/{id}/timer for the round being entered (BRIGHT-966: round
+// 2/3 are timed, so this is the moment their per-round countdown starts).
+// `roundTimerSeconds` is `config.rounds.map(r => r.timerSeconds)` - the
+// caller's job to resolve from its own parsed SortOrderConfig, same reason
+// openPhaseRoundState above never parses that config itself. Its length
+// doubles as maxRound - 1 (N entries in `rounds` means N+1 total rounds), so
+// there's nothing else to pass in. No-op once already at maxRound. Reuses
+// the exact sessions/{id}/timer node + SessionTimer shape openPhaseTimer
+// writes, so useTimer/TimerRing/the auto-submit-on-expiry lock in
+// SortOrderPlayerActive all keep working unchanged. Not called from
+// anywhere yet (BRIGHT-966 subtask 2/4) - this is the function a temporary
 // manual "next round" test button will call, and later the real QR-trigger
 // (BRIGHT-967) once its scan is validated; only the caller changes between
 // those two, not this function.
-export async function advanceRound(sessionId: string, phaseId: string, maxRound: number) {
+export async function advanceRound(
+  sessionId: string,
+  phaseId: string,
+  roundTimerSeconds: number[]
+) {
   requireHostUid()
   const node = eref(`sessions/${sessionId}/roundState/${phaseId}`)
   const snap = await get(node)
   const current = (snap.val() as { round?: number } | null)?.round ?? 1
+  const maxRound = roundTimerSeconds.length + 1
   if (current >= maxRound) return
-  await set(node, { round: current + 1 })
+  const next = current + 1
+  await set(node, { round: next })
+  const seconds = roundTimerSeconds[next - 2]
+  const timerNode = eref(`sessions/${sessionId}/timer`)
+  if (seconds > 0) {
+    const offset = await serverOffsetOnce()
+    const timer: SessionTimer = { phaseId, endsAt: Date.now() + offset + seconds * 1000 }
+    await set(timerNode, timer)
+  } else {
+    await remove(timerNode)
+  }
 }
 
 // Snapshot of the "played" phase-id set — sessions/{id}/played/{phaseId}: true.

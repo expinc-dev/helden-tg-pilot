@@ -50,7 +50,8 @@ export function HostSortOrder({
   const pointer = usePhasePointer(sessionId)
   const cumulative = useCumulativeScores(sessionId, phase)
 
-  const ready = isRevealReady(roster, answers, timer.expired)
+  const totalRounds = config.rounds.length + 1
+  const ready = isRevealReady(roster, answers, timer.expired, round, totalRounds)
   // 0 fallback for the brief window before phasePointer has loaded — by the
   // time any answer exists (a prerequisite for `ready`), the phase has
   // already opened and pointer.changedAt is set, so this rarely bites.
@@ -61,7 +62,10 @@ export function HostSortOrder({
   const [resetting, setResetting] = useState(false)
   const [answersOpen, setAnswersOpen] = useState(false)
   const gameValues: Record<string, number> = Object.fromEntries(
-    roster.map((r) => [r.key, previewScore(phase, config, phaseStartMs, answers[r.writerId])])
+    roster.map((r) => [
+      r.key,
+      previewScore(phase, config, phaseStartMs, answers[r.writerId], round),
+    ])
   )
 
   // Testing aid, not a player-facing feature — re-stamps a fresh timer for
@@ -195,7 +199,10 @@ export function HostSortOrder({
               <span className="text-white/80">{r.label}</span>
               <span className="flex items-center gap-3 font-mono">
                 <span className="text-[#2FB8FF]">
-                  {Math.round(previewScore(phase, config, phaseStartMs, answers[r.writerId]))} game
+                  {Math.round(
+                    previewScore(phase, config, phaseStartMs, answers[r.writerId], round)
+                  )}{' '}
+                  game
                 </span>
                 <span className="text-[#FFB800]">{Math.round(cumulative[r.key] ?? 0)} total</span>
               </span>
@@ -208,7 +215,7 @@ export function HostSortOrder({
         <PlayerAnswersPanel
           roster={roster}
           answers={answers}
-          config={config}
+          correctOrder={content.correctOrder}
           values={gameValues}
           onClose={() => setAnswersOpen(false)}
         />

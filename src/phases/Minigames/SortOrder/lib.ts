@@ -8,7 +8,7 @@ import { scorePhase } from '@/lib/scoring/score'
 import { usePresence } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
 
-import { type SortOrderConfig, scoreSortOrder } from './score'
+import { type SortOrderConfig, roundContentFor, scoreSortOrder } from './score'
 
 export function isTeamMode(phase: Phase): boolean {
   return phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
@@ -112,15 +112,24 @@ export function useCumulativeScores(
 
 // Live "this game" score preview — pure client computation using the SAME
 // scorer + scorePhase math flush.ts runs at phase-end, so the number shown
-// during reveal matches what actually gets persisted once the host advances.
+// during reveal matches what actually gets persisted once the host advances
+// (modulo the known phaseDurationMs gap documented in flush.ts - the speed
+// bonus shown here can differ slightly from what gets persisted). Round-aware
+// (BRIGHT-966): `round` should be the FINAL round (only called once
+// isRevealReady is true) - scores off that round's items/correctOrder and
+// its own timerSeconds, not round 1's, since correctness is decided by the
+// last round only (round 1 for a legacy non-multi-round config).
 export function previewScore(
   phase: Phase,
   config: SortOrderConfig,
   phaseStartMs: number,
-  answer: SortOrderAnswer | undefined
+  answer: SortOrderAnswer | undefined,
+  round: number
 ): number {
+  const content = roundContentFor(config, round)
+  const roundTimerSeconds = round >= 2 ? config.rounds[round - 2]?.timerSeconds : undefined
   const signal = scoreSortOrder({
-    config,
+    config: { ...config, items: content.items, correctOrder: content.correctOrder },
     answer: answer?.value,
     answerSubmittedAt: answer?.submittedAt,
     phaseStartMs,
@@ -129,18 +138,27 @@ export function previewScore(
     correct: signal.correct,
     answered: signal.answered,
     elapsedMs: signal.elapsedMs,
-    phaseDurationMs: (phase.timer?.seconds ?? 0) * 1000,
+    phaseDurationMs: (roundTimerSeconds ?? phase.timer?.seconds ?? 0) * 1000,
   })
 }
 
-// Reveal gate — wait for the phase timer to run out, full stop. Previously
-// this also revealed early once every roster row had submitted, but with a
-// roster of 1 (solo play/testing) that made it fire the instant the lone
-// player submitted, well before the clock ran out.
+// Reveal gate — wait for the LAST round's timer to run out, full stop.
+// Previously this also revealed early once every roster row had submitted,
+// but with a roster of 1 (solo play/testing) that made it fire the instant
+// the lone player submitted, well before the clock ran out.
+//
+// Round-aware (BRIGHT-966): a multi-round sort_order isn't "done" just
+// because SOME round's timer expired - round 1/2 locking just advances to
+// waiting-for-next-round (see SortOrderPlayerActive), not a reveal. Only
+// round === totalRounds becomes eligible. A legacy (non-multi-round) config
+// has totalRounds 1 and round always resolves to 1, so this reduces to
+// exactly `timerExpired`, unchanged from before this feature existed.
 export function isRevealReady(
   roster: SortOrderParticipant[],
   answers: Record<string, SortOrderAnswer | undefined>,
-  timerExpired: boolean
+  timerExpired: boolean,
+  round: number,
+  totalRounds: number
 ): boolean {
-  return timerExpired
+  return round >= totalRounds && timerExpired
 }

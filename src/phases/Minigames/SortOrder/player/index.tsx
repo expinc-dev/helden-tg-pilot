@@ -187,7 +187,8 @@ export function SortOrderPlayerActive({
   const { round } = useRoundState(sessionId, phaseId)
   const content = roundContentFor(config, round)
   const answers = useSortOrderAnswers(sessionId, roster, phaseId, round)
-  const ready = isRevealReady(roster, answers, timer.expired)
+  const totalRounds = config.rounds.length + 1
+  const ready = isRevealReady(roster, answers, timer.expired, round, totalRounds)
   const [order, setOrder] = useState<string[]>(() => shuffled(config.items.map((i) => i.id)))
   const [busy, setBusy] = useState(false)
   const [submittedIds, setSubmittedIds] = useState<string[] | null>(null)
