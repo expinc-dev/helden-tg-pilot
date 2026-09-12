@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
+import { ScannerPopup } from '@/components/scan/ScannerPopup'
 import {
   DndContext,
   type DragEndEvent,
@@ -26,10 +27,12 @@ import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 import { TimerRing } from '@/phases/Quiz/TimerRing'
 
 import { eref } from '@/lib/firebase'
+import { decodeQr } from '@/lib/scan/qrDetect'
 import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 
-import { isRevealReady, useSortOrderAnswers, useSortOrderRoster } from '../lib'
-import type { SortOrderConfig } from '../score'
+import { isRevealReady, useRoundState, useSortOrderAnswers, useSortOrderRoster } from '../lib'
+import { submitRoundTrigger } from '../roundTrigger'
+import { type SortOrderConfig, applyRoundDiffToOrder, roundContentFor } from '../score'
 
 // This is a vertical-only reorder list — without this, dnd-kit's default drag
 // transform follows the pointer on both axes, letting a row slide sideways
@@ -184,35 +187,109 @@ export function SortOrderPlayerActive({
   const timer = useTimer(sessionId, phase)
   const totalSec = phase.timer?.seconds ?? 60
   const roster = useSortOrderRoster(sessionId, phase)
-  const answers = useSortOrderAnswers(sessionId, roster, phaseId)
-  const ready = isRevealReady(roster, answers, timer.expired)
+  const { round } = useRoundState(sessionId, phaseId)
+  const content = roundContentFor(config, round)
+  const answers = useSortOrderAnswers(sessionId, roster, phaseId, round)
+  const totalRounds = config.rounds.length + 1
+  const ready = isRevealReady(roster, answers, timer.expired, round, totalRounds)
   const [order, setOrder] = useState<string[]>(() => shuffled(config.items.map((i) => i.id)))
   const [busy, setBusy] = useState(false)
   const [submittedIds, setSubmittedIds] = useState<string[] | null>(null)
   const autoSubmittedRef = useRef(false)
   const hadSubmittedRef = useRef(false)
+  // BRIGHT-967: real QR-trigger UI state. `scanWrong` is purely a "that code
+  // didn't work, try again" nudge - this device is never told WHY a scan
+  // failed (bad decode vs. right-shaped-but-wrong code are indistinguishable
+  // here on purpose, see roundTrigger.ts), and success needs no local flag at
+  // all: a correct scan's RTDB write flips `round` itself, which flows back
+  // in through useRoundState like any other round-advance (host button or
+  // otherwise) - this screen just reacts to `round` changing, same as always.
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanChecking, setScanChecking] = useState(false)
+  const [scanWrong, setScanWrong] = useState(false)
 
-  // Rejoin: if writerId already submitted for this phase, restore the locked
+  // Round transition (BRIGHT-966): re-seed `order` whenever `round` moves
+  // forward, skipping the very first render (round starts at 1, and the
+  // lazy useState initializer above already handles that case). Round 1's
+  // own content never needs this — only round>=2, where the AC says the
+  // starting order carries over from the previous round's submitted answer
+  // with that round's diff applied, not a fresh shuffle.
+  //
+  // Declared BEFORE the rejoin-listener effect below on purpose: its ref
+  // resets (hadSubmittedRef/autoSubmittedRef) run synchronously here, before
+  // that listener's cleanup+resubscribe for the new round's answer node can
+  // fire, so the listener's own "was submitted, now isn't -> reshuffle from
+  // round 1" fallback (meant for host "Reset Level") never fires for what is
+  // actually a round advance, not a reset.
+  //
+  // BRIGHT-967 decision C: a round-advance trigger (manual test button for
+  // now, the real QR scan later) must lock whatever the player was mid-drag
+  // on for the round being LEFT, exactly like timer expiry already does -
+  // round-advance is just another lock trigger alongside timer.expired, not
+  // a second state machine. So this reads `submittedIds`/`order` from THIS
+  // render's closure (the round the player is leaving) BEFORE reseeding:
+  // already submitted -> lock in that; still mid-drag -> write `order` as
+  // the lock, then seed the next round from whichever one that resolved to.
+  // No RTDB read-back needed - the outgoing order is already known locally,
+  // so there's no roundtrip for a concurrent write to race against.
+  const seedOrderForRound = (r: number, outgoingOrder: string[]) => {
+    if (r <= 1) {
+      setOrder(shuffled(content.items.map((i) => i.id)))
+      return
+    }
+    const roundDef = config.rounds[r - 2]
+    setOrder(roundDef ? applyRoundDiffToOrder(outgoingOrder, roundDef.diff) : outgoingOrder)
+  }
+
+  const prevRoundRef = useRef(round)
+  useEffect(() => {
+    if (round === prevRoundRef.current) return
+    const prevRound = prevRoundRef.current
+    prevRoundRef.current = round
+    const outgoingOrder = submittedIds ?? order
+    const lockOutgoing = submittedIds
+      ? Promise.resolve()
+      : set(
+          eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${prevRound}`),
+          {
+            value: order,
+            submittedAt: serverTimestamp(),
+          }
+        )
+    hadSubmittedRef.current = false
+    autoSubmittedRef.current = false
+    setSubmittedIds(null)
+    setScanWrong(false)
+    void lockOutgoing.then(() => seedOrderForRound(round, outgoingOrder))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round])
+
+  // Rejoin: if writerId already submitted for this round, restore the locked
   // view. Narrow read — only the writer's answer node, not players/*. Also
   // handles the reverse: a host "Reset Level" removes this same node, so a
   // previously-submitted answer can disappear underneath us. When it does,
   // reshuffle and drop back into the draggable view instead of staying stuck
-  // showing the old (now-deleted) result.
+  // showing the old (now-deleted) result. Round-scoped (BRIGHT-966) — re-subs
+  // when `round` changes so a round advance starts this listener fresh on
+  // the new round's (as yet unanswered) node instead of the old one.
   useEffect(() => {
-    return onValue(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), (s) => {
-      const v = s.val()
-      if (v && Array.isArray(v.value)) {
-        hadSubmittedRef.current = true
-        setSubmittedIds(v.value as string[])
-      } else if (hadSubmittedRef.current) {
-        hadSubmittedRef.current = false
-        autoSubmittedRef.current = false
-        setOrder(shuffled(config.items.map((i) => i.id)))
-        setSubmittedIds(null)
+    return onValue(
+      eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${round}`),
+      (s) => {
+        const v = s.val()
+        if (v && Array.isArray(v.value)) {
+          hadSubmittedRef.current = true
+          setSubmittedIds(v.value as string[])
+        } else if (hadSubmittedRef.current) {
+          hadSubmittedRef.current = false
+          autoSubmittedRef.current = false
+          setOrder(shuffled(content.items.map((i) => i.id)))
+          setSubmittedIds(null)
+        }
       }
-    })
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, writerId, phaseId])
+  }, [sessionId, writerId, phaseId, round])
 
   // Detect the host re-opening this same phase ("Reset Level" → resetPhase →
   // a fresh timer.endsAt for the same phaseId) and, in response, clear OUR
@@ -230,10 +307,17 @@ export function SortOrderPlayerActive({
       const prevEndsAt = lastEndsAtRef.current
       lastEndsAtRef.current = v.endsAt ?? null
       if (prevEndsAt !== undefined && v.endsAt !== prevEndsAt && hadSubmittedRef.current) {
-        remove(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`))
+        // Known gap (BRIGHT-966): clears whatever `round` currently points
+        // to at the moment this fires, not necessarily the round the
+        // player had actually submitted under, if a round advance and a
+        // "Reset Level" race each other. Reset Level is a host-only testing
+        // aid (see control.ts#resetPhase), not a player-facing path, so a
+        // stale rounds/{n} entry surviving a reset during dev testing is a
+        // manual-cleanup annoyance, not a scoring or gameplay bug.
+        remove(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${round}`))
       }
     })
-  }, [sessionId, writerId, phaseId])
+  }, [sessionId, writerId, phaseId, round])
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor))
   const onDragEnd = (e: DragEndEvent) => {
@@ -248,11 +332,29 @@ export function SortOrderPlayerActive({
 
   const submit = async () => {
     setBusy(true)
-    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
-      value: order,
-      submittedAt: serverTimestamp(),
-    })
+    await set(
+      eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}/rounds/${round}`),
+      {
+        value: order,
+        submittedAt: serverTimestamp(),
+      }
+    )
     setBusy(false)
+  }
+
+  // BRIGHT-967: capture a frame from the physical QR card, decode it, and try
+  // it as this round's advance code. A `false` result covers BOTH "nothing
+  // decoded" and "decoded fine but the RTDB rule rejected the guess" -
+  // indistinguishable here on purpose (see submitRoundTrigger/roundTrigger.ts
+  // and database.rules.json's roundState/{phaseId}/round rule), so the only
+  // feedback is "didn't work, try again", never a hint about which.
+  const handleScanCapture = async (frame: ImageData) => {
+    setScanOpen(false)
+    setScanChecking(true)
+    const decoded = await decodeQr(frame)
+    const ok = decoded ? await submitRoundTrigger(sessionId, phaseId, round, decoded) : false
+    setScanChecking(false)
+    setScanWrong(!ok)
   }
 
   // Lock in whatever order the player has dragged to so far the moment the
@@ -270,7 +372,7 @@ export function SortOrderPlayerActive({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer.expired, submittedIds])
 
-  const idToLabel = Object.fromEntries(config.items.map((i) => [i.id, i.label]))
+  const idToLabel = Object.fromEntries(content.items.map((i) => [i.id, i.label]))
 
   // Before reveal is ready, don't show the dragged order at all (correct/wrong
   // tinting would leak early) — just confirm the submission and wait, same
@@ -294,6 +396,35 @@ export function SortOrderPlayerActive({
         </div>
         <p className="text-xl font-bold text-[#FFB800]">Jawaban tersimpan!</p>
         <p className="text-sm text-white/50">Menunggu pemain lain menjawab...</p>
+
+        {round < totalRounds && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <p className="text-xs text-white/40">
+              Cari kartu QR fisik untuk membuka ronde berikutnya.
+            </p>
+            <ActionButton
+              disabled={scanChecking}
+              onClick={() => {
+                setScanWrong(false)
+                setScanOpen(true)
+              }}
+            >
+              {scanChecking ? 'Memeriksa…' : 'Pindai QR Ronde Berikutnya'}
+            </ActionButton>
+            {scanWrong && (
+              <p className="text-xs text-[#E21B3C]">Kode belum cocok, coba pindai lagi.</p>
+            )}
+          </div>
+        )}
+
+        {scanOpen && (
+          <ScannerPopup
+            title="Pindai Kartu Ronde Berikutnya"
+            instructions="Arahkan kamera ke kartu QR fisik untuk membuka ronde berikutnya."
+            onCapture={(frame) => void handleScanCapture(frame)}
+            onClose={() => setScanOpen(false)}
+          />
+        )}
       </div>
     )
   }
@@ -312,7 +443,7 @@ export function SortOrderPlayerActive({
               key={id}
               label={idToLabel[id] ?? id}
               position={i + 1}
-              correct={config.correctOrder[i] === id}
+              correct={content.correctOrder[i] === id}
             />
           ))}
         </ol>

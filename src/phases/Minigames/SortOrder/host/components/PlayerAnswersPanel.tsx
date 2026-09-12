@@ -2,18 +2,17 @@ import { Modal } from '@/components/Modal'
 
 import { PlayerAnswerRows } from '../../components/PlayerAnswerRows'
 import { type SortOrderAnswer, type SortOrderParticipant } from '../../lib'
-import type { SortOrderConfig } from '../../score'
 
 export function PlayerAnswersPanel({
   roster,
   answers,
-  config,
+  correctOrder,
   values,
   onClose,
 }: {
   roster: SortOrderParticipant[]
   answers: Record<string, SortOrderAnswer | undefined>
-  config: SortOrderConfig
+  correctOrder: string[]
   values: Record<string, number>
   onClose: () => void
 }) {
@@ -22,7 +21,7 @@ export function PlayerAnswersPanel({
       <PlayerAnswerRows
         roster={roster}
         answers={answers}
-        config={config}
+        correctOrder={correctOrder}
         values={values}
         accent="#FFB800"
       />

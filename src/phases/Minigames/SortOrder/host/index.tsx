@@ -5,7 +5,7 @@ import { Icon } from '@iconify/react'
 
 import { TimerRing } from '@/phases/Quiz/TimerRing'
 
-import { resetPhase } from '@/lib/session/control'
+import { advanceRound, resetPhase } from '@/lib/session/control'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { useTimer } from '@/lib/sync/useTimer'
 
@@ -13,10 +13,11 @@ import {
   isRevealReady,
   previewScore,
   useCumulativeScores,
+  useRoundState,
   useSortOrderAnswers,
   useSortOrderRoster,
 } from '../lib'
-import type { SortOrderConfig } from '../score'
+import { type SortOrderConfig, roundContentFor } from '../score'
 import { PlayerAnswersPanel } from './components/PlayerAnswersPanel'
 
 const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
@@ -42,12 +43,15 @@ export function HostSortOrder({
   config: SortOrderConfig
 }) {
   const roster = useSortOrderRoster(sessionId, phase)
-  const answers = useSortOrderAnswers(sessionId, roster, phase.id)
+  const { round } = useRoundState(sessionId, phase.id)
+  const content = roundContentFor(config, round)
+  const answers = useSortOrderAnswers(sessionId, roster, phase.id, round)
   const timer = useTimer(sessionId, phase)
   const pointer = usePhasePointer(sessionId)
   const cumulative = useCumulativeScores(sessionId, phase)
 
-  const ready = isRevealReady(roster, answers, timer.expired)
+  const totalRounds = config.rounds.length + 1
+  const ready = isRevealReady(roster, answers, timer.expired, round, totalRounds)
   // 0 fallback for the brief window before phasePointer has loaded — by the
   // time any answer exists (a prerequisite for `ready`), the phase has
   // already opened and pointer.changedAt is set, so this rarely bites.
@@ -56,9 +60,13 @@ export function HostSortOrder({
   const totalSec = phase.timer?.seconds ?? 60
   const submittedCount = roster.filter((r) => answers[r.writerId]).length
   const [resetting, setResetting] = useState(false)
+  const [advancing, setAdvancing] = useState(false)
   const [answersOpen, setAnswersOpen] = useState(false)
   const gameValues: Record<string, number> = Object.fromEntries(
-    roster.map((r) => [r.key, previewScore(phase, config, phaseStartMs, answers[r.writerId])])
+    roster.map((r) => [
+      r.key,
+      previewScore(phase, config, phaseStartMs, answers[r.writerId], round),
+    ])
   )
 
   // Testing aid, not a player-facing feature — re-stamps a fresh timer for
@@ -77,14 +85,44 @@ export function HostSortOrder({
     }
   }
 
-  // Pre-reveal: items in authored/display order, plain badges. Post-reveal:
+  // Host-only round-advance override. Started as a BRIGHT-966 subtask 5
+  // temporary test trigger (stood in for the real QR scan while round
+  // mechanics were being verified); now that the real scan (BRIGHT-967,
+  // SortOrder/roundTrigger.ts) exists, this is KEPT deliberately as a live-
+  // event fallback (physical card lost/damaged, bad lighting, camera
+  // trouble) rather than removed, decided with product, see the "Fallback"
+  // label below so a host doesn't reach for it as the default path over the
+  // actual physical cards. Deliberately callable at any point during a
+  // round, timer running or not: that's what exercises decision C (an early
+  // advance locks whatever the player was mid-drag on, exactly like timer
+  // expiry), same underlying advanceRound() a validated QR scan's
+  // equivalent RTDB write triggers, just host-authored instead of
+  // secret-checked. Only rendered for an actual multi-round config, before
+  // the final round is reached - advanceRound() is already a safe no-op
+  // past that, this just keeps the button from being clicked pointlessly.
+  const handleAdvanceRound = async () => {
+    if (advancing) return
+    setAdvancing(true)
+    try {
+      await advanceRound(
+        sessionId,
+        phase.id,
+        config.rounds.map((r) => r.timerSeconds)
+      )
+    } finally {
+      setAdvancing(false)
+    }
+  }
+
+  // Pre-reveal: items in this round's display order, plain badges (BRIGHT-966:
+  // round-aware via `content`, not always round 1's config.items). Post-reveal:
   // re-sorted into the correct order, each row given the same reveal
   // treatment Quiz's AnswerOptionsList uses for its correct answer.
   const displayItems = ready
-    ? config.correctOrder
-        .map((id) => config.items.find((it) => it.id === id))
+    ? content.correctOrder
+        .map((id) => content.items.find((it) => it.id === id))
         .filter((it): it is SortOrderConfig['items'][number] => !!it)
-    : config.items
+    : content.items
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
@@ -101,14 +139,27 @@ export function HostSortOrder({
         ) : (
           <span />
         )}
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={resetting}
-          className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 hover:text-white disabled:opacity-40"
-        >
-          {resetting ? 'Mereset…' : 'Reset Level'}
-        </button>
+        <div className="flex items-center gap-2">
+          {config.rounds.length > 0 && !ready && round < totalRounds && (
+            <button
+              type="button"
+              onClick={handleAdvanceRound}
+              disabled={advancing}
+              title="Cuma dipakai kalau kartu QR fisik hilang/rusak atau gagal discan - alur utamanya tetap scan kartu"
+              className="rounded-lg border border-[#FFB800]/40 bg-[#FFB800]/10 px-3 py-1.5 text-xs font-semibold text-[#FFB800] hover:bg-[#FFB800]/20 disabled:opacity-40"
+            >
+              {advancing ? 'Memproses…' : `Fallback: Ronde Berikutnya (${round}/${totalRounds})`}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={resetting}
+            className="rounded-lg border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/70 hover:text-white disabled:opacity-40"
+          >
+            {resetting ? 'Mereset…' : 'Reset Level'}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col items-center gap-4">
@@ -191,7 +242,10 @@ export function HostSortOrder({
               <span className="text-white/80">{r.label}</span>
               <span className="flex items-center gap-3 font-mono">
                 <span className="text-[#2FB8FF]">
-                  {Math.round(previewScore(phase, config, phaseStartMs, answers[r.writerId]))} game
+                  {Math.round(
+                    previewScore(phase, config, phaseStartMs, answers[r.writerId], round)
+                  )}{' '}
+                  game
                 </span>
                 <span className="text-[#FFB800]">{Math.round(cumulative[r.key] ?? 0)} total</span>
               </span>
@@ -204,7 +258,7 @@ export function HostSortOrder({
         <PlayerAnswersPanel
           roster={roster}
           answers={answers}
-          config={config}
+          correctOrder={content.correctOrder}
           values={gameValues}
           onClose={() => setAnswersOpen(false)}
         />

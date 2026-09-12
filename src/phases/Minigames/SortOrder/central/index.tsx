@@ -13,10 +13,11 @@ import {
   isRevealReady,
   previewScore,
   useCumulativeScores,
+  useRoundState,
   useSortOrderAnswers,
   useSortOrderRoster,
 } from '../lib'
-import type { SortOrderConfig } from '../score'
+import { type SortOrderConfig, roundContentFor } from '../score'
 
 type ScoreMode = 'game' | 'total'
 const GAME_ACCENT = '#2FB8FF'
@@ -32,14 +33,17 @@ export function CentralSortOrder({
   config: SortOrderConfig
 }) {
   const roster = useSortOrderRoster(sessionId, phase)
-  const answers = useSortOrderAnswers(sessionId, roster, phase.id)
+  const { round } = useRoundState(sessionId, phase.id)
+  const content = roundContentFor(config, round)
+  const answers = useSortOrderAnswers(sessionId, roster, phase.id, round)
   const timer = useTimer(sessionId, phase)
   const totalSec = phase.timer?.seconds ?? 60
   const pointer = usePhasePointer(sessionId)
   const cumulative = useCumulativeScores(sessionId, phase)
   const [mode, setMode] = useState<ScoreMode>('game')
 
-  const ready = isRevealReady(roster, answers, timer.expired)
+  const totalRounds = config.rounds.length + 1
+  const ready = isRevealReady(roster, answers, timer.expired, round, totalRounds)
   // 0 fallback for the brief window before phasePointer has loaded — by the
   // time any answer exists (a prerequisite for `ready`), the phase has
   // already opened and pointer.changedAt is set, so this rarely bites.
@@ -64,18 +68,18 @@ export function CentralSortOrder({
           <h2 className="mb-10 text-center text-4xl font-bold text-white">
             Correct Order:{' '}
             <span className="tracking-widest text-white/30 select-none">
-              {config.items.map(() => '*').join(' - ')}
+              {content.items.map(() => '*').join(' - ')}
             </span>
           </h2>
           <ol className="flex flex-col gap-5">
-            {config.items.map((item) => (
+            {content.items.map((item) => (
               <li
                 key={item.id}
                 className="flex items-center gap-5 border px-8 py-6 text-2xl text-white"
                 style={{ borderRadius: 8, borderColor: '#99A3AE', background: '#1F1F1F' }}
               >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FDDB00] text-lg font-bold text-black">
-                  {config.correctOrder.indexOf(item.id) + 1}
+                  {content.correctOrder.indexOf(item.id) + 1}
                 </span>
                 <span className="flex-1">{item.label}</span>
               </li>
@@ -89,7 +93,10 @@ export function CentralSortOrder({
   const values: Record<string, number> =
     mode === 'game'
       ? Object.fromEntries(
-          roster.map((r) => [r.key, previewScore(phase, config, phaseStartMs, answers[r.writerId])])
+          roster.map((r) => [
+            r.key,
+            previewScore(phase, config, phaseStartMs, answers[r.writerId], round),
+          ])
         )
       : Object.fromEntries(roster.map((r) => [r.key, cumulative[r.key] ?? 0]))
   const accent = mode === 'game' ? GAME_ACCENT : TOTAL_ACCENT
@@ -127,7 +134,7 @@ export function CentralSortOrder({
         <PlayerAnswerRows
           roster={roster}
           answers={answers}
-          config={config}
+          correctOrder={content.correctOrder}
           values={values}
           accent={accent}
         />

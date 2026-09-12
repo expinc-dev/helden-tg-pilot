@@ -7,6 +7,7 @@ import type {
 } from '@helden-inc/tg-schema'
 import { get, onValue, ref, remove, set, update } from 'firebase/database'
 
+import { sortOrderConfigSchema } from '@/phases/Minigames/SortOrder/score'
 import { normalizeCode } from '@/phases/codecheck'
 
 import { demoBundle } from '@/lib/demoBundle'
@@ -57,6 +58,18 @@ async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
 // Quiz answer keys are NOT seeded here: the host grades quiz reveal directly
 // from the (full) bundle's question.correctId, and the player-safe bundle
 // strips it — so quiz correctness never needs a server-side secret.
+//
+// sort_order (BRIGHT-967): same idea, one secret per EXTRA round, at
+// secrets/{phaseId}/round{N} (N=2,3,...), the code printed on that round's
+// physical QR card. This is the one place control.ts parses a minigame's own
+// local config shape (sortOrderConfigSchema) rather than staying at
+// phase.content.type/templateId like openPhaseRoundState below does; that's
+// a deliberate exception, not an inconsistency: this function already reads
+// content-specific fields for codeinput above, seeding secrets from a
+// template's config is the same job, just one layer of templateId dispatch
+// deeper. safeParse + early-return on failure so a malformed/legacy config
+// (no `rounds` authored, or authored before this field existed) never throws,
+// just seeds nothing.
 async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
   if (!phase) return
   if (phase.content.type === 'codeinput') {
@@ -65,6 +78,20 @@ async function openPhaseSecrets(sessionId: string, phase: Phase | undefined) {
       eref(`sessions/${sessionId}/secrets/${phase.id}`),
       normalizeCode(expected, caseSensitive)
     )
+    return
+  }
+  if (phase.content.type === 'minigame' && phase.content.templateId === 'sort_order') {
+    const parsed = sortOrderConfigSchema.safeParse(phase.content.config)
+    if (!parsed.success) return
+    const entries = parsed.data.rounds.map((round, i) => {
+      const roundNumber = i + 2 // rounds[0] is round 2, see sortOrderRoundSchema's note
+      return [
+        `secrets/${phase.id}/round${roundNumber}`,
+        normalizeCode(round.triggerCode, round.caseSensitive),
+      ] as const
+    })
+    if (entries.length === 0) return
+    await update(eref(`sessions/${sessionId}`), Object.fromEntries(entries))
   }
 }
 
@@ -72,6 +99,62 @@ function requireHostUid(): string {
   const uid = auth.currentUser?.uid
   if (!uid) throw new Error('control.ts called before anonymous sign-in resolved')
   return uid
+}
+
+// Host-only. Seeds sessions/{id}/roundState/{phaseId} = { round: 1 } for
+// sort_order phases (BRIGHT-966 multi-round). Keyed by phaseId like
+// secrets/fragmentOrder above, not a session-singleton like timer/
+// videoPlayback, so no removal branch for other phase types is needed -
+// a different phaseId's answers/{phaseId}/rounds/{round} path (see
+// SortOrder/lib.ts useSortOrderAnswers) simply never collides with this one.
+// This particular function only needs phase.content.type/templateId (plain
+// schema fields) to decide whether to run at all - it doesn't need
+// sortOrderConfigSchema itself, unlike openPhaseSecrets above, which does
+// parse it (to seed round trigger-code secrets, BRIGHT-967).
+async function openPhaseRoundState(sessionId: string, phase: Phase | undefined) {
+  if (!phase) return
+  const isSortOrder = phase.content.type === 'minigame' && phase.content.templateId === 'sort_order'
+  if (!isSortOrder) return
+  await set(eref(`sessions/${sessionId}/roundState/${phase.id}`), { round: 1 })
+}
+
+// Host-only. Advances sessions/{id}/roundState/{phaseId}.round by one and
+// re-arms sessions/{id}/timer for the round being entered (BRIGHT-966: round
+// 2/3 are timed, so this is the moment their per-round countdown starts).
+// `roundTimerSeconds` is `config.rounds.map(r => r.timerSeconds)` - the
+// caller's job to resolve from its own parsed SortOrderConfig, same reason
+// openPhaseRoundState above never parses that config itself. Its length
+// doubles as maxRound - 1 (N entries in `rounds` means N+1 total rounds), so
+// there's nothing else to pass in. No-op once already at maxRound. Reuses
+// the exact sessions/{id}/timer node + SessionTimer shape openPhaseTimer
+// writes, so useTimer/TimerRing/the auto-submit-on-expiry lock in
+// SortOrderPlayerActive all keep working unchanged. Not called from
+// anywhere yet (BRIGHT-966 subtask 2/4) - this is the function a temporary
+// manual "next round" test button will call, and later the real QR-trigger
+// (BRIGHT-967) once its scan is validated; only the caller changes between
+// those two, not this function.
+export async function advanceRound(
+  sessionId: string,
+  phaseId: string,
+  roundTimerSeconds: number[]
+) {
+  requireHostUid()
+  const node = eref(`sessions/${sessionId}/roundState/${phaseId}`)
+  const snap = await get(node)
+  const current = (snap.val() as { round?: number } | null)?.round ?? 1
+  const maxRound = roundTimerSeconds.length + 1
+  if (current >= maxRound) return
+  const next = current + 1
+  await set(node, { round: next })
+  const seconds = roundTimerSeconds[next - 2]
+  const timerNode = eref(`sessions/${sessionId}/timer`)
+  if (seconds > 0) {
+    const offset = await serverOffsetOnce()
+    const timer: SessionTimer = { phaseId, endsAt: Date.now() + offset + seconds * 1000 }
+    await set(timerNode, timer)
+  } else {
+    await remove(timerNode)
+  }
 }
 
 // Snapshot of the "played" phase-id set — sessions/{id}/played/{phaseId}: true.
@@ -159,6 +242,7 @@ async function openPhase(sessionId: string, phase: Phase | undefined) {
     openPhaseTimer(sessionId, phase),
     openPhaseSecrets(sessionId, phase),
     openPhaseVideoPlayback(sessionId, phase),
+    openPhaseRoundState(sessionId, phase),
     // Caught separately from the others: a permission_denied here (e.g. real
     // deployed rules that predate the codepiece/fragmentOrder path) must not
     // reject this whole Promise.all and silently skip the timer/secrets/

@@ -31,7 +31,16 @@ interface TeamNode {
   codeinput?: Record<string, { attempts?: number; solved?: boolean; solvedAt?: number }>
 }
 interface PlayerLiveNode extends PresenceNode {
-  answers?: Record<string, { value: unknown; submittedAt?: number }>
+  answers?: Record<
+    string,
+    {
+      value: unknown
+      submittedAt?: number
+      // sort_order only (BRIGHT-966): round-scoped submissions, see
+      // resolveCorrectness's 'minigame' case below.
+      rounds?: Record<number, { value: unknown; submittedAt?: number }>
+    }
+  >
   status?: string
 }
 
@@ -74,7 +83,21 @@ function resolveCorrectness(
       if (!template) return null
       const parsed = template.configSchema.safeParse(phase.content.config)
       if (!parsed.success) return null
-      const ans = ctx.player.answers?.[phase.id]
+      const raw = ctx.player.answers?.[phase.id]
+      // sort_order (BRIGHT-966): submissions are round-scoped at
+      // answers/{phaseId}/rounds/{round}, never a flat answers/{phaseId}
+      // value (every sort_order submit writes under rounds/{n}, multi-round
+      // or not - round defaults to 1 when no `rounds` are authored). Score
+      // off the LAST round only: rounds[] defaults to empty, so
+      // rounds.length + 1 is round 1 for a legacy/non-multi-round config and
+      // the actual final round otherwise - same lookup previewScore uses live.
+      // No other template uses this shape; if one does, promote this to a
+      // per-template answer-resolver hook on the registry instead of adding
+      // another `if (templateId === ...)` branch here.
+      const ans =
+        phase.content.templateId === 'sort_order'
+          ? raw?.rounds?.[(parsed.data.rounds?.length ?? 0) + 1]
+          : raw
       return template.scorer({
         config: parsed.data,
         answer: ans?.value,
@@ -112,6 +135,18 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
   const phaseStartMs = (pointerSnap.val()?.changedAt as number | undefined) ?? Date.now()
 
   const now = Date.now()
+  // Known gap, deferred on purpose (BRIGHT-966): this is phase.timer?.seconds
+  // for every content type, including sort_order, whose actual per-round
+  // timerSeconds (round 2/60s, round 3/120s) live in the minigame config
+  // instead. That means a multi-round sort_order's DURABLE speed bonus is
+  // computed against phase.timer (usually unset/0 for these phases) while
+  // the LIVE previewScore in SortOrder/lib.ts correctly uses the final
+  // round's own timerSeconds - so the persisted score can show a different
+  // (smaller) speed bonus than what reveal displayed live. Correctness
+  // (right/wrong) is unaffected, only the speed-bonus component. Fixing this
+  // means resolving phaseDurationMs per-content-type (like resolveCorrectness
+  // does), not just once here; left alone for now, flagged rather than
+  // silently wrong.
   const phaseDurationMs = (phase.timer?.seconds ?? 0) * 1000
   const contribs: Contribution[] = []
   for (const [playerId, p] of Object.entries(players)) {

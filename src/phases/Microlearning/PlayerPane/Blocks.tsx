@@ -125,6 +125,14 @@ export function BlockView({
   }
 }
 
+// Only http(s) may ever reach an <a href>. CMS's publishValidate already
+// rejects any other scheme at publish time (see helden-tg-cms's publish.ts /
+// validateButtonUrls), but the manual publish pipeline means a bundle can
+// reach this runtime without having gone through that check — a `javascript:`
+// URL here would execute in the clicking player's page (stored XSS), so this
+// is the actual security boundary, not a redundant belt-and-suspenders check.
+const SAFE_BUTTON_URL = /^https?:\/\//i
+
 // Bridge to Gemini (or similar): copy a prepared prompt, or open an external
 // link. Two variants share this component because CMS's ButtonBlockEditor
 // mirrors that split (see helden-tg-cms/src/components/blocks/button/).
@@ -139,7 +147,8 @@ function ButtonBlock({
     'inline-flex items-center gap-2 rounded-lg bg-[#FFB800] px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none'
 
   if (block.variant === 'external-link') {
-    const href = block.url ?? ''
+    const rawHref = block.url ?? ''
+    const href = SAFE_BUTTON_URL.test(rawHref) ? rawHref : ''
     // `pointer-events-none` when disabled or href empty — an <a> without href
     // is still keyboard-focusable and clickable, so `disabled` alone (an <a>
     // attribute that doesn't exist) isn't enough.
