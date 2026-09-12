@@ -21,6 +21,8 @@ export function PresentationRenderer({
   role,
   sessionId,
   phaseId,
+  phase,
+  playerId,
 }: {
   content: PresentationContent
   role: Role
@@ -168,6 +170,9 @@ export function PresentationRenderer({
           onDraftChange={() => {}}
           disabled
           fullBleed
+          sessionId={sessionId}
+          phase={phase}
+          playerId={playerId ?? ''}
         />
       </div>
     </div>

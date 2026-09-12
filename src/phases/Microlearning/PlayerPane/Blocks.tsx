@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import type { Block } from '@helden-inc/tg-schema'
+import type { Block, Phase } from '@helden-inc/tg-schema'
 import { toast } from 'sonner'
 
 import { detectProvider, vimeoEmbedUrl, youtubeEmbedUrl } from '@/phases/Video/lib'
 
+import { renderInline, renderRichText, renderSegments } from '@/lib/richText'
 import { sanitizeHtml } from '@/lib/sanitizeHtml'
 import { mmss } from '@/lib/sync/timermath'
 
@@ -18,24 +19,30 @@ export function BlockView({
   draft,
   onDraftChange,
   disabled,
+  sessionId,
+  phase,
+  playerId,
 }: {
   block: Block
   answer: unknown
   draft: unknown
   onDraftChange: (value: unknown) => void
   disabled: boolean
+  // Only consumed by 'question' blocks whose qType is qr_scan/pattern_scan
+  // (need session context to write their own score deltas — see QuestionView).
+  sessionId: string
+  phase: Phase
+  playerId: string
 }) {
   switch (block.kind) {
     case 'text': {
-      const { heading, paragraphs } = parseTextBlock(block.markdown)
+      const { heading, segments } = parseTextBlock(block.markdown)
       return (
         <div className="flex flex-col gap-2">
           {heading && <SectionHeading text={heading} />}
-          {paragraphs.map((p, i) => (
-            <p key={i} className="text-sm leading-relaxed text-white/70">
-              {p}
-            </p>
-          ))}
+          {renderSegments(segments, {
+            paragraphClassName: 'text-sm leading-relaxed text-white/70',
+          })}
         </div>
       )
     }
@@ -51,8 +58,13 @@ export function BlockView({
           ) : (
             <div className="aspect-video w-full rounded-2xl bg-white/5" />
           )}
+          {block.title && (
+            <p className="text-sm font-semibold text-white/90">{renderInline(block.title)}</p>
+          )}
           {block.caption && (
-            <figcaption className="text-xs text-white/40">{block.caption}</figcaption>
+            <figcaption className="text-xs text-white/40">
+              {renderRichText(block.caption)}
+            </figcaption>
           )}
         </figure>
       )
@@ -88,6 +100,9 @@ export function BlockView({
           draft={draft}
           onDraftChange={onDraftChange}
           disabled={disabled}
+          sessionId={sessionId}
+          phase={phase}
+          playerId={playerId}
         />
       )
     case 'timer':

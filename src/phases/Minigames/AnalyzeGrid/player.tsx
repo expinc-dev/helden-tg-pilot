@@ -188,6 +188,9 @@ export function AnalyzeGridPlayer({
                     setQuestionAnswers((prev) => prev.map((x, j) => (j === i ? v : x)))
                   }
                   disabled={submitted || timer.expired}
+                  sessionId={sessionId}
+                  phase={phase}
+                  playerId={writerId}
                 />
               </div>
             ))}
