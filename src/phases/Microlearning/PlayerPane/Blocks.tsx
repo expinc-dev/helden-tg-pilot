@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { detectProvider, vimeoEmbedUrl, youtubeEmbedUrl } from '@/phases/Video/lib'
 
 import { renderInline, renderRichText, renderSegments } from '@/lib/richText'
+import { sanitizeHtml } from '@/lib/sanitizeHtml'
 import { mmss } from '@/lib/sync/timermath'
 
 import { QuestionView } from './QuestionView'
@@ -45,7 +46,7 @@ export function BlockView({
       const { heading, segments } = parseTextBlock(block.markdown)
       return (
         <div className="flex flex-col gap-2">
-          {heading && <SectionHeading text={renderInline(heading)} />}
+          {heading && <SectionHeading text={heading} />}
           {renderSegments(segments, {
             paragraphClassName: 'text-sm leading-relaxed text-white/70',
           })}
@@ -65,12 +66,12 @@ export function BlockView({
             <div className="aspect-video w-full rounded-2xl bg-white/5" />
           )}
           {block.title && (
-            <p className="text-center text-lg font-bold text-[#FFB800]">
-              {renderInline(block.title)}
-            </p>
+            <p className="text-sm font-semibold text-white/90">{renderInline(block.title)}</p>
           )}
           {block.caption && (
-            <div className="text-xs text-white/40">{renderRichText(block.caption)}</div>
+            <figcaption className="text-xs text-white/40">
+              {renderRichText(block.caption)}
+            </figcaption>
           )}
         </figure>
       )
@@ -118,6 +119,15 @@ export function BlockView({
       // Fallback only — when a hero image exists, StepBody pulls the heading
       // block out and overlays it instead of rendering it here in the flow.
       return <p className="text-lg font-bold text-[#FFB800]">{block.text}</p>
+    case 'html':
+      return (
+        <div
+          className="max-w-none [&_img]:max-w-full [&_table]:border-collapse [&_td]:border [&_td]:p-1 [&_th]:border [&_th]:p-1"
+          // Sanitized above — the only dangerouslySetInnerHTML in the app, and
+          // nothing reaches it without passing DOMPurify first.
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }}
+        />
+      )
     case 'button':
       return <ButtonBlock block={block} disabled={disabled} />
     default:

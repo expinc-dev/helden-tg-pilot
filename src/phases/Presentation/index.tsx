@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
@@ -40,6 +40,37 @@ export function PresentationRenderer({
   const isLastSlide = bounded === content.slides.length - 1
 
   const [pendingPhaseEnd, setPendingPhaseEnd] = useState(false)
+  const [jumpOpen, setJumpOpen] = useState(false)
+  const prevBoundedRef = useRef(bounded)
+  const [transitionDir, setTransitionDir] = useState<'right' | 'left'>('right')
+
+  useEffect(() => {
+    if (bounded !== prevBoundedRef.current) {
+      setTransitionDir(bounded > prevBoundedRef.current ? 'right' : 'left')
+      prevBoundedRef.current = bounded
+    }
+  }, [bounded])
+
+  useEffect(() => {
+    if (role !== 'host' || !canControl) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' && bounded < content.slides.length - 1) {
+        e.preventDefault()
+        setStep(bounded + 1)
+      }
+      if (e.key === 'ArrowLeft' && bounded > 0) {
+        e.preventDefault()
+        setStep(bounded - 1)
+      }
+      if (e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
+        const n = Number(e.key) - 1
+        if (n < content.slides.length) setStep(n)
+      }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [role, canControl, bounded, content.slides.length, setStep])
 
   if (role === 'player') {
     if (!playerId) return null
@@ -71,12 +102,40 @@ export function PresentationRenderer({
 
   const controls = role === 'host' && (
     <div
-      className="flex items-center justify-between gap-4 border-t px-4 py-3"
+      className="relative flex items-center justify-between gap-4 border-t px-4 py-3"
       style={{ borderColor: '#353535' }}
     >
       <span className="text-xs text-white/60">
-        Slides {bounded + 1}/{content.slides.length}
+        {bounded + 1} / {content.slides.length}
       </span>
+      <button
+        type="button"
+        onClick={() => setJumpOpen(!jumpOpen)}
+        className="rounded border px-2 py-1 text-xs text-white"
+        style={{ borderColor: '#353535' }}
+      >
+        Jump
+      </button>
+      {jumpOpen && (
+        <div
+          className="absolute bottom-14 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
+          style={{ borderColor: '#353535' }}
+        >
+          {content.slides.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => {
+                setStep(i)
+                setJumpOpen(false)
+              }}
+              className={`size-7 rounded text-xs ${i === bounded ? 'bg-yellow-400 text-black' : 'bg-white/10 text-white'}`}
+            >
+              {i + 1}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2">
         <button
           type="button"
@@ -105,33 +164,48 @@ export function PresentationRenderer({
   }
 
   const slideView = (
-    <div className="flex w-full flex-1 flex-col overflow-hidden">
-      <StepBody
-        stepId={slide.id}
-        // Inert — presentation slides always hard-fail publish if they carry
-        // a question block (see helden-tg-cms's registry.ts publishValidate),
-        // so no BlockView here ever actually reaches a 'question' branch that
-        // would read the qId this builds. slide.id is a reasonable stand-in,
-        // same spirit as PathQuestion.tsx's own inert task-content qId.
-        microStepId={slide.id}
-        blocks={slide.blocks}
-        header={null}
-        answers={{}}
-        drafts={{}}
-        onDraftChange={() => {}}
-        disabled
-        sessionId={sessionId}
-        phase={phase}
-        playerId={playerId ?? ''}
-        fullBleed
-      />
+    <div
+      key={slide.id}
+      className={`animate-in fade-in flex w-full flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
+    >
+      <div className="mx-auto flex w-full flex-1 flex-col">
+        <StepBody
+          stepId={slide.id}
+          // Inert — presentation slides always hard-fail publish if they carry
+          // a question block (see helden-tg-cms's registry.ts publishValidate),
+          // so no BlockView here ever actually reaches a 'question' branch that
+          // would read the qId this builds. slide.id is a reasonable stand-in,
+          // same spirit as PathQuestion.tsx's own inert task-content qId.
+          microStepId={slide.id}
+          blocks={slide.blocks}
+          header={null}
+          answers={{}}
+          drafts={{}}
+          onDraftChange={() => {}}
+          disabled
+          fullBleed
+          sessionId={sessionId}
+          phase={phase}
+          playerId={playerId ?? ''}
+        />
+      </div>
     </div>
+  )
+
+  const indicator = (
+    <span
+      className="fixed top-4 right-4 z-10 rounded-md border px-3 py-1 text-xs text-white/70"
+      style={{ borderColor: '#353535', background: 'rgba(8,8,8,0.5)' }}
+    >
+      {bounded + 1} / {content.slides.length}
+    </span>
   )
 
   if (role === 'central') {
     return (
       <div className="fixed inset-0 flex flex-col" style={bgStyle}>
         {slideView}
+        {indicator}
         <FullscreenToggle position="fixed" />
       </div>
     )
@@ -142,6 +216,7 @@ export function PresentationRenderer({
       {slideView}
       <FullscreenToggle position="absolute" />
       {controls}
+      {indicator}
 
       {pendingPhaseEnd && (
         <PhaseEndConfirm onCancel={() => setPendingPhaseEnd(false)} onConfirm={confirmPhaseEnd} />
