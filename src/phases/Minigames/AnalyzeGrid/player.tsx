@@ -1,15 +1,16 @@
 import { useState } from 'react'
 
 import type { Phase, Question } from '@helden-inc/tg-schema'
-import { ref, serverTimestamp, set } from 'firebase/database'
+import { serverTimestamp, set } from 'firebase/database'
 
 import { QuestionView } from '@/phases/Microlearning/PlayerPane/QuestionView'
 import { ActionButton, SectionHeading } from '@/phases/Microlearning/PlayerPane/shared'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 import { useTimer } from '@/lib/sync/useTimer'
 
 import type { AnalyzeGridConfig } from './score'
+import { isAnalyzeGridGateCorrect } from './score'
 
 // Team mode: only the leader plays; members see the "focus on the leader"
 // screen (Router gates team_leader_only; this also treats team_collaborative
@@ -52,12 +53,7 @@ export function AnalyzeGridPlayer({
   }
 
   const checkGate = () => {
-    const markedKey = [...marked].sort().join('|')
-    const keyKey = config.emptyCells
-      .map((c) => `${c.row}/${c.col}`)
-      .sort()
-      .join('|')
-    if (markedKey === keyKey) {
+    if (isAnalyzeGridGateCorrect(config, marked)) {
       setGatePassed(true)
       setAttempts(0)
     } else {
@@ -69,7 +65,7 @@ export function AnalyzeGridPlayer({
   const submitAnswers = async () => {
     if (!allAnswered || busy) return
     setBusy(true)
-    await set(ref(rtdb, `sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
+    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
       value: { gate: [...marked], questions: questionAnswers },
       submittedAt: serverTimestamp(),
     })
@@ -79,12 +75,9 @@ export function AnalyzeGridPlayer({
 
   // Final gate score (used by host central reveal / scrolling): correct if
   // the marked set matched exactly. Answers were ungraded single_choice.
-  const gateCorrect =
-    [...marked].sort().join('|') ===
-    config.emptyCells
-      .map((c) => `${c.row}/${c.col}`)
-      .sort()
-      .join('|')
+  // Delegates to the scorer's comparison so the UI and the flushed score share
+  // one definition of "correct" (see AnalyzeGrid/score.ts).
+  const gateCorrect = isAnalyzeGridGateCorrect(config, marked)
 
   if (submitted) {
     return (
