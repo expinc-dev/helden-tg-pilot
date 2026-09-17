@@ -102,6 +102,27 @@
                 }
               }
             },
+            "selfies": {
+              ".read": "auth != null",
+              "$keyId": {
+                ".write": "auth != null && (auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + $keyId).val() || auth.uid === root.child('events/' + $eventId + '/sessions/' + $sessionId + '/playerOwners/' + root.child('events/' + $eventId + '/sessions/' + $sessionId + '/teams/' + $keyId + '/ownerPlayerId').val()).val())",
+                "image": {
+                  ".validate": "newData.isString() && newData.val().length < 400000"
+                },
+                "caption": {
+                  ".validate": "newData.isString() && newData.val().length <= 200"
+                },
+                "createdAt": {
+                  ".validate": "newData.isNumber()"
+                },
+                "updatedBy": {
+                  ".validate": "newData.isString()"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
             "codepiece": {
               "$phaseId": {
                 ".read": true,

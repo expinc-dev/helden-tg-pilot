@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { EndScreen } from '@/pages/extra/end-screen'
+import type { Phase } from '@helden-inc/tg-schema'
 
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
@@ -79,9 +80,10 @@ export function CentralView() {
     )
   }
 
-  // Idle's full-bleed lobby-style layout escapes the standard live wrapper's
-  // padding and debug line — same reasoning as the host's video bypass.
-  if (phase && sessionId && phase.content.type === 'idle') {
+  // Full-bleed phases escape the standard live wrapper's padding and debug
+  // line: idle's lobby-style layout, and team_selfie's wall-filling gallery
+  // (HLN-018). Same reasoning as the host's video bypass.
+  if (phase && sessionId && isFullBleedPhase(phase)) {
     return (
       <PhaseRouter
         phase={phase}
@@ -112,4 +114,11 @@ export function CentralView() {
   }
 
   return <WaitingScreen sessionId={sessionId} joinCode={config?.joinCode} />
+}
+
+// Phases that own the whole viewport. Kept as one predicate so the two bypass
+// call sites can never drift apart.
+function isFullBleedPhase(phase: Phase): boolean {
+  if (phase.content.type === 'idle') return true
+  return phase.content.type === 'minigame' && phase.content.templateId === 'team_selfie'
 }

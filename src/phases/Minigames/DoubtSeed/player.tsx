@@ -12,9 +12,9 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import type { Phase } from '@helden-inc/tg-schema'
-import { ref, serverTimestamp, set } from 'firebase/database'
+import { serverTimestamp, set } from 'firebase/database'
 
-import { rtdb } from '@/lib/firebase'
+import { eref } from '@/lib/firebase'
 
 type Card = { id: string; text: string }
 type Slot = Card | null
@@ -76,7 +76,7 @@ export function DoubtSeedPlayer({
   const submit = async () => {
     if (filledCount !== dropZones || busy) return
     setBusy(true)
-    await set(ref(rtdb, `sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
+    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
       value: slots.map((s) => s?.id).filter(Boolean),
       submittedAt: serverTimestamp(),
     })

@@ -4,6 +4,8 @@ import { DoubtSeedRenderer } from './DoubtSeed'
 import { doubtSeedConfigSchema, scoreDoubtSeed } from './DoubtSeed/score'
 import { SortOrderRenderer } from './SortOrder'
 import { scoreSortOrder, sortOrderConfigSchema } from './SortOrder/score'
+import { TeamSelfieRenderer } from './TeamSelfie'
+import { scoreTeamSelfie, teamSelfieConfigSchema } from './TeamSelfie/score'
 import type { MinigameTemplate } from './types'
 
 // The registry: templateId → template code. Add a new template by importing
@@ -33,6 +35,12 @@ const templates: AnyTemplate[] = [
     configSchema: doubtSeedConfigSchema,
     Renderer: DoubtSeedRenderer,
     scorer: scoreDoubtSeed,
+  },
+  {
+    templateId: 'team_selfie',
+    configSchema: teamSelfieConfigSchema,
+    Renderer: TeamSelfieRenderer,
+    scorer: scoreTeamSelfie,
   },
 ]
 const byId = new Map<string, AnyTemplate>(templates.map((t) => [t.templateId, t]))
