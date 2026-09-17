@@ -42,18 +42,24 @@ export function HostQuiz({
   const [confirmReveal, setConfirmReveal] = useState(false)
   const scoredRef = useRef<string | null>(null)
 
+  // HLN-012: on_device quizzes are ungraded and single-stage. The host only
+  // steps forward — no answering timer, no reveal, no scoring, no leaderboard.
+  const onDevice = content.mode === 'on_device'
+
   const isLastQuestion = quizStep.step >= content.questions.length - 1
   const timers = resolveTimers(content)
 
   // Question and answer choices show together from the start — no separate
-  // "Bersiap!"/reading-only step, straight into the answering timer.
+  // "Bersiap!"/reading-only step, straight into the answering timer. on_device
+  // skips the timer: an attitude statement is not a race, and there is no
+  // "time's up" state to advance to.
   const handleStartQuestion = useCallback(
     async (step: number) => {
       scoredRef.current = null
-      await startTimer(phaseId, timers.answering)
+      if (!onDevice) await startTimer(phaseId, timers.answering)
       await write({ step, stage: 'answering', correctId: undefined })
     },
-    [write, startTimer, phaseId, timers.answering]
+    [write, startTimer, phaseId, timers.answering, onDevice]
   )
 
   const handleReveal = useCallback(async () => {
@@ -114,6 +120,62 @@ export function HostQuiz({
   if (!q) return null
 
   const text = renderPromptBlocks(q.prompt)
+  const answeredPct = totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0
+
+  // ── on_device (attitude quiz, HLN-012) ────────────────────────────────────
+  // The statement is on the player's own device; the host screen is just a
+  // step indicator with an answered-count progress bar. The live distribution
+  // is deliberately NOT rendered: it stays in RTDB as L3 discussion material,
+  // and showing it here would leak the room's positions back into the room.
+  if (onDevice) {
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        <div className="flex items-center justify-between border-b border-white/20 px-10 py-3">
+          <div className="text-2xl">
+            <span className="text-helden-yellow font-bold">{quizStep.step + 1}</span>
+            <span className="font-thin text-white">/{content.questions.length}</span>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-4">
+          <div className="flex w-full items-start px-10 py-5">
+            <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 px-10">
+            <div className="mt-auto flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
+                  style={{ width: `${answeredPct}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-xs whitespace-nowrap text-white">
+                <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
+                <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
+                menjawab
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-auto flex w-full flex-col gap-3 px-10 pb-10">
+            <GradientButton
+              onClick={handleNext}
+              className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+            >
+              {isLastQuestion ? (
+                <>
+                  <Icon icon="mdi:check-circle" className="size-5" /> Selesai
+                </>
+              ) : (
+                'Pernyataan Berikutnya →'
+              )}
+            </GradientButton>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">

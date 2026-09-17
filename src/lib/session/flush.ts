@@ -125,6 +125,15 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
     return
   }
 
+  // on_device quizzes (HLN-012) are ungraded: every question carries no answer
+  // key, the host never scores, and scoring.mode is 'none'. Falling through
+  // would write a 0-score PhaseResult for every player AND dump all raw answers
+  // via extractAnswersForPhase into results/{keyId}/phaseResults/{phaseId} —
+  // i.e. the room's private positions, verbatim, into a node L3 reads. The
+  // aggregate distribution in `aggregates/distribution` is the L3 material and
+  // is deliberately left untouched here.
+  if (phase.content.type === 'quiz' && phase.content.mode === 'on_device') return
+
   const [playersSnap, teamsSnap, pointerSnap] = await Promise.all([
     get(eref(`sessions/${sessionId}/players`)),
     get(eref(`sessions/${sessionId}/teams`)),

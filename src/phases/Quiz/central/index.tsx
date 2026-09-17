@@ -59,7 +59,13 @@ export function CentralQuiz({
   const totalPlayers = useTotalPlayers(sessionId)
   const timers = resolveTimers(content)
 
-  if (quizStep.stage === 'leaderboard') {
+  // HLN-012: on_device quizzes are ungraded and single-stage — no leaderboard,
+  // no timer, no reveal, and deliberately no live distribution. The room's
+  // positions stay private; the aggregate is read back later (L3) from
+  // `aggregates/distribution`, never projected here.
+  const onDevice = content.mode === 'on_device'
+
+  if (!onDevice && quizStep.stage === 'leaderboard') {
     return <LeaderboardScreen sessionId={sessionId} phase={phase} content={content} />
   }
 
@@ -67,6 +73,49 @@ export function CentralQuiz({
 
   const text = renderPromptBlocks(q.prompt)
   const answeredPct = totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0
+
+  if (onDevice) {
+    return (
+      <div
+        className="fixed inset-0 flex flex-col gap-6 p-10"
+        style={{
+          backgroundImage: `url(${assets.images.backgrounds.central})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="flex items-center justify-between px-10">
+          <div className="text-4xl font-normal">
+            <span className="text-helden-yellow">{quizStep.step + 1}</span>
+            <span className="text-white">/{content.questions.length}</span>
+          </div>
+
+          <div className="mx-auto w-full max-w-4xl rounded-sm bg-black/30 px-10 py-20">
+            <h1 className="text-center text-4xl leading-tight font-bold text-white">{text}</h1>
+          </div>
+
+          <p className="shrink-0 text-lg text-white/70">Jawab di perangkatmu</p>
+        </div>
+
+        {totalPlayers > 0 && (
+          <div className="flex w-full px-10">
+            <div className="mx-auto flex w-full items-center gap-4 rounded-lg border border-white/15 bg-black/20 px-5 py-3">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
+                  style={{ width: `${answeredPct}%` }}
+                />
+              </div>
+              <p className="shrink-0 text-sm whitespace-nowrap text-white/60">
+                <span className="font-bold text-white">{answeredCount}</span> dari{' '}
+                <span className="font-bold text-white">{totalPlayers}</span> pemain telah menjawab
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div
