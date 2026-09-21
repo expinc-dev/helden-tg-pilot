@@ -89,6 +89,29 @@ export const demoBundle: PublishedGame = {
           },
         ],
       },
+      // Host-only script (HLN-001). Deliberately authored here so /host shows
+      // the populated state — the empty state ("No script authored for this
+      // phase") is what you get by removing this block. Stripped from the
+      // player-safe copy by the CMS projection; demoBundlePlayerSafe is a
+      // separate literal and simply never carries it.
+      hostScript: {
+        anchorScript: [
+          { kind: 'text', markdown: '## Naskah Pembuka' },
+          {
+            kind: 'text',
+            markdown:
+              'Bacakan pengantar berikut sebelum memulai latihan.\n\n- Jelaskan bahwa latihan ini berfokus pada penanganan komplain\n- Ingatkan peserta bahwa tidak ada jawaban yang salah\n- Beri waktu 30 detik untuk membaca setiap kasus',
+          },
+        ],
+        sharingPrompts: [
+          {
+            kind: 'text',
+            markdown:
+              '**Ajak peserta berbagi:**\n- Jalur mana yang kamu pilih dan kenapa?\n- Apa yang paling sulit dari kasus tadi?',
+          },
+        ],
+        improvMarker: true,
+      },
     },
   },
   publishedAt: 1789013679907,

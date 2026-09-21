@@ -8,6 +8,7 @@ import { Modal } from '@/components/Modal'
 import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
 import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
+import { HostScriptPanel } from '@/pages/host/_shared/HostScriptPanel'
 import { LevelIntro } from '@/pages/host/_shared/LevelIntro'
 import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
@@ -111,6 +112,15 @@ export function HostView() {
     )
   }
 
+  // Host script overlay (HLN-001). Mounted in every branch that is actually
+  // running a phase, because each live branch below returns early with its own
+  // full-bleed layout — a panel added only to the shared shell at the bottom of
+  // this function would be silently skipped by video, idle and microlearning.
+  // Lobby and the modular picker are deliberately exempt: no phase is running
+  // yet, so there is no anchor script to read. Keyed by phase id so switching
+  // phases re-seeds the panel's open state from the new phase's improvMarker.
+  const scriptPanel = <HostScriptPanel key={phase?.id} phase={phase} />
+
   // Video-phase host screen: rendered top-level so its full-bleed layout
   // escapes the standard live wrapper's padding (which would otherwise leak
   // the parent background as a white bar on TabletFrame simulations). The
@@ -121,12 +131,15 @@ export function HostView() {
       ? () => endLevel(sessionId, phase.id)
       : () => nextPhase(sessionId, pointer?.activePhaseId)
     return (
-      <VideoHostScreen
-        sessionId={sessionId}
-        videoTitle={phase.title}
-        videoUrl={phase.content.videoUrl}
-        onAdvance={advance}
-      />
+      <>
+        <VideoHostScreen
+          sessionId={sessionId}
+          videoTitle={phase.title}
+          videoUrl={phase.content.videoUrl}
+          onAdvance={advance}
+        />
+        {scriptPanel}
+      </>
     )
   }
 
@@ -136,14 +149,17 @@ export function HostView() {
   // this screen up there would make its button silently do nothing.
   if (meta.status === 'live' && phase && phase.content.type === 'idle' && !isModular) {
     return (
-      <PhaseRouter
-        phase={phase}
-        phaseStartMs={pointer?.changedAt}
-        role="host"
-        sessionId={sessionId}
-        allowTeams={config.allowTeams}
-        onAdvance={() => nextPhase(sessionId, pointer?.activePhaseId)}
-      />
+      <>
+        <PhaseRouter
+          phase={phase}
+          phaseStartMs={pointer?.changedAt}
+          role="host"
+          sessionId={sessionId}
+          allowTeams={config.allowTeams}
+          onAdvance={() => nextPhase(sessionId, pointer?.activePhaseId)}
+        />
+        {scriptPanel}
+      </>
     )
   }
 
@@ -155,18 +171,21 @@ export function HostView() {
   // button inside the card, so this bypasses both.
   if (meta.status === 'live' && phase && phase.content.type === 'microlearning') {
     return (
-      <PhaseRouter
-        phase={phase}
-        phaseStartMs={pointer?.changedAt}
-        role="host"
-        sessionId={sessionId}
-        allowTeams={config.allowTeams}
-        onAdvance={
-          isModular
-            ? () => endLevel(sessionId, phase.id)
-            : () => nextPhase(sessionId, pointer?.activePhaseId)
-        }
-      />
+      <>
+        <PhaseRouter
+          phase={phase}
+          phaseStartMs={pointer?.changedAt}
+          role="host"
+          sessionId={sessionId}
+          allowTeams={config.allowTeams}
+          onAdvance={
+            isModular
+              ? () => endLevel(sessionId, phase.id)
+              : () => nextPhase(sessionId, pointer?.activePhaseId)
+          }
+        />
+        {scriptPanel}
+      </>
     )
   }
 
@@ -275,6 +294,8 @@ export function HostView() {
             )
           })()
         ))}
+
+      {scriptPanel}
     </div>
   )
 }
