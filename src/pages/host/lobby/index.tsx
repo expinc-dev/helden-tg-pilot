@@ -133,6 +133,7 @@ export function HostView() {
     return (
       <>
         <VideoHostScreen
+          key={phase.id}
           sessionId={sessionId}
           videoTitle={phase.title}
           videoUrl={phase.content.videoUrl}

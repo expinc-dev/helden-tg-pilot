@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import type { VideoPlayback } from '@helden-inc/tg-schema'
 
@@ -68,6 +68,9 @@ export function VimeoPlayer({
   muted,
   role,
   positionRef,
+  onEnded,
+  onTimeUpdate,
+  onDuration,
 }: {
   url: string
   state: VideoPlayback['state']
@@ -75,10 +78,28 @@ export function VimeoPlayer({
   muted: boolean
   role: Role
   positionRef: React.MutableRefObject<number>
+  onEnded?: () => void
+  onTimeUpdate?: (sec: number) => void
+  onDuration?: (sec: number) => void
 }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
-  const embedUrl = vimeoEmbedUrl(url, muted)
+  // Always request the embed itself muted — browsers block autoplay otherwise
+  // — and toggle actual volume afterwards via postMessage. Baking `muted` into
+  // the src instead would change it on every toggle, reloading the iframe and
+  // losing playback position and state.
+  const embedUrl = useMemo(() => vimeoEmbedUrl(url, true), [url])
+  // The message listener below is registered once (deps []), so it would
+  // otherwise close over the first render's state/positionSec/muted. The
+  // `ready` event routinely arrives *after* the host has already tapped play
+  // (the iframe is still loading when the controls first render), and the
+  // [state, positionSec] effect has already bailed out on readyRef being
+  // false by then — so replaying those stale values here would drop the tap
+  // and leave the video stuck on the "Klik untuk memulai video" overlay.
+  const latestRef = useRef({ state, positionSec, muted })
+  useEffect(() => {
+    latestRef.current = { state, positionSec, muted }
+  })
 
   const send = (method: string, value?: unknown) => {
     const iframe = ref.current
@@ -92,15 +113,29 @@ export function VimeoPlayer({
       try {
         const msg = JSON.parse(e.data) as {
           event?: string
-          data?: { seconds?: number }
+          data?: { seconds?: number; duration?: number }
+          value?: number
         }
         if (msg.event === 'ready') {
           readyRef.current = true
           send('addEventListener', 'timeupdate')
-          send('setCurrentTime', positionSec)
-          if (state === 'playing') send('play')
+          send('addEventListener', 'finish')
+          send('setCurrentTime', latestRef.current.positionSec)
+          send('setVolume', latestRef.current.muted ? 0 : 1)
+          // Belt-and-suspenders: timeupdate's payload carries duration too
+          // (below), but that only arrives once playback ticks. Ask for it
+          // directly so the seek bar and skip buttons have a real duration
+          // immediately, before the video has ever played.
+          send('getDuration')
+          if (latestRef.current.state === 'playing') send('play')
+        } else if (msg.event === 'getDuration' && typeof msg.value === 'number') {
+          onDuration?.(msg.value)
         } else if (msg.event === 'timeupdate' && typeof msg.data?.seconds === 'number') {
           positionRef.current = msg.data.seconds
+          onTimeUpdate?.(msg.data.seconds)
+          if (typeof msg.data.duration === 'number') onDuration?.(msg.data.duration)
+        } else if (msg.event === 'finish') {
+          onEnded?.()
         }
       } catch {
         /* Vimeo sometimes sends non-JSON strings, ignore */
@@ -113,12 +148,20 @@ export function VimeoPlayer({
 
   useEffect(() => {
     if (!readyRef.current) return
-    if (Math.abs(positionRef.current - positionSec) > 0.5) {
-      send('setCurrentTime', positionSec)
-    }
+    // Always resend the seek. This effect only fires on an explicit
+    // play/pause/seek action (positionSec is written to RTDB only then, never
+    // on a natural playback tick), so there is no jitter risk — whereas the
+    // old >0.5s-diff guard could silently swallow a legitimate seek when
+    // positionRef.current, updated from Vimeo's own timeupdate, already
+    // happened to sit near the target.
+    send('setCurrentTime', positionSec)
     send(state === 'playing' ? 'play' : 'pause')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, positionSec])
+
+  useEffect(() => {
+    if (!readyRef.current) return
+    send('setVolume', muted ? 0 : 1)
+  }, [muted])
 
   return (
     <iframe
@@ -140,6 +183,9 @@ export function YoutubePlayer({
   muted,
   role,
   positionRef,
+  onEnded,
+  onTimeUpdate,
+  onDuration,
 }: {
   url: string
   state: VideoPlayback['state']
@@ -147,10 +193,24 @@ export function YoutubePlayer({
   muted: boolean
   role: Role
   positionRef: React.MutableRefObject<number>
+  onEnded?: () => void
+  onTimeUpdate?: (sec: number) => void
+  onDuration?: (sec: number) => void
 }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
-  const embedUrl = youtubeEmbedUrl(url, muted)
+  const wasEndedRef = useRef(false)
+  // Same reasoning as VimeoPlayer above: the embed always starts muted (the
+  // autoplay requirement), then real mute state is driven by postMessage once
+  // ready, so toggling it never changes the iframe src and reloads the player.
+  const embedUrl = useMemo(() => youtubeEmbedUrl(url, true), [url])
+  // See the matching comment in VimeoPlayer: the listener is registered once,
+  // so it must read the current state/positionSec/muted rather than the first
+  // render's, or a host tap made before the embed finishes loading is lost.
+  const latestRef = useRef({ state, positionSec, muted })
+  useEffect(() => {
+    latestRef.current = { state, positionSec, muted }
+  })
 
   const send = (func: string, args?: unknown[]) => {
     const iframe = ref.current
@@ -167,14 +227,27 @@ export function YoutubePlayer({
       try {
         const msg = JSON.parse(e.data) as {
           event?: string
-          info?: { currentTime?: number }
+          info?: { currentTime?: number; playerState?: number; duration?: number }
         }
         if (msg.event === 'onReady') {
           readyRef.current = true
-          send('seekTo', [positionSec, true])
-          if (state === 'playing') send('playVideo')
-        } else if (msg.event === 'infoDelivery' && typeof msg.info?.currentTime === 'number') {
-          positionRef.current = msg.info.currentTime
+          send('seekTo', [latestRef.current.positionSec, true])
+          send(latestRef.current.muted ? 'mute' : 'unMute')
+          if (latestRef.current.state === 'playing') send('playVideo')
+        } else if (msg.event === 'infoDelivery') {
+          if (typeof msg.info?.currentTime === 'number') {
+            positionRef.current = msg.info.currentTime
+            onTimeUpdate?.(msg.info.currentTime)
+          }
+          // The IFrame API's infoDelivery payload carries duration alongside
+          // currentTime once the player has metadata.
+          if (typeof msg.info?.duration === 'number') onDuration?.(msg.info.duration)
+          // YT.PlayerState.ENDED === 0. Edge-trigger on entering it so onEnded
+          // fires once per playthrough, not on every infoDelivery tick that
+          // still happens to report state 0.
+          const ended = msg.info?.playerState === 0
+          if (ended && !wasEndedRef.current) onEnded?.()
+          wasEndedRef.current = ended
         }
       } catch {
         /* YouTube sometimes sends non-JSON strings, ignore */
@@ -187,12 +260,15 @@ export function YoutubePlayer({
 
   useEffect(() => {
     if (!readyRef.current) return
-    if (Math.abs(positionRef.current - positionSec) > 0.5) {
-      send('seekTo', [positionSec, true])
-    }
+    // Always resend the seek — see the matching comment in VimeoPlayer above.
+    send('seekTo', [positionSec, true])
     send(state === 'playing' ? 'playVideo' : 'pauseVideo')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, positionSec])
+
+  useEffect(() => {
+    if (!readyRef.current) return
+    send(muted ? 'mute' : 'unMute')
+  }, [muted])
 
   return (
     <iframe

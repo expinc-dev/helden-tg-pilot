@@ -1,15 +1,16 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Header } from '@/pages/host/_shared/Header'
 import type { VideoContent } from '@helden-inc/tg-schema'
 
-import { setVideoPlayback } from '@/lib/session/videoControl'
+import { pauseVideo, playVideo, setVideoPlayback } from '@/lib/session/videoControl'
 import { useVideoPlayback } from '@/lib/sync/useVideoPlayback'
 
 import { detectProvider } from '../lib'
 import { DirectPlayer, VimeoPlayer, YoutubePlayer } from '../players'
+import { EmbedControls } from './components/EmbedControls'
 import { HostControls } from './components/HostControls'
 import { HostDirectPlayer } from './components/HostDirectPlayer'
 
@@ -87,12 +88,47 @@ export function VideoHostScreen({
   const playback = useVideoPlayback(sessionId)
   const state = playback?.state ?? 'paused'
   const positionSec = playback?.positionSec ?? 0
+  // Shared across the vimeo/youtube branches below — an inline
+  // `{ current: positionSec }` literal, as this used to pass, is a fresh
+  // object on every render, so the timeupdate position the players write back
+  // via postMessage never survived the next render.
+  const positionRef = useRef<number>(positionSec)
 
   const [ended, setEnded] = useState(false)
   const [confirm, setConfirm] = useState<null | 'replay' | 'advance'>(null)
+  // Vimeo/YouTube's own postMessage timeupdate — NOT the RTDB-synced
+  // positionSec, which only moves on an explicit play/pause/seek — is what
+  // gives the seek bar the same smooth live movement HostDirectPlayer gets
+  // for free from the native <video> element's timeupdate event.
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
 
   const provider = videoUrl ? detectProvider(videoUrl) : null
   const canAdvance = ended
+
+  useEffect(() => {
+    // sessions/{id}/videoPlayback is one global node per session, not scoped
+    // per phase — so without this, a video phase entered right after another
+    // one that was left mid-"playing" inherits that state and autoplays with
+    // no host interaction at all. Forcing paused+0 here means every video
+    // phase always starts requiring an explicit host tap.
+    // (The component's own state — ended/currentTime/duration — is reset by
+    // the key={phase.id} its callers pass, not here.)
+    if (videoUrl) void setVideoPlayback(sessionId, 'paused', 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoUrl])
+
+  const play = () => playVideo(sessionId, positionRef.current)
+  const pause = () => pauseVideo(sessionId, positionRef.current)
+  const seekBy = (delta: number) => {
+    // Don't clamp against `duration` when it isn't known yet (0 before the
+    // first timeupdate/getDuration response) — that would clamp every forward
+    // seek straight back to 0. Vimeo/YouTube clamp out-of-range seeks to
+    // their own real duration on their end regardless.
+    const next = duration > 0 ? Math.min(duration, currentTime + delta) : currentTime + delta
+    setVideoPlayback(sessionId, state, Math.max(0, next))
+  }
+  const seekTo = (n: number) => setVideoPlayback(sessionId, state, n)
 
   return (
     <div
@@ -128,26 +164,54 @@ export function VideoHostScreen({
             />
           )}
           {videoUrl && provider === 'vimeo' && (
-            <div className="aspect-video w-full">
+            <div className="relative aspect-video w-full">
               <VimeoPlayer
                 url={videoUrl}
                 state={state}
                 positionSec={positionSec}
                 muted
                 role="host"
-                positionRef={{ current: positionSec } as React.MutableRefObject<number>}
+                positionRef={positionRef}
+                onEnded={() => setEnded(true)}
+                onTimeUpdate={setCurrentTime}
+                onDuration={setDuration}
+              />
+              <EmbedControls
+                state={state}
+                ended={ended}
+                currentTime={currentTime}
+                duration={duration}
+                onPlay={play}
+                onPause={pause}
+                onSeekBy={seekBy}
+                onSeekTo={seekTo}
+                onReplayRequest={() => setConfirm('replay')}
               />
             </div>
           )}
           {videoUrl && provider === 'youtube' && (
-            <div className="aspect-video w-full">
+            <div className="relative aspect-video w-full">
               <YoutubePlayer
                 url={videoUrl}
                 state={state}
                 positionSec={positionSec}
                 muted
                 role="host"
-                positionRef={{ current: positionSec } as React.MutableRefObject<number>}
+                positionRef={positionRef}
+                onEnded={() => setEnded(true)}
+                onTimeUpdate={setCurrentTime}
+                onDuration={setDuration}
+              />
+              <EmbedControls
+                state={state}
+                ended={ended}
+                currentTime={currentTime}
+                duration={duration}
+                onPlay={play}
+                onPause={pause}
+                onSeekBy={seekBy}
+                onSeekTo={seekTo}
+                onReplayRequest={() => setConfirm('replay')}
               />
             </div>
           )}
