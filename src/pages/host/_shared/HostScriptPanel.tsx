@@ -130,12 +130,19 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
   const improv = phase.hostScript?.improvMarker === true
   const authored = anchor.length > 0 || prompts.length > 0
 
+  // Anchored clear of the host action stack. 11.5rem = 184px, which sits
+  // 15px above the tallest one: Quiz's per-stage GradientButton, whose band
+  // reaches 169px from the card's bottom edge (`mt-auto` + `pb-10` inside
+  // the phase card). The previous bottom-24 (96px) only cleared the generic
+  // shell's own 56px button and landed inside that band, so the panel
+  // swallowed clicks on the controls it was covering.
+  // `bottom` needs the same lg+ correction as `right`: this panel is
+  // `position: fixed`, so inside TabletFrame's simulated 768x1024 box it
+  // anchors to the raw viewport and drifts out of the frame. The frame's own
+  // bottom inset is `max(1rem, 50vh - 32rem)` (see TabletFrame's
+  // `lg:h-[1024px] lg:max-h-[calc(100vh-2rem)]` + `lg:p-4`), mirrored here.
   return (
-    // Anchored above the bottom action button (every host screen pins one at
-    // the bottom of the viewport) so the two never collide. At lg+ the app is
-    // a centered 768px tablet frame, so `right` is offset to land back inside
-    // that frame instead of on the desktop backdrop.
-    <div className="fixed right-4 bottom-24 z-40 flex w-[min(90vw,26rem)] flex-col gap-2 lg:right-[calc(50vw-24rem+1rem)]">
+    <div className="fixed right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2 lg:right-[calc(50vw-24rem+1rem)] lg:bottom-[calc(max(1rem,50vh-32rem)+11.5rem)]">
       {/* The improvisation marker is deliberately outside the collapsible body:
           there is no control anywhere in this component that hides it while
           improvMarker is set, so the host cannot lose the cue. */}
