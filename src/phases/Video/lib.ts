@@ -16,6 +16,14 @@ export function detectProvider(url: string): 'vimeo' | 'youtube' | 'direct' {
   return 'direct'
 }
 
+// The postMessage event Vimeo's player emits when playback reaches the end.
+// It is 'ended', NOT 'finish': player.js forwards the name verbatim to the
+// embed (on(name) → callMethod('addEventListener', name)) and contains no
+// 'finish' alias anywhere, so 'finish' registers a listener that can never
+// fire — which is what left the host's "Tahap selanjutnya" disabled forever
+// after the video finished.
+export const VIMEO_END_EVENT = 'ended'
+
 // opts defaults match the synced central/host players (no native controls,
 // no autoplay — playback is driven by postMessage commands instead). Pass
 // { controls: true } for an unsynced, standalone embed (e.g. a Block-level

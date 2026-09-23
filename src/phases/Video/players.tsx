@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { VideoPlayback } from '@helden-inc/tg-schema'
 
 import type { Role } from '../PhaseRouter'
-import { vimeoEmbedUrl, youtubeEmbedUrl } from './lib'
+import { VIMEO_END_EVENT, vimeoEmbedUrl, youtubeEmbedUrl } from './lib'
 
 export function DirectPlayer({
   url,
@@ -84,6 +84,9 @@ export function VimeoPlayer({
 }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
+  // Last duration Vimeo reported (via getDuration or timeupdate), used only
+  // by the end-of-playback fallback below.
+  const durationRef = useRef(0)
   // Always request the embed itself muted — browsers block autoplay otherwise
   // — and toggle actual volume afterwards via postMessage. Baking `muted` into
   // the src instead would change it on every toggle, reloading the iframe and
@@ -109,17 +112,22 @@ export function VimeoPlayer({
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (typeof e.data !== 'string') return
+      // Vimeo posts either a JSON string or an already-parsed object —
+      // player.js's own parseMessageData accepts both. Only handling strings
+      // would silently drop every event (ready included) if the shape ever
+      // changed, leaving the video permanently unrecoverable.
       try {
-        const msg = JSON.parse(e.data) as {
+        const msg = (typeof e.data === 'string' ? JSON.parse(e.data) : e.data) as {
           event?: string
+          method?: string
           data?: { seconds?: number; duration?: number }
           value?: number
-        }
+        } | null
+        if (!msg || typeof msg !== 'object') return
         if (msg.event === 'ready') {
           readyRef.current = true
           send('addEventListener', 'timeupdate')
-          send('addEventListener', 'finish')
+          send('addEventListener', VIMEO_END_EVENT)
           send('setCurrentTime', latestRef.current.positionSec)
           send('setVolume', latestRef.current.muted ? 0 : 1)
           // Belt-and-suspenders: timeupdate's payload carries duration too
@@ -128,13 +136,29 @@ export function VimeoPlayer({
           // immediately, before the video has ever played.
           send('getDuration')
           if (latestRef.current.state === 'playing') send('play')
-        } else if (msg.event === 'getDuration' && typeof msg.value === 'number') {
+        } else if (msg.method === 'getDuration' && typeof msg.value === 'number') {
+          durationRef.current = msg.value
           onDuration?.(msg.value)
         } else if (msg.event === 'timeupdate' && typeof msg.data?.seconds === 'number') {
           positionRef.current = msg.data.seconds
           onTimeUpdate?.(msg.data.seconds)
-          if (typeof msg.data.duration === 'number') onDuration?.(msg.data.duration)
-        } else if (msg.event === 'finish') {
+          if (typeof msg.data.duration === 'number') {
+            durationRef.current = msg.data.duration
+            onDuration?.(msg.data.duration)
+          }
+          // Fallback for the VIMEO_END_EVENT subscription above: timeupdate
+          // reports the same seconds/duration pair (at the end it arrives as
+          // seconds === duration), so reaching the final half-second also
+          // enables "Tahap selanjutnya" even if that event were missed.
+          // Deliberately not edge-guarded behind a ref: onEnded is
+          // idempotent here (the host screen just sets a boolean), whereas a
+          // latch would survive the host's replay — which resets the screen's
+          // ended state to false — and silently swallow the finish of every
+          // subsequent playthrough.
+          if (durationRef.current > 0 && msg.data.seconds >= durationRef.current - 0.5) {
+            onEnded?.()
+          }
+        } else if (msg.event === VIMEO_END_EVENT) {
           onEnded?.()
         }
       } catch {

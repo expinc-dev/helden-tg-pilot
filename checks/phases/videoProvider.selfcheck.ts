@@ -2,7 +2,12 @@
 // types needed:
 //   npx tsx checks/phases/videoProvider.selfcheck.ts
 // Excluded from the app build (tsconfig.app.json includes only "src").
-import { detectProvider, vimeoEmbedUrl, youtubeEmbedUrl } from '../../src/phases/Video/lib'
+import {
+  VIMEO_END_EVENT,
+  detectProvider,
+  vimeoEmbedUrl,
+  youtubeEmbedUrl,
+} from '../../src/phases/Video/lib'
 
 const ok = (cond: boolean, msg: string) => {
   if (!cond) throw new Error(`FAIL: ${msg}`)
@@ -72,5 +77,11 @@ ok(
 
 const ytOptedIn = youtubeEmbedUrl('https://youtu.be/FUKmyRLOlAA', false, { controls: true })
 ok(ytOptedIn.includes('controls=1'), `opts.controls opt-in re-enables chrome (got "${ytOptedIn}")`)
+
+// The reported bug: the end-of-playback subscription used 'finish', which
+// @vimeo/player never emits (the name is forwarded verbatim to the embed and
+// no 'finish' alias exists), so onEnded never fired and "Tahap selanjutnya"
+// stayed disabled after the video ended. Pin the real event name.
+eq(VIMEO_END_EVENT, 'ended', 'Vimeo end event is the emitted name, not legacy finish')
 
 console.log('videoProvider.selfcheck: OK')
