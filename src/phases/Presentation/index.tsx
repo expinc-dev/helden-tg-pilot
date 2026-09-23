@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
 import type { Phase } from '@helden-inc/tg-schema'
@@ -157,11 +156,13 @@ export function PresentationRenderer({
     </div>
   )
 
-  const bgStyle = {
-    backgroundImage: `url(${assets.images.backgrounds.central})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }
+  // The projected slide is the content here, so it gets a flat dark surface.
+  // Deliberately NOT the lobby backdrop (`backgrounds.central`): that PNG is
+  // drawn out of ASCII-art character fields, and its bottom-left cluster leaked
+  // through the strip under the slide's below-image title as garbled lettering
+  // ("frnxxx..."). Same near-black as the hero image's own bottom fade, so the
+  // seam between image and surface stays invisible.
+  const bgStyle = { backgroundColor: '#121212' }
 
   const slideView = (
     <div
