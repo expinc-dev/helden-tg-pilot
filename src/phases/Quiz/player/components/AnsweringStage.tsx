@@ -25,6 +25,15 @@ export function AnsweringStage({
   options: ChoiceOption[]
   onAnswer: (optionId: string) => void
 }) {
+  // A 2-option question (e.g. the AI Myth Quiz's Benar/Salah) otherwise makes
+  // both buttons span a whole column of this `flex-1` grid as a single row,
+  // and with only one row the implicit track stretches to the full container
+  // height — two tiles swallowing the screen. Capping that lone row at 50%
+  // gives exactly the tile height an equivalent 4-option 2x2 question gets;
+  // `content-center` keeps the pair mid-screen instead of jammed under the
+  // timer.
+  const singleRow = options.length <= 2
+
   return (
     <div
       className="flex min-h-dvh flex-col"
@@ -59,7 +68,9 @@ export function AnsweringStage({
           <p className="text-xl text-white/90">Menunggu pemain lain menjawab...</p>
         </div>
       ) : (
-        <div className="grid flex-1 grid-cols-2 gap-3 p-4 px-10 pb-8">
+        <div
+          className={`grid flex-1 grid-cols-2 gap-3 p-4 px-10 pb-8 ${singleRow ? 'auto-rows-[50%] content-center' : ''}`}
+        >
           {options.map((opt, i) => {
             const icon = OPTION_ICONS[i % OPTION_ICONS.length]
             const isSelected = selectedId === opt.id
