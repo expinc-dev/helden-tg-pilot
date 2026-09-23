@@ -4,6 +4,9 @@
 // Excluded from the app build (tsconfig.app.json includes only "src").
 import {
   VIMEO_END_EVENT,
+  VIMEO_END_EVENT_LEGACY,
+  VIMEO_TIME_UPDATE_EVENT,
+  VIMEO_TIME_UPDATE_EVENT_LEGACY,
   detectProvider,
   vimeoEmbedUrl,
   youtubeEmbedUrl,
@@ -78,10 +81,25 @@ ok(
 const ytOptedIn = youtubeEmbedUrl('https://youtu.be/FUKmyRLOlAA', false, { controls: true })
 ok(ytOptedIn.includes('controls=1'), `opts.controls opt-in re-enables chrome (got "${ytOptedIn}")`)
 
-// The reported bug: the end-of-playback subscription used 'finish', which
-// @vimeo/player never emits (the name is forwarded verbatim to the embed and
-// no 'finish' alias exists), so onEnded never fired and "Tahap selanjutnya"
-// stayed disabled after the video ended. Pin the real event name.
-eq(VIMEO_END_EVENT, 'ended', 'Vimeo end event is the emitted name, not legacy finish')
+// The reported bug: the host's progress bar stayed pinned at 0s and "Tahap
+// selanjutnya" never enabled after the video ended. Two independent halves:
+//
+//  1. The end-of-playback subscription used 'finish', which the embed only
+//     ever emits in its legacy Froogaloop v1 dialect — so on the modern
+//     dialect it registered a listener that could never fire.
+//  2. The embed picks that dialect from the *type* of the envelope it
+//     receives: buildMessage() renames outgoing events through
+//     {playProgress:'timeupdate', finish:'ended', seek:'seeked'} only when
+//     the parent's message arrived as a JSON string. VimeoPlayer.send used to
+//     JSON.stringify, so every event came back under the legacy names —
+//     while method replies (getDuration) went unrenamed, which is exactly why
+//     the slider had a real duration but the thumb never moved.
+//
+// Pin both dialects' names: we now post a structured object (modern) and
+// match either spelling on the way in, so neither can silently drift back.
+eq(VIMEO_TIME_UPDATE_EVENT, 'timeupdate', 'Vimeo progress event is the modern name')
+eq(VIMEO_TIME_UPDATE_EVENT_LEGACY, 'playProgress', 'legacy alias the string-envelope dialect emits')
+eq(VIMEO_END_EVENT, 'ended', 'Vimeo end event is the modern name')
+eq(VIMEO_END_EVENT_LEGACY, 'finish', 'legacy alias the string-envelope dialect emits')
 
 console.log('videoProvider.selfcheck: OK')

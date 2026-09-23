@@ -126,9 +126,19 @@ export function VideoHostScreen({
     // seek straight back to 0. Vimeo/YouTube clamp out-of-range seeks to
     // their own real duration on their end regardless.
     const next = duration > 0 ? Math.min(duration, currentTime + delta) : currentTime + delta
-    setVideoPlayback(sessionId, state, Math.max(0, next))
+    const target = Math.max(0, next)
+    // Move the seek bar to the target immediately rather than waiting for the
+    // embed to report the new position. While paused the embed may not tick a
+    // timeupdate at all, which left the thumb snapped back to where it was
+    // before the seek (reported as "the bar jumps back to the left"). The
+    // embed's own timeupdate still refines this once playback resumes.
+    setCurrentTime(target)
+    setVideoPlayback(sessionId, state, target)
   }
-  const seekTo = (n: number) => setVideoPlayback(sessionId, state, n)
+  const seekTo = (n: number) => {
+    setCurrentTime(n)
+    setVideoPlayback(sessionId, state, n)
+  }
 
   return (
     <div

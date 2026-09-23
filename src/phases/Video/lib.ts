@@ -16,13 +16,19 @@ export function detectProvider(url: string): 'vimeo' | 'youtube' | 'direct' {
   return 'direct'
 }
 
-// The postMessage event Vimeo's player emits when playback reaches the end.
-// It is 'ended', NOT 'finish': player.js forwards the name verbatim to the
-// embed (on(name) → callMethod('addEventListener', name)) and contains no
-// 'finish' alias anywhere, so 'finish' registers a listener that can never
-// fire — which is what left the host's "Tahap selanjutnya" disabled forever
-// after the video finished.
+// The postMessage events Vimeo's player emits for playback progress and
+// end-of-playback. Both are delivered under a second, legacy Froogaloop v1
+// name when the parent's own messages arrive as JSON strings rather than
+// objects: the embed's buildMessage() renames every outgoing event through
+// {playProgress:'timeupdate', finish:'ended', seek:'seeked'} only in that
+// case, while method replies (getDuration, …) are never renamed. Registering
+// a listener accepts either spelling — the embed maps legacy names back to
+// modern ones — so we subscribe to the modern pair and match both on the way
+// in. See VimeoPlayer's `send` for the envelope-type switch itself.
+export const VIMEO_TIME_UPDATE_EVENT = 'timeupdate'
+export const VIMEO_TIME_UPDATE_EVENT_LEGACY = 'playProgress'
 export const VIMEO_END_EVENT = 'ended'
+export const VIMEO_END_EVENT_LEGACY = 'finish'
 
 // opts defaults match the synced central/host players (no native controls,
 // no autoplay — playback is driven by postMessage commands instead). Pass

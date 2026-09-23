@@ -3,7 +3,14 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { VideoPlayback } from '@helden-inc/tg-schema'
 
 import type { Role } from '../PhaseRouter'
-import { VIMEO_END_EVENT, vimeoEmbedUrl, youtubeEmbedUrl } from './lib'
+import {
+  VIMEO_END_EVENT,
+  VIMEO_END_EVENT_LEGACY,
+  VIMEO_TIME_UPDATE_EVENT,
+  VIMEO_TIME_UPDATE_EVENT_LEGACY,
+  vimeoEmbedUrl,
+  youtubeEmbedUrl,
+} from './lib'
 
 export function DirectPlayer({
   url,
@@ -107,7 +114,21 @@ export function VimeoPlayer({
   const send = (method: string, value?: unknown) => {
     const iframe = ref.current
     if (!iframe?.contentWindow) return
-    iframe.contentWindow.postMessage(JSON.stringify({ method, value }), '*')
+    // Post a structured object, never a JSON string. The embed picks its
+    // event-name dialect off the *type* of the envelope it just received:
+    // its buildMessage() applies the legacy Froogaloop rename
+    // (vq = {playProgress:'timeupdate', finish:'ended', seek:'seeked'}) only
+    // when that inbound message arrived as a string. Stringifying here made
+    // the embed emit every event under the legacy name, which our listener
+    // never matched — the progress bar stayed pinned at 0s and "Tahap
+    // selanjutnya" never enabled. Method replies such as getDuration are
+    // exempt from the rename, which is why the duration arrived correctly
+    // even while every event was being dropped.
+    // player.js's own client posts the object too (stringifying only for
+    // IE 8/9).
+    const message: { method: string; value?: unknown } = { method }
+    if (value !== undefined) message.value = value
+    iframe.contentWindow.postMessage(message, '*')
   }
 
   useEffect(() => {
@@ -139,7 +160,10 @@ export function VimeoPlayer({
         } else if (msg.method === 'getDuration' && typeof msg.value === 'number') {
           durationRef.current = msg.value
           onDuration?.(msg.value)
-        } else if (msg.event === 'timeupdate' && typeof msg.data?.seconds === 'number') {
+        } else if (
+          (msg.event === VIMEO_TIME_UPDATE_EVENT || msg.event === VIMEO_TIME_UPDATE_EVENT_LEGACY) &&
+          typeof msg.data?.seconds === 'number'
+        ) {
           positionRef.current = msg.data.seconds
           onTimeUpdate?.(msg.data.seconds)
           if (typeof msg.data.duration === 'number') {
@@ -158,7 +182,7 @@ export function VimeoPlayer({
           if (durationRef.current > 0 && msg.data.seconds >= durationRef.current - 0.5) {
             onEnded?.()
           }
-        } else if (msg.event === VIMEO_END_EVENT) {
+        } else if (msg.event === VIMEO_END_EVENT || msg.event === VIMEO_END_EVENT_LEGACY) {
           onEnded?.()
         }
       } catch {
