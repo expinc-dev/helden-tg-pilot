@@ -147,7 +147,7 @@ export function VimeoPlayer({
         if (!msg || typeof msg !== 'object') return
         if (msg.event === 'ready') {
           readyRef.current = true
-          send('addEventListener', 'timeupdate')
+          send('addEventListener', VIMEO_TIME_UPDATE_EVENT)
           send('addEventListener', VIMEO_END_EVENT)
           send('setCurrentTime', latestRef.current.positionSec)
           send('setVolume', latestRef.current.muted ? 0 : 1)
