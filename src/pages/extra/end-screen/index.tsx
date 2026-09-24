@@ -1,7 +1,6 @@
 import { Scoreboard } from '@/phases/End/Scoreboard'
 
 import { useScoreMaps } from '@/lib/sync/useScoreboard'
-import { useTeams } from '@/lib/sync/useTeams'
 
 // Rendered when meta.status === 'ended'. Reads the boundary-flushed aggregate
 // maps (aggregates/scores + aggregates/teamScores) through the same narrow
@@ -10,7 +9,6 @@ import { useTeams } from '@/lib/sync/useTeams'
 // the host dashboard can render if needed.
 export function EndScreen({ sessionId }: { sessionId: string }) {
   const { scores, teamScores } = useScoreMaps(sessionId)
-  const teams = useTeams(sessionId)
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -20,9 +18,9 @@ export function EndScreen({ sessionId }: { sessionId: string }) {
       </div>
 
       <Scoreboard
+        sessionId={sessionId}
         scores={scores}
         teamScores={teamScores}
-        teamLabels={Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id]))}
         variant="light"
         emptyText="No scored phases in this session."
       />

@@ -41,11 +41,15 @@ export function useScoreMaps(sessionId: string | undefined): {
 }
 export type ScoreRow = { id: string; label: string; score: number }
 
-// Ranked descending. `labels` supplies display names where they are known
-// (team names). Ids without an entry fall back to the id itself — which is what
-// the session-end board has always shown for players: players/ is a
-// host/central read, and the player role renders a board too, so no player-name
-// lookup may happen here (BLUEPRINT_runtime §5 listener scoping).
+// Ranked descending. `labels` supplies display names; ids without an entry fall
+// back to the id itself, so a caller that passes no labels degrades to raw ids
+// rather than disappearing. For player ids that fallback is the bug the raw
+// p_… rows used to be: players/ is NOT a host/central read (database.rules.json
+// grants ".read": "auth != null" at sessions/{id}/players, and
+// useTeamMembersPresence already reads players/{id} per-id from the player
+// role). What the runtime contract actually forbids is the WHOLE-tree
+// subscription — that is usePresence, host/central-only. A per-id listener is
+// fine for any role, which is what usePlayerNameLabels does.
 export function rankedRows(scores: ScoreMap, labels: Record<string, string> = {}): ScoreRow[] {
   return Object.entries(scores)
     .map(([id, score]) => ({ id, label: labels[id] ?? id, score }))

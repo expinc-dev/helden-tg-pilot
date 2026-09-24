@@ -1,28 +1,38 @@
 import clsx from 'clsx'
 
+import { usePlayerNameLabels } from '@/lib/sync/usePlayerNameLabels'
 import { type ScoreMap, rankedRows } from '@/lib/sync/useScoreboard'
+import { useTeams } from '@/lib/sync/useTeams'
 
 // Final-score board shared by the session-end screen (pages/extra/end-screen)
-// and the end phase renderer — same rows, two chromes. Data arrives as the two
-// boundary-flushed maps; this component subscribes to nothing itself, so the
-// caller decides which (if any) name lookups to pay for.
+// and the end phase renderer — same rows, two chromes.
+//
+// It owns its own name lookups rather than taking them as props: the board used
+// to accept teamLabels and silently show raw p_… ids for players, which is how
+// every caller ended up shipping ids to the audience. Both lookups are narrow —
+// teams/ once, and one listener per id actually present in `scores` — so the
+// player role may render this without subscribing to broad session state
+// (BLUEPRINT_runtime §5 listener scoping).
 export function Scoreboard({
+  sessionId,
   scores,
   teamScores,
-  teamLabels = {},
   variant,
   emptyText,
 }: {
+  sessionId: string
   scores: ScoreMap
   teamScores: ScoreMap
-  teamLabels?: Record<string, string>
   variant: 'light' | 'dark'
   emptyText: string
 }) {
+  const teams = useTeams(sessionId)
+  const teamLabels = Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id]))
+  const playerLabels = usePlayerNameLabels(sessionId, Object.keys(scores))
   const dark = variant === 'dark'
   const sections = [
-    { key: 'teams', label: 'Teams', rows: rankedRows(teamScores, teamLabels), mono: false },
-    { key: 'players', label: 'Players', rows: rankedRows(scores), mono: true },
+    { key: 'teams', label: 'Teams', rows: rankedRows(teamScores, teamLabels) },
+    { key: 'players', label: 'Players', rows: rankedRows(scores, playerLabels) },
   ].filter((section) => section.rows.length > 0)
 
   if (sections.length === 0) {
@@ -54,7 +64,7 @@ export function Scoreboard({
                 <span className={clsx('w-6 text-right', dark ? 'text-white/50' : 'text-gray-400')}>
                   {i + 1}.
                 </span>
-                <span className={clsx(section.mono && 'font-mono text-xs')}>{row.label}</span>
+                <span>{row.label}</span>
               </span>
               <span className={clsx('font-mono tabular-nums', dark && 'text-helden-accent')}>
                 {Math.round(row.score)} pts

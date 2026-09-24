@@ -1,33 +1,18 @@
 import { useScoreMaps } from '@/lib/sync/useScoreboard'
-import { useTeams } from '@/lib/sync/useTeams'
 
 import type { Role } from '../PhaseRouter'
 import { Scoreboard } from './Scoreboard'
 import { type EndContent, resolveEndContent } from './lib'
 
-// own screens). The player role must not: BLUEPRINT_runtime §5 listener
-// scoping — same reason usePresence is host/central-only. The board is
-// otherwise identical, so only the labels differ.
-function NamedScores({ sessionId }: { sessionId: string }) {
-  const teams = useTeams(sessionId)
+// The board owns its own name lookups (see Scoreboard), so every role gets the
+// same pane — there is no longer a labels-bearing variant a caller can forget
+// to use. Scores are the only input.
+function ScoresPane({ sessionId }: { sessionId: string }) {
   const { scores, teamScores } = useScoreMaps(sessionId)
 
   return (
     <Scoreboard
-      scores={scores}
-      teamScores={teamScores}
-      teamLabels={Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id]))}
-      variant="dark"
-      emptyText="Belum ada skor di sesi ini."
-    />
-  )
-}
-
-function PlayerScores({ sessionId }: { sessionId: string }) {
-  const { scores, teamScores } = useScoreMaps(sessionId)
-
-  return (
-    <Scoreboard
+      sessionId={sessionId}
       scores={scores}
       teamScores={teamScores}
       variant="dark"
@@ -73,11 +58,7 @@ export function EndRenderer({
       </div>
 
       <div className="w-full max-w-2xl">
-        {role === 'player' ? (
-          <PlayerScores sessionId={sessionId} />
-        ) : (
-          <NamedScores sessionId={sessionId} />
-        )}
+        <ScoresPane sessionId={sessionId} />
       </div>
     </div>
   )
