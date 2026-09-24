@@ -4,6 +4,7 @@ import { type TeamRole, useTeamRole } from '@/lib/sync/useTeamRole'
 
 import { TeamCodeInput } from './CodeInput'
 import { CodePieceRenderer } from './CodePiece'
+import { EndRenderer } from './End'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { UnknownTemplate } from './Minigames/UnknownTemplate'
@@ -182,6 +183,8 @@ function PhaseContentSwitch({
         />
       )
     }
+    case 'end':
+      return <EndRenderer content={content} title={phase.title} role={role} sessionId={sessionId} />
     default:
       return (
         <div className="p-8 text-sm text-gray-500">
