@@ -69,20 +69,11 @@ export function CentralView() {
     )
   }
 
-  if (meta?.status === 'ended' && sessionId) {
-    return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <p className="text-xs text-gray-500">
-          {sessionId} · {meta.status} · {identity.id}
-        </p>
-        <EndScreen sessionId={sessionId} />
-      </div>
-    )
-  }
+  if (meta?.status === 'ended' && sessionId) return <EndScreen sessionId={sessionId} />
 
-  // Full-bleed phases escape the standard live wrapper's padding and debug
-  // line: idle's lobby-style layout, and team_selfie's wall-filling gallery
-  // (HLN-018). Same reasoning as the host's video bypass.
+  // Full-bleed phases escape the standard live wrapper's padding: idle's
+  // lobby-style layout, and team_selfie's wall-filling gallery (HLN-018). Same
+  // reasoning as the host's video bypass.
   if (phase && sessionId && isFullBleedPhase(phase)) {
     return (
       <PhaseRouter
@@ -97,10 +88,7 @@ export function CentralView() {
 
   if (phase && sessionId) {
     return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <p className="text-xs text-gray-500">
-          {sessionId} · {meta?.status ?? '—'} · {identity.id}
-        </p>
+      <div className="flex min-h-screen flex-col gap-4 bg-[#121212] p-8">
         <TimerBar sessionId={sessionId} phase={phase} role="central" />
         <PhaseRouter
           phase={phase}

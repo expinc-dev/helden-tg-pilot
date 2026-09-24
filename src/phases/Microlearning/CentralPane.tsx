@@ -26,7 +26,7 @@ export function CentralProgressPane({
     : 0
 
   return (
-    <div className="flex flex-col items-center gap-3 p-6 text-center">
+    <div className="flex flex-col items-center gap-3 p-6 text-center text-white">
       <h2 className="text-lg font-semibold">{title}</h2>
       <div className="h-3 w-64 overflow-hidden rounded-full bg-gray-200">
         <div className="h-3 rounded-full bg-black transition-all" style={{ width: `${avgPct}%` }} />

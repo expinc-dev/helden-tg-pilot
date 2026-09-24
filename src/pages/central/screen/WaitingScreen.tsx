@@ -12,7 +12,6 @@ import { usePresenceCounts } from '@/lib/sync/useSession'
 export function WaitingScreen({ sessionId, joinCode }: { sessionId?: string; joinCode?: string }) {
   const { players } = usePresenceCounts(sessionId)
   const joinUrl = joinCode ? `${window.location.origin}/join/player?code=${joinCode}` : null
-  console.log(joinUrl)
   return (
     <div
       className="flex min-h-screen flex-col items-center bg-neutral-950 bg-cover bg-center p-8"

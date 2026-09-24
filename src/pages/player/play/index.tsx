@@ -118,16 +118,7 @@ export function PlayerView() {
     )
   }
 
-  if (meta?.status === 'ended' && sessionId) {
-    return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <p className="text-xs text-gray-500">
-          {sessionId} · {meta.status} · {identity.name ?? identity.id}
-        </p>
-        <EndScreen sessionId={sessionId} />
-      </div>
-    )
-  }
+  if (meta?.status === 'ended' && sessionId) return <EndScreen sessionId={sessionId} />
 
   // Minigame + codeinput/codepiece templates own their full screen
   // (background + card + their own timer, e.g. SortOrder/CodeInput) — same
