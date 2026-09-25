@@ -1,6 +1,7 @@
 import { TeamFocusLeader } from '../../TeamFocusLeader'
 import type { MinigameRendererProps } from '../types'
 import { DoubtSeedCentral } from './central'
+import { HostDoubtSeed } from './host'
 import { DoubtSeedPlayer } from './player'
 import type { DoubtSeedConfig } from './score'
 
@@ -9,12 +10,15 @@ import type { DoubtSeedConfig } from './score'
 // collaborative: in v1 the leader drives and members see the focus screen,
 // pending PM confirmation of the sync model (see todo).
 //
-// The central renders the anonymous gallery instead of the board (HLN-003):
-// the generic AI version next to the teams' own versions, no names.
+// Central and host both render the anonymous gallery instead of the board
+// (HLN-003): the generic AI version next to the teams' own versions, no names.
+// The host gets the same board inside its own shell, not the full-bleed frame.
 export function DoubtSeedRenderer(props: MinigameRendererProps<DoubtSeedConfig>) {
   const { config, phase, sessionId, playerId, role, teamRole } = props
 
-  if (role === 'host') return null
+  if (role === 'host') {
+    return <HostDoubtSeed sessionId={sessionId} phase={phase} config={config} />
+  }
   if (role === 'central') {
     return <DoubtSeedCentral sessionId={sessionId} phase={phase} config={config} />
   }
