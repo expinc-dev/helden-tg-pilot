@@ -12,6 +12,11 @@ import {
   submittedGalleryEntries,
   toggleSpotlight,
 } from '../../../src/phases/Minigames/DoubtSeed/gallery'
+import type { GalleryCardEntry } from '../../../src/phases/Minigames/DoubtSeed/gallery'
+import {
+  doubtSeedConfigSchema,
+  keepsVersionPrivate,
+} from '../../../src/phases/Minigames/DoubtSeed/score'
 import type { DoubtSeedConfig } from '../../../src/phases/Minigames/DoubtSeed/score'
 
 const ok = (cond: boolean, msg: string) => {
@@ -30,6 +35,7 @@ const config: DoubtSeedConfig = {
   ],
   dropZones: 3,
   instructions: 'Susun kartu.',
+  gallery: { enabled: true, mode: 'auto', cap: 3 },
 }
 
 // ── card id resolution ────────────────────────────────────────────────────
@@ -105,6 +111,43 @@ ok(
   'no answers at all -> empty gallery'
 )
 
+// ── keep-private (HLN-003 gallery.mode = 'optional') ──────────────────────
+// `shared: false` removes the version from the wall entirely. It must not
+// render as an empty card: the room cannot be allowed to learn that a version
+// exists and was withheld.
+const withShared = (shared: boolean | undefined): GalleryCardEntry[] =>
+  submittedGalleryEntries(
+    teamRoster,
+    { p1: { value: ['s1'], shared }, p2: { value: ['d1'] } },
+    cardTextIndex(config)
+  )
+
+ok(withShared(false).length === 1, 'an explicit shared:false hides the version')
+ok(withShared(false)[0].label === 'Tim A', 'hiding renumbers the labels contiguously')
+ok(withShared(true).length === 2, 'an explicit shared:true shows the version')
+ok(withShared(undefined).length === 2, 'an absent flag counts as shown (pre-HLN-003 answers)')
+// `soulCards`/`distractorCards` each need at least one entry; only the gallery
+// block is under test here.
+const minimal = {
+  soulCards: [{ id: 's1', text: 'Soul' }],
+  distractorCards: [{ id: 'd1', text: 'Distractor' }],
+  dropZones: 4,
+  instructions: '',
+}
+{
+  const legacy = doubtSeedConfigSchema.parse(minimal)
+  ok(legacy.gallery.enabled === true, 'a bundle without a gallery block still shows the gallery')
+  ok(legacy.gallery.mode === 'auto', 'and defaults to always-shown, its pre-HLN-003 behaviour')
+  ok(legacy.gallery.cap === 3, 'and the cap defaults to the storyboard’s upper bound')
+}
+ok(
+  !doubtSeedConfigSchema.safeParse({ ...minimal, gallery: { cap: 0 } }).success,
+  'a cap below 1 is rejected'
+)
+ok(
+  !doubtSeedConfigSchema.safeParse({ ...minimal, gallery: { mode: 'sometimes' } }).success,
+  'an unknown gallery mode is rejected'
+)
 // ── host curation (HLN-003) ───────────────────────────────────────────────
 // Pinning is pure list maths, so the cap and the ordering are checked here
 // rather than through the host screen.
@@ -146,5 +189,24 @@ ok(
   'pinned entries keep their original positional labels'
 )
 ok(pinnedGallery(wall, []).length === 0, 'nothing pinned -> empty subset')
+
+// ── keep-private predicate (HLN-003) ──────────────────────────────────────
+// The answer writer and the player screen both ask this, so a screen can never
+// claim a state the stored answer disagrees with. The `enabled: false` cases are
+// the ones worth naming: a wall that is off has no post-submit control, so
+// writing `shared: false` there would strand the version off a wall that never
+// renders in the first place.
+ok(
+  keepsVersionPrivate({ enabled: true, mode: 'optional', cap: 3 }),
+  'optional + enabled starts private'
+)
+ok(
+  !keepsVersionPrivate({ enabled: true, mode: 'auto', cap: 3 }),
+  'auto mode never writes the flag — its answers look pre-HLN-003'
+)
+ok(
+  !keepsVersionPrivate({ enabled: false, mode: 'optional', cap: 3 }),
+  'a switched-off gallery writes no flag, even in optional mode'
+)
 
 console.log('doubt_seed_gallery.selfcheck: OK')

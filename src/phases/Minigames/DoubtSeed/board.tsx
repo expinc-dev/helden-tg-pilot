@@ -5,7 +5,6 @@ import { useGallerySpotlight } from '@/lib/sync/useGallerySpotlight'
 import { pageForTick, paginate } from '../TeamSelfie/grid'
 import { useTick } from '../TeamSelfie/useTick'
 import {
-  GALLERY_SPOTLIGHT_CAP,
   GENERIC_VERSION_CAPTION,
   GENERIC_VERSION_TEXT,
   cardTextIndex,
@@ -17,8 +16,8 @@ import type { DoubtSeedConfig } from './score'
 import { useGalleryAnswers, useGalleryRoster } from './useGallery'
 
 // How many team versions share one rotating page. Deliberately the same three
-// as the host's curation cap (GALLERY_SPOTLIGHT_CAP): both exist so a version
-// stays readable from the back of the room, not for any layout reason.
+// as the default curation cap: both exist so a version stays readable from the
+// back of the room, not for any layout reason.
 const PAGE_CAPACITY = 3
 const ROTATE_MS = 6000
 
@@ -55,9 +54,16 @@ export function GalleryBoard({
   /** Present only on the host's screen: renders the per-version pin chips. */
   onToggle?: (key: string) => void
 }) {
-  const spotlight = useGallerySpotlight(sessionId)
-  const roster = useGalleryRoster(sessionId, phase)
-  const answers = useGalleryAnswers(sessionId, roster, phase.id)
+  const gallery = config.gallery
+  // A switched-off gallery must not cost a listener, let alone one per team
+  // (the central screen is a shared projector on a shared connection). Passing
+  // an undefined session id is the hooks' own "not subscribed" idiom — every
+  // lib/sync hook short-circuits on it — so disabling the gallery stops the
+  // reads rather than only hiding the result.
+  const gallerySessionId = gallery.enabled ? sessionId : undefined
+  const spotlight = useGallerySpotlight(gallerySessionId)
+  const roster = useGalleryRoster(gallerySessionId, phase)
+  const answers = useGalleryAnswers(gallerySessionId, roster, phase.id)
   const entries = submittedGalleryEntries(roster, answers, cardTextIndex(config))
   const pinned = pinnedGallery(entries, spotlight)
 
@@ -71,7 +77,9 @@ export function GalleryBoard({
     <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.6fr] gap-10">
       <GenericPanel />
       <div className="flex min-h-0 flex-col gap-4">
-        {entries.length === 0 ? (
+        {!gallery.enabled ? (
+          <GalleryDisabled />
+        ) : entries.length === 0 ? (
           <EmptyGallery />
         ) : pinned.length > 0 ? (
           // Pinned order is the host's, not submission order, and there is only
@@ -80,8 +88,8 @@ export function GalleryBoard({
         ) : (
           <TeamVersions page={pages[pageIndex]} pageIndex={pageIndex} pageCount={pages.length} />
         )}
-        {onToggle && entries.length > 0 && (
-          <CurationBar entries={entries} pinned={spotlight} onToggle={onToggle} />
+        {onToggle && gallery.enabled && entries.length > 0 && (
+          <CurationBar entries={entries} pinned={spotlight} cap={gallery.cap} onToggle={onToggle} />
         )}
       </div>
     </div>
@@ -165,6 +173,17 @@ function EmptyGallery() {
   )
 }
 
+// The gallery is switched off for this phase (CMS `gallery.enabled: false`).
+// Shown as a deliberate state rather than an empty wall: the host needs to know
+// the difference between "nobody has submitted yet" and "this was turned off".
+function GalleryDisabled() {
+  return (
+    <div className="flex size-full flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 text-center">
+      <p className="text-helden-sub text-2xl font-light">Galeri dimatikan untuk sesi ini.</p>
+    </div>
+  )
+}
+
 // The host's curation strip (HLN-003): one chip per submitted version, labelled
 // exactly the way the wall labels it. Clicking a chip pins or unpins that
 // version; the room's screen follows within the same read cycle.
@@ -176,17 +195,19 @@ function EmptyGallery() {
 function CurationBar({
   entries,
   pinned,
+  cap,
   onToggle,
 }: {
   entries: GalleryCardEntry[]
   pinned: string[]
+  cap: number
   onToggle: (key: string) => void
 }) {
-  const atCap = pinned.length >= GALLERY_SPOTLIGHT_CAP
+  const atCap = pinned.length >= cap
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-helden-sub text-xs font-semibold tracking-wide uppercase">
-        Kurasi {pinned.length}/{GALLERY_SPOTLIGHT_CAP}
+        Kurasi {pinned.length}/{cap}
       </span>
       {entries.map((entry) => {
         const isPinned = pinned.includes(entry.key)

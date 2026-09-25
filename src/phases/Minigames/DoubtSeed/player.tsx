@@ -12,12 +12,12 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import type { Phase } from '@helden-inc/tg-schema'
-import { serverTimestamp, set } from 'firebase/database'
 
-import { eref } from '@/lib/firebase'
+import { setDoubtSeedShared, submitDoubtSeedAnswer } from '@/lib/session/doubtSeed'
 
+import { SubmittedPane } from './SubmittedPane'
 import { cardTextIndex, submittedGalleryEntries } from './gallery'
-import type { DoubtSeedConfig } from './score'
+import { type DoubtSeedConfig, keepsVersionPrivate } from './score'
 import { useGalleryAnswers, usePlayerGalleryRoster } from './useGallery'
 
 type Card = { id: string; text: string }
@@ -33,6 +33,8 @@ type Slot = Card | null
 // versions scroll anonymously, so a player who finished early has something to
 // read instead of a spinner. No name and no score ever reaches this list — the
 // labels are positional ("Tim A/B/C"), which is the point of the exercise.
+// That whole post-submit screen is SubmittedPane, so it can be rendered and
+// checked without a running session.
 export function DoubtSeedPlayer({
   phase,
   sessionId,
@@ -44,7 +46,7 @@ export function DoubtSeedPlayer({
   writerId: string
   config: DoubtSeedConfig
 }) {
-  const { soulCards, distractorCards, dropZones, instructions } = config
+  const { soulCards, distractorCards, dropZones, instructions, gallery } = config
   const phaseId = phase.id
   const pool = useMemo(
     () => shufflePool([...soulCards, ...distractorCards]),
@@ -54,14 +56,24 @@ export function DoubtSeedPlayer({
   const [active, setActive] = useState<Card | null>(null)
   const [busy, setBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [shareBusy, setShareBusy] = useState(false)
+  // Whether this player's version starts off the wall — the same predicate the
+  // answer write uses (lib/session/doubtSeed.ts), so the screen can never claim
+  // a state the stored answer disagrees with. Private is the default in
+  // `optional` mode because the alternative — shown until the player finds the
+  // opt-out — would leak the very thing the storyboard is careful about.
+  const privateByDefault = keepsVersionPrivate(gallery)
+  const [shared, setShared] = useState(!privateByDefault)
 
   // The gallery reads are mounted from the first render, not from the submit —
   // hooks cannot be called conditionally. They are cheap (one flat uid map plus
-  // one listener per writer) and the pool they describe is the same set the
-  // player is about to join. `usePlayerGalleryRoster` deliberately avoids
-  // presence, which a player client may not read.
-  const roster = usePlayerGalleryRoster(sessionId, phase)
-  const answers = useGalleryAnswers(sessionId, roster, phaseId)
+  // one listener per writer), and they describe the very pool this player is
+  // about to join. `usePlayerGalleryRoster` deliberately avoids presence, which
+  // a player client may not read. A switched-off gallery subscribes to nothing:
+  // the phone is on a shared mobile connection, and there is no wall to fill.
+  const gallerySessionId = gallery.enabled ? sessionId : undefined
+  const roster = usePlayerGalleryRoster(gallerySessionId, phase)
+  const answers = useGalleryAnswers(gallerySessionId, roster, phaseId)
   const entries = submittedGalleryEntries(roster, answers, cardTextIndex(config))
 
   const filledCount = slots.filter((s) => s !== null).length
@@ -89,55 +101,37 @@ export function DoubtSeedPlayer({
   const submit = async () => {
     if (filledCount !== dropZones || busy) return
     setBusy(true)
-    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
-      value: slots.map((s) => s?.id).filter(Boolean),
-      submittedAt: serverTimestamp(),
-    })
+    await submitDoubtSeedAnswer(
+      sessionId,
+      writerId,
+      phaseId,
+      slots.flatMap((s) => (s ? [s.id] : [])),
+      gallery
+    )
     setSubmitted(true)
     setBusy(false)
   }
 
+  const shareToGallery = async () => {
+    if (shareBusy) return
+    setShareBusy(true)
+    try {
+      await setDoubtSeedShared(sessionId, writerId, phaseId, true)
+      setShared(true)
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
   if (submitted) {
     return (
-      <div className="flex min-h-dvh flex-col bg-[#1F1F1F] p-4 text-white sm:p-6">
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4">
-          <div className="flex flex-col items-center gap-1 pt-2 text-center">
-            <p className="text-xl font-bold text-[#FFB800]">Versi kamu tersimpan!</p>
-            <p className="text-sm text-white/50">
-              Sambil menunggu, baca versi yang lain. Semuanya anonim.
-            </p>
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4">
-            {entries.length === 0 ? (
-              <p className="pt-8 text-center text-sm text-white/40">
-                Menunggu pemain lain menjawab…
-              </p>
-            ) : (
-              entries.map((entry) => (
-                <article
-                  key={entry.key}
-                  className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-4"
-                >
-                  <p className="pb-3 text-xs font-semibold tracking-wide text-white/50 uppercase">
-                    {entry.label}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {entry.cards.map((text, i) => (
-                      <span
-                        key={i}
-                        className="rounded-lg bg-black/40 px-3 py-1.5 text-sm text-white/80"
-                      >
-                        {text}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      <SubmittedPane
+        entries={entries}
+        gallery={gallery}
+        shared={shared}
+        shareBusy={shareBusy}
+        onShare={shareToGallery}
+      />
     )
   }
 

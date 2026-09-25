@@ -89,19 +89,27 @@ export function galleryEntries(
 }
 
 /**
- * Progressive reveal: a team appears as soon as its arrangement lands. Entries
- * with nothing to show yet are dropped, so the room sees the gallery fill up
- * instead of a wall of placeholders. An empty `cards` array (including one
- * whose ids all failed to resolve) counts as "nothing to show".
+ * Progressive reveal: a version appears as soon as its arrangement lands.
+ * Entries with nothing to show yet are dropped, so the room sees the gallery
+ * fill up instead of a wall of placeholders. An empty `cards` array (including
+ * one whose ids all failed to resolve) counts as "nothing to show".
+ *
+ * `shared === false` is the `optional` gallery mode's keep-private choice (see
+ * score.ts): only an explicit false hides a version, so answers written before
+ * that field existed — and every `auto`-mode answer — stay on the wall. The
+ * withheld version is dropped whole, exactly like an empty one, because the room
+ * must not learn that a version exists and was held back.
  */
 export function submittedGalleryEntries(
   entries: GalleryEntry[],
-  answers: Record<string, { value: string[] } | undefined>,
+  answers: Record<string, { value: string[]; shared?: boolean } | undefined>,
   index: Record<string, string>
 ): GalleryCardEntry[] {
   const out: GalleryCardEntry[] = []
   entries.forEach((entry) => {
-    const value = answers[entry.writerId]?.value
+    const answer = answers[entry.writerId]
+    const value = answer?.value
+    if (answer?.shared === false) return
     if (!Array.isArray(value) || value.length === 0) return
     out.push({
       key: entry.key,

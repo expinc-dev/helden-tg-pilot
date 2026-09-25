@@ -9,7 +9,7 @@ import { useTeams } from '@/lib/sync/useTeams'
 
 import { type GalleryEntry, galleryEntries } from './gallery'
 
-export type GalleryAnswer = { value: string[]; submittedAt?: number }
+export type GalleryAnswer = { value: string[]; submittedAt?: number; shared?: boolean }
 
 /**
  * Who has a version in this gallery, plus where their submission lives. One row
@@ -19,7 +19,7 @@ export type GalleryAnswer = { value: string[]; submittedAt?: number }
  *
  * The session-wide teams/presence reads are host/central concerns by design
  * (see the notes on usePresence); this hook is only ever mounted by the central
- * and host renderers. A player's own screen must build the same roster from
+ * and host renderers. A player's own screen builds the same roster from
  * `playerOwners` — ids only, no presence — instead.
  */
 export function useGalleryRoster(
@@ -56,6 +56,10 @@ export function usePlayerGalleryRoster(
  * roster row, never one on `players/` broadly (same scoping rule as
  * SortOrder/lib.ts#useSortOrderAnswers). The dependency is the joined writer
  * list so a team joining or leaving re-subscribes exactly once.
+ *
+ * `shared` is the `optional` mode's keep-private flag (see score.ts). It is
+ * passed through as-is — `undefined` for every answer written before HLN-003,
+ * which submittedGalleryEntries reads as "on the wall".
  */
 export function useGalleryAnswers(
   sessionId: string | undefined,
@@ -74,7 +78,7 @@ export function useGalleryAnswers(
           ...prev,
           [r.writerId]:
             v && Array.isArray(v.value)
-              ? { value: v.value, submittedAt: v.submittedAt }
+              ? { value: v.value, submittedAt: v.submittedAt, shared: v.shared }
               : undefined,
         }))
       })

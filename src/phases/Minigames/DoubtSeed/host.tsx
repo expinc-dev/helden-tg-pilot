@@ -40,9 +40,11 @@ export function HostDoubtSeed({
     // Fire-and-forget with a visible failure: the chip strip re-renders from
     // the RTDB read, so a dropped write would otherwise leave the host
     // believing the room is looking at a set that was never stored.
-    void setGallerySpotlight(sessionId, toggleSpotlight(spotlight, key)).catch((e: unknown) => {
-      setError(e instanceof Error ? e.message : String(e))
-    })
+    void setGallerySpotlight(sessionId, toggleSpotlight(spotlight, key, config.gallery.cap)).catch(
+      (e: unknown) => {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    )
   }
 
   return (
