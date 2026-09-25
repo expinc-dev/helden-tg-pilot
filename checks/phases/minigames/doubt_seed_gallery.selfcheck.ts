@@ -3,11 +3,14 @@
 // React/Firebase.
 //   npx tsx checks/phases/minigames/doubt_seed_gallery.selfcheck.ts
 import {
+  GALLERY_SPOTLIGHT_CAP,
   GENERIC_VERSION_TEXT,
   cardTextIndex,
   galleryEntries,
   galleryLabel,
+  pinnedGallery,
   submittedGalleryEntries,
+  toggleSpotlight,
 } from '../../../src/phases/Minigames/DoubtSeed/gallery'
 import type { DoubtSeedConfig } from '../../../src/phases/Minigames/DoubtSeed/score'
 
@@ -55,15 +58,12 @@ const teams = [
   { id: 't2', ownerPlayerId: 'p2', createdAt: 200 },
   { id: 't1', ownerPlayerId: 'p1', createdAt: 100 },
 ]
-const teamRoster = galleryEntries({ teamMode: 'team_collaborative' }, teams, {
-  p1: {},
-  p2: {},
-})
+const teamRoster = galleryEntries({ teamMode: 'team_collaborative' }, teams, ['p1', 'p2'])
 ok(teamRoster.length === 2, 'one roster row per team')
 ok(teamRoster[0].writerId === 'p1', 'teams must be ordered by createdAt ascending')
 ok(teamRoster[0].key === 't1', 'key must be the team id for stable React identity')
 
-const soloRoster = galleryEntries({ teamMode: 'solo' }, teams, { p1: {}, p2: {}, p3: {} })
+const soloRoster = galleryEntries({ teamMode: 'solo' }, teams, ['p1', 'p2', 'p3'])
 ok(soloRoster.length === 3, 'individual session: one row per player, teams ignored')
 ok(
   soloRoster.every((r) => r.key === r.writerId),
@@ -104,5 +104,47 @@ ok(
   submittedGalleryEntries(teamRoster, { p1: undefined, p2: undefined }, index).length === 0,
   'no answers at all -> empty gallery'
 )
+
+// ── host curation (HLN-003) ───────────────────────────────────────────────
+// Pinning is pure list maths, so the cap and the ordering are checked here
+// rather than through the host screen.
+const empty: string[] = []
+const one = toggleSpotlight(empty, 't1')
+ok(one.join(',') === 't1', 'pinning adds the key')
+ok(empty.length === 0, 'toggle must not mutate the list it was given')
+ok(toggleSpotlight(one, 't1').length === 0, 'toggling a pinned key unpins it')
+
+// Pin order is the host's order, not submission order — that is the whole
+// point of curating a pair ("these two contrast the most").
+ok(toggleSpotlight(['t2'], 't1').join(',') === 't2,t1', 'a new pin appends, keeping pin order')
+
+// At the cap an add is refused and the room keeps the frame it is watching.
+const full = ['a', 'b', 'c']
+ok(toggleSpotlight(full, 'd').join(',') === 'a,b,c', 'the cap refuses a further pin')
+ok(toggleSpotlight(full, 'b').length === 2, 'unpinning is allowed while at the cap')
+ok(toggleSpotlight(['a'], 'b', 1).join(',') === 'a', 'an explicit lower cap is respected')
+ok(GALLERY_SPOTLIGHT_CAP === 3, 'the default cap matches the storyboard’s 2–3 versions')
+
+// The pinned subset must keep the wall's own labels: renumbering on pin would
+// lose the label the host has just read out to the room.
+const wall = submittedGalleryEntries(
+  teamRoster,
+  { p1: { value: ['s1'] }, p2: { value: ['d1'] } },
+  index
+)
+ok(wall.length === 2, 'both submitted versions are on the wall')
+ok(
+  wall[0].key === 't1' && wall[0].label === 'Tim A',
+  'a card entry keeps the entry key it came from'
+)
+
+const pinned = pinnedGallery(wall, ['t2', 't1', 't3'])
+ok(pinned.length === 2, 'a pinned key that resolves to nothing is dropped, not rendered')
+ok(pinned[0].key === 't2' && pinned[1].key === 't1', 'pinned order follows the pin list')
+ok(
+  pinned[0].label === 'Tim B' && pinned[1].label === 'Tim A',
+  'pinned entries keep their original positional labels'
+)
+ok(pinnedGallery(wall, []).length === 0, 'nothing pinned -> empty subset')
 
 console.log('doubt_seed_gallery.selfcheck: OK')

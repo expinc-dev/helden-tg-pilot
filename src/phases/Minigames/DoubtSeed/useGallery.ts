@@ -18,7 +18,8 @@ export type GalleryAnswer = { value: string[]; submittedAt?: number }
  *
  * The session-wide teams/presence reads are host/central concerns by design
  * (see the notes on usePresence); this hook is only ever mounted by the central
- * renderer.
+ * and host renderers. A player's own screen must build the same roster from
+ * `playerOwners` — ids only, no presence — instead.
  */
 export function useGalleryRoster(
   sessionId: string | undefined,
@@ -26,7 +27,7 @@ export function useGalleryRoster(
 ): GalleryEntry[] {
   const teams = useTeams(sessionId)
   const { players } = usePresence(sessionId)
-  return galleryEntries(phase, teams, players)
+  return galleryEntries(phase, teams, Object.keys(players))
 }
 
 /**
