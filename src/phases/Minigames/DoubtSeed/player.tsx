@@ -16,6 +16,10 @@ import { serverTimestamp, set } from 'firebase/database'
 
 import { eref } from '@/lib/firebase'
 
+import { cardTextIndex, submittedGalleryEntries } from './gallery'
+import type { DoubtSeedConfig } from './score'
+import { useGalleryAnswers, usePlayerGalleryRoster } from './useGallery'
+
 type Card = { id: string; text: string }
 type Slot = Card | null
 
@@ -24,23 +28,23 @@ type Slot = Card | null
 // valid — reflection activity, no grading. Full drag-and-drop using
 // @dnd-kit/core (reused from sort_order, C5). PointerSensor covers mouse +
 // touch on mobile. The parent (index.tsx) drives role/team handling.
+//
+// On submit the screen becomes the gallery (HLN-003, storyboard §7): the room's
+// versions scroll anonymously, so a player who finished early has something to
+// read instead of a spinner. No name and no score ever reaches this list — the
+// labels are positional ("Tim A/B/C"), which is the point of the exercise.
 export function DoubtSeedPlayer({
   phase,
   sessionId,
   writerId,
-  soulCards,
-  distractorCards,
-  dropZones,
-  instructions,
+  config,
 }: {
   phase: Phase
   sessionId: string
   writerId: string
-  soulCards: Card[]
-  distractorCards: Card[]
-  dropZones: number
-  instructions: string
+  config: DoubtSeedConfig
 }) {
+  const { soulCards, distractorCards, dropZones, instructions } = config
   const phaseId = phase.id
   const pool = useMemo(
     () => shufflePool([...soulCards, ...distractorCards]),
@@ -50,6 +54,15 @@ export function DoubtSeedPlayer({
   const [active, setActive] = useState<Card | null>(null)
   const [busy, setBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+
+  // The gallery reads are mounted from the first render, not from the submit —
+  // hooks cannot be called conditionally. They are cheap (one flat uid map plus
+  // one listener per writer) and the pool they describe is the same set the
+  // player is about to join. `usePlayerGalleryRoster` deliberately avoids
+  // presence, which a player client may not read.
+  const roster = usePlayerGalleryRoster(sessionId, phase)
+  const answers = useGalleryAnswers(sessionId, roster, phaseId)
+  const entries = submittedGalleryEntries(roster, answers, cardTextIndex(config))
 
   const filledCount = slots.filter((s) => s !== null).length
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
@@ -86,18 +99,44 @@ export function DoubtSeedPlayer({
 
   if (submitted) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#1F1F1F] p-6 text-center text-white">
-        <div className="flex gap-2">
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="size-3 animate-bounce rounded-full bg-[#FDDB00]"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
+      <div className="flex min-h-dvh flex-col bg-[#1F1F1F] p-4 text-white sm:p-6">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4">
+          <div className="flex flex-col items-center gap-1 pt-2 text-center">
+            <p className="text-xl font-bold text-[#FFB800]">Versi kamu tersimpan!</p>
+            <p className="text-sm text-white/50">
+              Sambil menunggu, baca versi yang lain. Semuanya anonim.
+            </p>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4">
+            {entries.length === 0 ? (
+              <p className="pt-8 text-center text-sm text-white/40">
+                Menunggu pemain lain menjawab…
+              </p>
+            ) : (
+              entries.map((entry) => (
+                <article
+                  key={entry.key}
+                  className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-4"
+                >
+                  <p className="pb-3 text-xs font-semibold tracking-wide text-white/50 uppercase">
+                    {entry.label}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {entry.cards.map((text, i) => (
+                      <span
+                        key={i}
+                        className="rounded-lg bg-black/40 px-3 py-1.5 text-sm text-white/80"
+                      >
+                        {text}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
         </div>
-        <p className="text-xl font-bold text-[#FFB800]">Jawaban tersimpan!</p>
-        <p className="text-sm text-white/50">Menunggu pemain lain menjawab…</p>
       </div>
     )
   }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { onValue } from 'firebase/database'
 
 import { eref } from '@/lib/firebase'
+import { usePlayerOwners } from '@/lib/sync/usePlayerOwners'
 import { usePresence } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
 
@@ -28,6 +29,26 @@ export function useGalleryRoster(
   const teams = useTeams(sessionId)
   const { players } = usePresence(sessionId)
   return galleryEntries(phase, teams, Object.keys(players))
+}
+
+/**
+ * The same roster for a player's own phone (HLN-003), where the gallery is the
+ * post-submit screen.
+ *
+ * useGalleryRoster is off limits there: it reads presence, which is documented
+ * as host/central-only. So the participant set comes from `playerOwners` — the
+ * flat uid map claimOwnership already maintains, readable by any signed-in
+ * client and carrying no names at all. In an individual session its keys are
+ * the players; in a team session `galleryEntries` uses the teams instead, which
+ * this hook still reads (one row per team, not per member).
+ */
+export function usePlayerGalleryRoster(
+  sessionId: string | undefined,
+  phase: { teamMode?: string }
+): GalleryEntry[] {
+  const teams = useTeams(sessionId)
+  const owners = usePlayerOwners(sessionId)
+  return galleryEntries(phase, teams, Object.keys(owners))
 }
 
 /**

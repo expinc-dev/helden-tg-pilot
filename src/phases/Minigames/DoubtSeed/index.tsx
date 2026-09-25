@@ -30,15 +30,5 @@ export function DoubtSeedRenderer(props: MinigameRendererProps<DoubtSeedConfig>)
       </div>
     )
   }
-  return (
-    <DoubtSeedPlayer
-      phase={phase}
-      sessionId={sessionId}
-      writerId={playerId}
-      soulCards={config.soulCards}
-      distractorCards={config.distractorCards}
-      dropZones={config.dropZones}
-      instructions={config.instructions}
-    />
-  )
+  return <DoubtSeedPlayer phase={phase} sessionId={sessionId} writerId={playerId} config={config} />
 }
