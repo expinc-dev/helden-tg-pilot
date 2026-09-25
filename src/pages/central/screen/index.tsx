@@ -72,8 +72,8 @@ export function CentralView() {
   if (meta?.status === 'ended' && sessionId) return <EndScreen sessionId={sessionId} />
 
   // Full-bleed phases escape the standard live wrapper's padding: idle's
-  // lobby-style layout, and team_selfie's wall-filling gallery (HLN-018). Same
-  // reasoning as the host's video bypass.
+  // lobby-style layout, team_selfie's wall-filling photo mosaic (HLN-018), and
+  // doubt_seed's gallery (HLN-003). Same reasoning as the host's video bypass.
   if (phase && sessionId && isFullBleedPhase(phase)) {
     return (
       <PhaseRouter
@@ -108,5 +108,8 @@ export function CentralView() {
 // call sites can never drift apart.
 function isFullBleedPhase(phase: Phase): boolean {
   if (phase.content.type === 'idle') return true
-  return phase.content.type === 'minigame' && phase.content.templateId === 'team_selfie'
+  return (
+    phase.content.type === 'minigame' &&
+    (phase.content.templateId === 'team_selfie' || phase.content.templateId === 'doubt_seed')
+  )
 }
