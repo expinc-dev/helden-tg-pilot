@@ -133,7 +133,12 @@ function TeamVersions({
             <p className="text-helden-sub text-lg font-semibold tracking-wide uppercase">
               {entry.label}
             </p>
-            <div className="flex flex-wrap content-start gap-3 overflow-hidden">
+            {/* Scrolls rather than clips: a team whose cards outgrow its panel
+                would otherwise lose the tail silently, and the whole point of
+                this wall is that a participant can find their own words. The
+                parent article is already `min-h-0 flex-1`, so this box shrinks
+                and scrolls inside it instead of stretching the page. */}
+            <div className="flex min-h-0 flex-wrap content-start gap-3 overflow-y-auto">
               {entry.cards.map((text, i) => (
                 <span
                   key={i}

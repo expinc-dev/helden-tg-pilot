@@ -110,6 +110,23 @@ function isFullBleedPhase(phase: Phase): boolean {
   if (phase.content.type === 'idle') return true
   return (
     phase.content.type === 'minigame' &&
-    (phase.content.templateId === 'team_selfie' || phase.content.templateId === 'doubt_seed')
+    (phase.content.templateId === 'team_selfie' ||
+      phase.content.templateId === 'doubt_seed' ||
+      // form_to_prompt (HLN-005) is one large instruction card + a count for the
+      // room to read while they work. Inside the standard wrapper the 48px
+      // padding plus the timer bar would push its own min-h-dvh layout past a
+      // viewport, so it takes the wall like the other two.
+      phase.content.templateId === 'form_to_prompt' ||
+      // commitment (HLN-014) is the same shape as form_to_prompt — the
+      // instruction plus a bare "berapa yang sudah mengirim" — read by the whole
+      // room in the last minutes of the day. Same reason it takes the wall.
+      //
+      // journey is deliberately NOT here. Its central branch renders null: the
+      // wall's "Perjalananmu" is an authored `content` phase (the storyboard's
+      // copy is fixed, with no participant data in it), so a journey minigame
+      // phase on the wall would be an authoring mistake rather than a layout
+      // decision. Giving it the full viewport would only make that mistake
+      // bigger.
+      phase.content.templateId === 'commitment')
   )
 }

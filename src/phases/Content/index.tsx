@@ -45,8 +45,8 @@ export function ContentPageRenderer({
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col">
         <StepBody
           stepId={phase.id}
-          // Inert — `disabled` below means no rendered block reads this qId, and
-          // question blocks never survive the filter above. Same stand-in spirit
+          // Inert — question blocks never survive the filter above, so the only
+          // block left that reads this qId is unreachable. Same stand-in spirit
           // as Presentation/index.tsx and PathQuestion.tsx.
           microStepId={phase.id}
           blocks={blocks}
@@ -54,10 +54,11 @@ export function ContentPageRenderer({
           answers={{}}
           drafts={{}}
           onDraftChange={() => {}}
-          // Read-only page. Only QuestionView and ButtonBlock read this flag,
-          // and only the latter is reachable here — so a copy/external button
-          // stays visible but inert. `disabled={false}` is deliberately NOT
-          // used: it would render a live copy button that writes nothing.
+          // Read-only page: `disabled` freezes answer input, and the only block
+          // that reads it here is QuestionView, which the filter above already
+          // removed. It deliberately does NOT gate `button` blocks — ButtonBlock
+          // ignores this flag so a copy / open-Gemini button stays live, which is
+          // exactly what a Gemini-opener content page is for.
           disabled
           // Microlearning's reading treatment (framed 4:3 image, title and
           // caption stacked below) rather than Presentation's projected

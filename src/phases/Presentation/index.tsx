@@ -183,6 +183,9 @@ export function PresentationRenderer({
           answers={{}}
           drafts={{}}
           onDraftChange={() => {}}
+          // `disabled` freezes answer input only — QuestionView is unreachable
+          // here per the publish guard above. `button` blocks ignore it, so a
+          // projected slide can carry a live copy / open-Gemini button.
           disabled
           fullBleed
           sessionId={sessionId}
