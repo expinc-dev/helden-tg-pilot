@@ -5,6 +5,7 @@ import { renderPromptBlocks } from '@/lib/richText'
 import { ImageSequenceView } from './ImageSequenceQuestion'
 import { OrderQuestionView } from './OrderQuestion'
 import { PathQuestionView } from './PathQuestion'
+import { PromptBuilderView } from './PromptBuilderQuestion'
 import { ScanQuestion } from './ScanQuestion'
 import { SectionHeading } from './shared'
 import { usePatternDetector, useQrDetector } from './useScanDetector'
@@ -242,6 +243,24 @@ export function QuestionView({
         qId={qId}
         sessionId={sessionId}
         phase={phase}
+        playerId={playerId}
+      />
+    )
+  }
+
+  if (question.qType === 'prompt_builder') {
+    // Raw `disabled`, not `locked` — same reasoning as path_question above:
+    // `locked` trips on `answer !== null`, which would wrongly freeze the
+    // whole path picker after just the first path is completed.
+    return (
+      <PromptBuilderView
+        question={question}
+        answer={answer}
+        draft={draft}
+        onDraftChange={onDraftChange}
+        disabled={disabled}
+        qId={qId}
+        sessionId={sessionId}
         playerId={playerId}
       />
     )
