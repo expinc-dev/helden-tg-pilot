@@ -131,7 +131,10 @@ export function HostView() {
       ? () => endLevel(sessionId, phase.id)
       : () => nextPhase(sessionId, pointer?.activePhaseId)
     return (
-      <>
+      // `relative` + the frame height: HostScriptPanel is absolute, so it needs
+      // this wrapper to be its containing block — these branches bypass the
+      // padded live shell, which is the only other relative ancestor.
+      <div className="relative flex h-dvh w-full flex-col lg:h-full">
         <VideoHostScreen
           key={phase.id}
           sessionId={sessionId}
@@ -140,7 +143,7 @@ export function HostView() {
           onAdvance={advance}
         />
         {scriptPanel}
-      </>
+      </div>
     )
   }
 
@@ -150,7 +153,10 @@ export function HostView() {
   // this screen up there would make its button silently do nothing.
   if (meta.status === 'live' && phase && phase.content.type === 'idle' && !isModular) {
     return (
-      <>
+      // `relative` + the frame height: HostScriptPanel is absolute, so it needs
+      // this wrapper to be its containing block — these branches bypass the
+      // padded live shell, which is the only other relative ancestor.
+      <div className="relative flex h-dvh w-full flex-col lg:h-full">
         <PhaseRouter
           key={phase.id}
           phase={phase}
@@ -161,7 +167,7 @@ export function HostView() {
           onAdvance={() => nextPhase(sessionId, pointer?.activePhaseId)}
         />
         {scriptPanel}
-      </>
+      </div>
     )
   }
 
@@ -173,7 +179,10 @@ export function HostView() {
   // button inside the card, so this bypasses both.
   if (meta.status === 'live' && phase && phase.content.type === 'microlearning') {
     return (
-      <>
+      // `relative` + the frame height: HostScriptPanel is absolute, so it needs
+      // this wrapper to be its containing block — these branches bypass the
+      // padded live shell, which is the only other relative ancestor.
+      <div className="relative flex h-dvh w-full flex-col lg:h-full">
         <PhaseRouter
           key={phase.id}
           phase={phase}
@@ -188,7 +197,7 @@ export function HostView() {
           }
         />
         {scriptPanel}
-      </>
+      </div>
     )
   }
 
@@ -237,7 +246,7 @@ export function HostView() {
       // the raw (often taller) browser viewport instead, pushing anything
       // pinned to the bottom (e.g. the quiz's per-stage action button) below
       // the visible area. lg:h-full matches that capped box exactly.
-      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-8 py-3 lg:h-full"
+      className="relative flex h-dvh w-full flex-col gap-3 overflow-hidden px-8 py-3 lg:h-full"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -299,6 +308,11 @@ export function HostView() {
           })()
         ))}
 
+      {/* Rendered as a direct child of this `relative` shell: the panel positions
+          itself with `absolute` against it. No intermediate wrapper here — an
+          overlay wrapper would have to be pointer-events-none to keep the shell
+          clickable (the panel overlays the phase card), and that inheritance
+          silently disabled the whole panel, toggle included. */}
       {scriptPanel}
     </div>
   )

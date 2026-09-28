@@ -101,7 +101,7 @@ export function PresentationRenderer({
 
   const controls = role === 'host' && (
     <div
-      className="relative flex shrink-0 items-center justify-between gap-4 border-t px-4 py-3"
+      className="relative z-50 flex shrink-0 items-center justify-between gap-4 border-t bg-[#121212] px-4 py-3"
       style={{ borderColor: '#353535' }}
     >
       <span className="text-xs text-white/60">
@@ -221,7 +221,7 @@ export function PresentationRenderer({
   // min-h-0` keeps it inside while central keeps its own `fixed inset-0` deck.
   return (
     <div
-      className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden"
+      className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
       style={bgStyle}
     >
       {slideView}

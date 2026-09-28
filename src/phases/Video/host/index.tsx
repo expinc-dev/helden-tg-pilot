@@ -104,7 +104,6 @@ export function VideoHostScreen({
   const [duration, setDuration] = useState(0)
 
   const provider = videoUrl ? detectProvider(videoUrl) : null
-  const canAdvance = ended
 
   useEffect(() => {
     // sessions/{id}/videoPlayback is one global node per session, not scoped
@@ -227,11 +226,16 @@ export function VideoHostScreen({
         </div>
       </div>
 
+      {/* Never disabled. The video is a host-side aid: the phase gate is
+          phasePointer, players fold in from it, and nothing downstream reads
+          `ended` — so gating this button on the video's end (vimeo/youtube only
+          report it via postMessage) stranded a host on a video that is
+          unwatchable in their room, with no way to skip. `ended` now only drives
+          the replay overlay. */}
       <button
         type="button"
         onClick={() => setConfirm('advance')}
-        disabled={!canAdvance}
-        className="w-full shrink-0 rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black transition-opacity disabled:cursor-not-allowed disabled:opacity-30 sm:py-[18px] sm:text-lg"
+        className="w-full shrink-0 rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black transition-opacity sm:py-[18px] sm:text-lg"
       >
         Tahap selanjutnya
       </button>

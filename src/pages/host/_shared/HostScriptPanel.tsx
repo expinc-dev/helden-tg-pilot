@@ -136,13 +136,19 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
   // the phase card). The previous bottom-24 (96px) only cleared the generic
   // shell's own 56px button and landed inside that band, so the panel
   // swallowed clicks on the controls it was covering.
-  // `bottom` needs the same lg+ correction as `right`: this panel is
-  // `position: fixed`, so inside TabletFrame's simulated 768x1024 box it
-  // anchors to the raw viewport and drifts out of the frame. The frame's own
-  // bottom inset is `max(1rem, 50vh - 32rem)` (see TabletFrame's
-  // `lg:h-[1024px] lg:max-h-[calc(100vh-2rem)]` + `lg:p-4`), mirrored here.
+  // `absolute`, NOT `fixed`: fixed anchored to the raw browser viewport, so
+  // inside TabletFrame's simulated 768x1024 box (lg+) it drifted out of the
+  // device frame and needed a hand-rolled `calc(50vw - 24rem)` correction on
+  // both axes to be pulled back in. Every caller now owns a `relative`
+  // wrapper spanning that same box (pages/host/lobby's live shell plus its
+  // video/idle/microlearning early-return wrappers), so the panel is
+  // frame-locked by construction and the viewport math is gone.
+  // Callers must render it directly inside that wrapper: the panel overlays the
+  // phase card, so any intermediate full-inset overlay would need
+  // `pointer-events-none` to stay clickable-through, which the panel would then
+  // inherit and die on.
   return (
-    <div className="fixed right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2 lg:right-[calc(50vw-24rem+1rem)] lg:bottom-[calc(max(1rem,50vh-32rem)+11.5rem)]">
+    <div className="absolute right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2">
       {/* The improvisation marker is deliberately outside the collapsible body:
           there is no control anywhere in this component that hides it while
           improvMarker is set, so the host cannot lose the cue. */}
