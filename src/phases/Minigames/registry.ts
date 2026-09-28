@@ -1,7 +1,13 @@
 import { AnalyzeGridRenderer } from './AnalyzeGrid'
 import { analyzeGridConfigSchema, scoreAnalyzeGrid } from './AnalyzeGrid/score'
+import { CommitmentRenderer } from './Commitment'
+import { commitmentConfigSchema, scoreCommitment } from './Commitment/score'
 import { DoubtSeedRenderer } from './DoubtSeed'
 import { doubtSeedConfigSchema, scoreDoubtSeed } from './DoubtSeed/score'
+import { FormToPromptRenderer } from './FormToPrompt'
+import { formToPromptConfigSchema, scoreFormToPrompt } from './FormToPrompt/score'
+import { JourneyRenderer } from './Journey'
+import { journeyConfigSchema, scoreJourney } from './Journey/score'
 import { SortOrderRenderer } from './SortOrder'
 import { scoreSortOrder, sortOrderConfigSchema } from './SortOrder/score'
 import { TeamSelfieRenderer } from './TeamSelfie'
@@ -41,6 +47,24 @@ const templates: AnyTemplate[] = [
     configSchema: teamSelfieConfigSchema,
     Renderer: TeamSelfieRenderer,
     scorer: scoreTeamSelfie,
+  },
+  {
+    templateId: 'form_to_prompt',
+    configSchema: formToPromptConfigSchema,
+    Renderer: FormToPromptRenderer,
+    scorer: scoreFormToPrompt,
+  },
+  {
+    templateId: 'commitment',
+    configSchema: commitmentConfigSchema,
+    Renderer: CommitmentRenderer,
+    scorer: scoreCommitment,
+  },
+  {
+    templateId: 'journey',
+    configSchema: journeyConfigSchema,
+    Renderer: JourneyRenderer,
+    scorer: scoreJourney,
   },
 ]
 const byId = new Map<string, AnyTemplate>(templates.map((t) => [t.templateId, t]))
