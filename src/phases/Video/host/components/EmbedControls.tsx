@@ -1,75 +1,44 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import type { VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
-import { pauseVideo, playVideo, setVideoPlayback } from '@/lib/session/videoControl'
-
 import { fmtTime } from '../../lib'
 
-export function HostDirectPlayer({
-  url,
+// Vimeo/YouTube embeds run with controls=0 (native chrome hidden — the host
+// drives playback so the central screen they're synced to never shows
+// competing native UI), so unlike HostDirectPlayer they'd otherwise render
+// with no way to start, pause, replay or seek at all. Mirrors
+// HostDirectPlayer's overlay 1:1 (same tap-to-reveal skip/play/pause row, same
+// bottom seek bar) so host controls are identical across all three video
+// providers — the currentTime/duration it seeks against come from the embed's
+// own postMessage timeupdate, not the RTDB-synced positionSec, which only
+// moves on an explicit play/pause/seek.
+export function EmbedControls({
   state,
-  positionSec,
-  title,
-  sessionId,
   ended,
-  onEnded,
+  currentTime,
+  duration,
+  onPlay,
+  onPause,
+  onSeekBy,
+  onSeekTo,
   onReplayRequest,
 }: {
-  url: string
   state: VideoPlayback['state']
-  positionSec: number
-  title: string
-  sessionId: string
   ended: boolean
-  onEnded: () => void
+  currentTime: number
+  duration: number
+  onPlay: () => void
+  onPause: () => void
+  onSeekBy: (delta: number) => void
+  onSeekTo: (n: number) => void
   onReplayRequest: () => void
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [currentTime, setCurrentTime] = useState(positionSec)
-  const [duration, setDuration] = useState(0)
   const [scrubbing, setScrubbing] = useState(false)
+  const [scrubValue, setScrubValue] = useState(currentTime)
   const [controlsVisible, setControlsVisible] = useState(false)
   const hideTimer = useRef<number | null>(null)
-
-  useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-    if (Math.abs(el.currentTime - positionSec) > 0.5) {
-      el.currentTime = positionSec
-    }
-    if (state === 'playing') {
-      el.play().catch((err) => console.warn('video.play() blocked:', err))
-    } else {
-      el.pause()
-    }
-  }, [state, positionSec])
-
-  useEffect(() => {
-    if (!scrubbing) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentTime(positionSec)
-    }
-  }, [positionSec, scrubbing])
-
-  useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-    const onTime = () => {
-      if (!scrubbing) setCurrentTime(el.currentTime)
-    }
-    const onMeta = () => setDuration(el.duration || 0)
-    const onEnd = () => onEnded()
-    el.addEventListener('timeupdate', onTime)
-    el.addEventListener('loadedmetadata', onMeta)
-    el.addEventListener('ended', onEnd)
-    return () => {
-      el.removeEventListener('timeupdate', onTime)
-      el.removeEventListener('loadedmetadata', onMeta)
-      el.removeEventListener('ended', onEnd)
-    }
-  }, [scrubbing, onEnded])
 
   const flashControls = () => {
     setControlsVisible(true)
@@ -78,42 +47,18 @@ export function HostDirectPlayer({
   }
 
   const isPlaying = state === 'playing'
-  const neverPlayed = positionSec < 0.1 && !isPlaying && !ended && currentTime < 0.1
-
-  const play = () => {
-    playVideo(sessionId, currentTime)
-  }
-
-  const pause = () => {
-    pauseVideo(sessionId, currentTime)
-  }
-
-  const seekBy = (delta: number) => {
-    const next = Math.max(0, Math.min(duration || 0, currentTime + delta))
-    setVideoPlayback(sessionId, state, next)
-  }
-
-  const seekTo = (n: number) => {
-    setVideoPlayback(sessionId, state, n)
-  }
+  const neverPlayed = !isPlaying && !ended && currentTime < 0.1
+  const displayTime = scrubbing ? scrubValue : currentTime
 
   return (
-    <div
-      className="relative h-full max-h-full min-h-0 w-full cursor-pointer overflow-hidden bg-black"
-      onClick={flashControls}
-    >
-      <video ref={videoRef} src={url} muted playsInline className="h-full w-full object-contain" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3 text-sm text-white">
-        {title}
-      </div>
-
+    <div className="absolute inset-0 cursor-pointer" onClick={flashControls}>
       {neverPlayed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              play()
+              onPlay()
             }}
             className="flex size-20 items-center justify-center rounded-full bg-black/80 ring-2 ring-white/40"
             aria-label="Mulai video"
@@ -147,7 +92,7 @@ export function HostDirectPlayer({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              seekBy(-10)
+              onSeekBy(-10)
             }}
             className="flex size-14 items-center justify-center rounded-full bg-black/70 text-white"
             aria-label="Mundur 10 detik"
@@ -159,9 +104,9 @@ export function HostDirectPlayer({
             onClick={(e) => {
               e.stopPropagation()
               if (isPlaying) {
-                pause()
+                onPause()
               } else {
-                play()
+                onPlay()
               }
             }}
             className="flex size-16 items-center justify-center rounded-full bg-black/70 text-white"
@@ -173,7 +118,7 @@ export function HostDirectPlayer({
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              seekBy(10)
+              onSeekBy(10)
             }}
             className="flex size-14 items-center justify-center rounded-full bg-black/70 text-white"
             aria-label="Maju 10 detik"
@@ -190,20 +135,28 @@ export function HostDirectPlayer({
             min={0}
             max={duration || 0}
             step={0.1}
-            value={currentTime}
-            onPointerDown={() => setScrubbing(true)}
-            onPointerUp={() => setScrubbing(false)}
-            onInput={(e) => setCurrentTime(Number(e.currentTarget.value))}
+            value={displayTime}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              setScrubValue(currentTime)
+              setScrubbing(true)
+            }}
+            onPointerUp={(e) => e.stopPropagation()}
+            onInput={(e) => {
+              e.stopPropagation()
+              setScrubValue(Number(e.currentTarget.value))
+            }}
             onChange={(e) => {
+              e.stopPropagation()
               setScrubbing(false)
-              seekTo(Number(e.currentTarget.value))
+              onSeekTo(Number(e.currentTarget.value))
             }}
             onClick={(e) => e.stopPropagation()}
             className="w-full accent-[#FFB800]"
             aria-label="Seek video"
           />
           <span className="text-xs text-white/80">
-            {fmtTime(currentTime)} / {fmtTime(duration)}
+            {fmtTime(displayTime)} / {fmtTime(duration)}
           </span>
         </div>
       )}

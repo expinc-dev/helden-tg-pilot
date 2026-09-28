@@ -245,6 +245,30 @@ async function openPhaseFragmentOrder(sessionId: string, phase: Phase | undefine
   await set(eref(`sessions/${sessionId}/codepiece/${phase.id}/fragmentOrder`), order)
 }
 
+/**
+ * Pin the host's curated gallery versions (HLN-003) to the central screen.
+ *
+ * Lives on `centralStep/gallery` rather than a node of its own: that path is
+ * already host-only for writes and readable by every screen, and its rule
+ * carries no `.validate`, so a list leaf needs no new node and no new security
+ * rule. `openPhase` deletes the whole node on every phase change, so a stale
+ * pin cannot survive into the next phase.
+ *
+ * An empty list means "nothing pinned" — the central falls back to rotating
+ * through its pages — so we remove the leaf instead of writing `[]`, which
+ * keeps the node absent in exactly the state it was before HLN-003.
+ */
+export async function setGallerySpotlight(sessionId: string, keys: string[] | null) {
+  // Guard only: throws when this runs before the host's anonymous sign-in has
+  // resolved, i.e. before any write could reach RTDB.
+  requireHostUid()
+  if (keys && keys.length > 0) {
+    await set(eref(`sessions/${sessionId}/centralStep/gallery`), keys)
+    return
+  }
+  await remove(eref(`sessions/${sessionId}/centralStep/gallery`))
+}
+
 async function openPhase(sessionId: string, phase: Phase | undefined) {
   await Promise.all([
     openPhaseTimer(sessionId, phase),

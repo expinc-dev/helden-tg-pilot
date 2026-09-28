@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
 import type { Phase } from '@helden-inc/tg-schema'
@@ -102,7 +101,7 @@ export function PresentationRenderer({
 
   const controls = role === 'host' && (
     <div
-      className="relative flex items-center justify-between gap-4 border-t px-4 py-3"
+      className="relative z-50 flex shrink-0 items-center justify-between gap-4 border-t bg-[#121212] px-4 py-3"
       style={{ borderColor: '#353535' }}
     >
       <span className="text-xs text-white/60">
@@ -157,18 +156,20 @@ export function PresentationRenderer({
     </div>
   )
 
-  const bgStyle = {
-    backgroundImage: `url(${assets.images.backgrounds.central})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  }
+  // The projected slide is the content here, so it gets a flat dark surface.
+  // Deliberately NOT the lobby backdrop (`backgrounds.central`): that PNG is
+  // drawn out of ASCII-art character fields, and its bottom-left cluster leaked
+  // through the strip under the slide's below-image title as garbled lettering
+  // ("frnxxx..."). Same near-black as the hero image's own bottom fade, so the
+  // seam between image and surface stays invisible.
+  const bgStyle = { backgroundColor: '#121212' }
 
   const slideView = (
     <div
       key={slide.id}
-      className={`animate-in fade-in flex w-full flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
+      className={`animate-in fade-in flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
     >
-      <div className="mx-auto flex w-full flex-1 flex-col">
+      <div className="mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto">
         <StepBody
           stepId={slide.id}
           // Inert — presentation slides always hard-fail publish if they carry
@@ -182,6 +183,9 @@ export function PresentationRenderer({
           answers={{}}
           drafts={{}}
           onDraftChange={() => {}}
+          // `disabled` freezes answer input only — QuestionView is unreachable
+          // here per the publish guard above. `button` blocks ignore it, so a
+          // projected slide can carry a live copy / open-Gemini button.
           disabled
           fullBleed
           sessionId={sessionId}
@@ -211,12 +215,18 @@ export function PresentationRenderer({
     )
   }
 
+  // Host branch: in-flow flex child of the host live shell (pages/host/lobby),
+  // NOT an absolutely-positioned overlay. `absolute inset-0` resolved against
+  // that middle band and let the slide paint outside its container; `h-full
+  // min-h-0` keeps it inside while central keeps its own `fixed inset-0` deck.
   return (
-    <div className="absolute inset-0 flex flex-col" style={bgStyle}>
+    <div
+      className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+      style={bgStyle}
+    >
       {slideView}
       <FullscreenToggle position="absolute" />
       {controls}
-      {indicator}
 
       {pendingPhaseEnd && (
         <PhaseEndConfirm onCancel={() => setPendingPhaseEnd(false)} onConfirm={confirmPhaseEnd} />

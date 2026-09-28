@@ -69,20 +69,11 @@ export function CentralView() {
     )
   }
 
-  if (meta?.status === 'ended' && sessionId) {
-    return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <p className="text-xs text-gray-500">
-          {sessionId} · {meta.status} · {identity.id}
-        </p>
-        <EndScreen sessionId={sessionId} />
-      </div>
-    )
-  }
+  if (meta?.status === 'ended' && sessionId) return <EndScreen sessionId={sessionId} />
 
-  // Full-bleed phases escape the standard live wrapper's padding and debug
-  // line: idle's lobby-style layout, and team_selfie's wall-filling gallery
-  // (HLN-018). Same reasoning as the host's video bypass.
+  // Full-bleed phases escape the standard live wrapper's padding: idle's
+  // lobby-style layout, team_selfie's wall-filling photo mosaic (HLN-018), and
+  // doubt_seed's gallery (HLN-003). Same reasoning as the host's video bypass.
   if (phase && sessionId && isFullBleedPhase(phase)) {
     return (
       <PhaseRouter
@@ -97,10 +88,7 @@ export function CentralView() {
 
   if (phase && sessionId) {
     return (
-      <div className="flex min-h-screen flex-col gap-4 p-8">
-        <p className="text-xs text-gray-500">
-          {sessionId} · {meta?.status ?? '—'} · {identity.id}
-        </p>
+      <div className="flex min-h-screen flex-col gap-4 bg-[#121212] p-8">
         <TimerBar sessionId={sessionId} phase={phase} role="central" />
         <PhaseRouter
           phase={phase}
@@ -120,5 +108,25 @@ export function CentralView() {
 // call sites can never drift apart.
 function isFullBleedPhase(phase: Phase): boolean {
   if (phase.content.type === 'idle') return true
-  return phase.content.type === 'minigame' && phase.content.templateId === 'team_selfie'
+  return (
+    phase.content.type === 'minigame' &&
+    (phase.content.templateId === 'team_selfie' ||
+      phase.content.templateId === 'doubt_seed' ||
+      // form_to_prompt (HLN-005) is one large instruction card + a count for the
+      // room to read while they work. Inside the standard wrapper the 48px
+      // padding plus the timer bar would push its own min-h-dvh layout past a
+      // viewport, so it takes the wall like the other two.
+      phase.content.templateId === 'form_to_prompt' ||
+      // commitment (HLN-014) is the same shape as form_to_prompt — the
+      // instruction plus a bare "berapa yang sudah mengirim" — read by the whole
+      // room in the last minutes of the day. Same reason it takes the wall.
+      //
+      // journey is deliberately NOT here. Its central branch renders null: the
+      // wall's "Perjalananmu" is an authored `content` phase (the storyboard's
+      // copy is fixed, with no participant data in it), so a journey minigame
+      // phase on the wall would be an authoring mistake rather than a layout
+      // decision. Giving it the full viewport would only make that mistake
+      // bigger.
+      phase.content.templateId === 'commitment')
+  )
 }

@@ -19,20 +19,20 @@ export function CentralProgressPane({
 }) {
   const rows = usePlayerBoard(sessionId)
   const total = content.steps.length
-  const doneCounts = rows.map((r) => Math.min(r.selfStep, total - 1) + 1)
+  const doneCounts = rows.map((r) => Math.min(Math.max(r.selfStep, 0), total))
   const finished = doneCounts.filter((d) => d === total).length
   const avgPct = rows.length
     ? Math.round((doneCounts.reduce((a, b) => a + b, 0) / (rows.length * total)) * 100)
     : 0
 
   return (
-    <div className="flex flex-col items-center gap-3 p-6 text-center">
+    <div className="flex flex-col items-center gap-3 p-6 text-center text-white">
       <h2 className="text-lg font-semibold">{title}</h2>
       <div className="h-3 w-64 overflow-hidden rounded-full bg-gray-200">
         <div className="h-3 rounded-full bg-black transition-all" style={{ width: `${avgPct}%` }} />
       </div>
       <p className="text-xs text-gray-400">
-        {finished}/{rows.length} selesai · {avgPct}% rata-rata progres
+        {finished}/{rows.length} pemain selesai · {avgPct}% rata-rata progres
       </p>
     </div>
   )

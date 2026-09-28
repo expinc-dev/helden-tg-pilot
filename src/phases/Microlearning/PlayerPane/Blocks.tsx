@@ -129,7 +129,7 @@ export function BlockView({
         />
       )
     case 'button':
-      return <ButtonBlock block={block} disabled={disabled} />
+      return <ButtonBlock block={block} />
     default:
       return <p className="text-xs text-white/40">Unsupported block: {block.kind}</p>
   }
@@ -146,23 +146,23 @@ const SAFE_BUTTON_URL = /^https?:\/\//i
 // Bridge to Gemini (or similar): copy a prepared prompt, or open an external
 // link. Two variants share this component because CMS's ButtonBlockEditor
 // mirrors that split (see helden-tg-cms/src/components/blocks/button/).
-function ButtonBlock({
-  block,
-  disabled,
-}: {
-  block: Extract<Block, { kind: 'button' }>
-  disabled: boolean
-}) {
+//
+// Deliberately does NOT take `disabled`. That flag means "this surface cannot
+// accept an answer" and only QuestionView's family reads it; a button writes
+// no answer, only the clipboard or a new tab. Gating it by `disabled` made the
+// block inert on exactly the surfaces it is needed live — a read-only content
+// page, a projected slide, a past step opened for review — where re-copying
+// the prompt is the point. Empty text/href is the only reason to render inert.
+function ButtonBlock({ block }: { block: Extract<Block, { kind: 'button' }> }) {
   const className =
     'inline-flex items-center gap-2 rounded-lg bg-[#FFB800] px-4 py-2 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none'
 
   if (block.variant === 'external-link') {
     const rawHref = block.url ?? ''
     const href = SAFE_BUTTON_URL.test(rawHref) ? rawHref : ''
-    // `pointer-events-none` when disabled or href empty — an <a> without href
-    // is still keyboard-focusable and clickable, so `disabled` alone (an <a>
-    // attribute that doesn't exist) isn't enough.
-    const inert = disabled || !href
+    // `pointer-events-none` when href is empty — an <a> without href is still
+    // keyboard-focusable and clickable, so omitting the attribute isn't enough.
+    const inert = !href
     return (
       <a
         href={href}
@@ -178,7 +178,7 @@ function ButtonBlock({
   }
 
   const text = block.text ?? ''
-  const inert = disabled || !text
+  const inert = !text
   return (
     <button
       type="button"

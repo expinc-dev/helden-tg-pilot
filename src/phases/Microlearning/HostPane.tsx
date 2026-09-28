@@ -20,7 +20,9 @@ import { useTeams } from '@/lib/sync/useTeams'
 // row mirrors that same step, matching what they'd actually see on screen.
 
 function progressPct(step: number, total: number): number {
-  const done = Math.min(step, total - 1) + 1
+  // Completed steps, not pointer+1: a fresh player (selfStep 0) is at 0%, and
+  // the finish sentinel (selfStep === total) saturates at 100%.
+  const done = Math.min(Math.max(step, 0), total)
   return Math.round((done / total) * 100)
 }
 
@@ -65,23 +67,29 @@ export function MonitorPane({
       members: members.map(([id, p]) => ({
         id,
         name: p.name,
-        step: Math.min(leaderStep, total - 1) + 1,
+        step: Math.min(Math.max(leaderStep, 0), total),
       })),
       total,
     }
   })
   const openTeam = teamRows.find((t) => t.id === openTeamId)
+  // Solo testing / pre-team lobby in a teams-on session: no teams exist yet,
+  // so a teams-only list would render empty ("tidak muncul"). Fall back to
+  // per-player rows until the first team appears.
+  const showTeams = gameType === 'Multiplayer Game' && teamRows.length > 0
 
   return (
     <div
-      className="flex min-h-dvh flex-col bg-cover bg-top p-4 sm:p-6"
+      className="flex h-dvh w-full flex-col overflow-hidden bg-cover bg-top p-4 sm:p-6 lg:h-full"
       style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
     >
       <div
-        className="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border p-4 sm:p-6"
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border p-4 sm:p-6"
         style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
       >
-        <HostBadge pageName={gameType} />
+        <div className="shrink-0">
+          <HostBadge pageName={gameType} />
+        </div>
         <div className="text-center">
           <h2 className="text-xl font-bold text-white">{title}</h2>
           <p className="mt-1 text-xs text-white/40">
@@ -90,7 +98,7 @@ export function MonitorPane({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
-          {gameType === 'Multiplayer Game'
+          {showTeams
             ? teamRows.map((t) => (
                 <TeamProgressRow key={t.id} team={t} onOpen={() => setOpenTeamId(t.id)} />
               ))
@@ -105,9 +113,11 @@ export function MonitorPane({
         </div>
 
         {onAdvance && (
-          <GradientButton type="button" onClick={onAdvance} className="w-full py-3.5 text-sm">
-            Akhiri Level
-          </GradientButton>
+          <div className="shrink-0">
+            <GradientButton type="button" onClick={onAdvance} className="w-full py-3.5 text-sm">
+              Akhiri Level
+            </GradientButton>
+          </div>
         )}
       </div>
 

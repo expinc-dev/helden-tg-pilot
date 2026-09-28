@@ -4,6 +4,8 @@ import { type TeamRole, useTeamRole } from '@/lib/sync/useTeamRole'
 
 import { TeamCodeInput } from './CodeInput'
 import { CodePieceRenderer } from './CodePiece'
+import { ContentPageRenderer } from './Content'
+import { EndRenderer } from './End'
 import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { UnknownTemplate } from './Minigames/UnknownTemplate'
@@ -63,6 +65,10 @@ function PhaseContentSwitch({
   onAdvance,
 }: RouterProps & { teamRole: TeamRole }) {
   const content = phase.content
+  // Read once, before the switch, so the fallback below still has a value to
+  // print: with every member of the union now handled, TypeScript narrows
+  // `content` to `never` inside `default` and `content.type` stops compiling.
+  const contentType: string = content.type
   switch (content.type) {
     case 'idle':
       return (
@@ -98,6 +104,16 @@ function PhaseContentSwitch({
           role={role}
           playerId={playerId}
           teamId={allowTeams ? teamId : undefined}
+        />
+      )
+    case 'content':
+      return (
+        <ContentPageRenderer
+          content={content}
+          phase={phase}
+          role={role}
+          sessionId={sessionId}
+          playerId={playerId}
         />
       )
     case 'video':
@@ -182,10 +198,12 @@ function PhaseContentSwitch({
         />
       )
     }
+    case 'end':
+      return <EndRenderer content={content} title={phase.title} role={role} sessionId={sessionId} />
     default:
       return (
         <div className="p-8 text-sm text-gray-500">
-          Phase type "{content.type}" not renderable yet.
+          Phase type "{contentType}" not renderable yet.
         </div>
       )
   }

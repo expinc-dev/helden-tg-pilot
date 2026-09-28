@@ -13,25 +13,29 @@ type StepStatus = 'done' | 'available' | 'locked'
 // current step," not true per-step completion in arbitrary order.
 function stepStatus(
   index: number,
-  bounded: number,
-  mode: MicrolearningContent['mode']
+  capped: number,
+  mode: MicrolearningContent['mode'],
+  total: number
 ): StepStatus {
-  if (index < bounded) return 'done'
-  if (index === bounded) return 'available'
+  if (index < capped) return 'done'
+  if (index === capped && capped < total) return 'available'
   return mode === 'free' ? 'available' : 'locked'
 }
 
 export function StepPickerGrid({
   content,
-  bounded,
+  step,
   onSelect,
 }: {
   content: MicrolearningContent
-  bounded: number
+  // Raw RTDB step (may equal steps.length once finished) — NOT the clamped
+  // live pointer. Clamping here kept the bar at (len-1)/len forever.
+  step: number
   onSelect: (index: number) => void
 }) {
   const total = content.steps.length
-  const pct = Math.round((bounded / total) * 100)
+  const capped = Math.min(Math.max(step, 0), total)
+  const pct = Math.round((capped / total) * 100)
 
   return (
     <div
@@ -59,7 +63,7 @@ export function StepPickerGrid({
               key={step.id}
               step={step}
               index={i}
-              status={stepStatus(i, bounded, content.mode)}
+              status={stepStatus(i, capped, content.mode, total)}
               onSelect={() => onSelect(i)}
             />
           ))}

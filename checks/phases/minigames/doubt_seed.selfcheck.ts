@@ -18,6 +18,7 @@ const config = {
   distractorCards: [{ id: 'd1', text: 'Distractor 1' }],
   dropZones: 2,
   instructions: 'Drag your cards.',
+  gallery: { enabled: true, mode: 'auto', cap: 3 },
 }
 const phaseStartMs = 1_000_000
 

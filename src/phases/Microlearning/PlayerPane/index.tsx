@@ -15,7 +15,7 @@ import { useMyTeamId } from '@/lib/sync/useTeams'
 import { StepBody } from './StepBody'
 import { StepPickerGrid } from './StepPicker'
 import { isDraftValid } from './isDraftValid'
-import { ActionButton } from './shared'
+import { ActionButton, BackToPicker } from './shared'
 
 export function PlayerPane({
   content,
@@ -45,6 +45,7 @@ export function PlayerPane({
   const bounded = Math.min(step, content.steps.length - 1)
   const current = content.steps[bounded]
   const isLastStep = bounded === content.steps.length - 1
+
   const gated = stepRequiresAnswer(current)
 
   // Within-step pagination: one block per screen. blockIndex is local, not
@@ -119,11 +120,12 @@ export function PlayerPane({
     return block.kind === 'question' && isDraftValid(block.question, drafts[i])
   })
 
+  // Deliberately no `isLastBlock && isLastStep` term: the final step's final
+  // block is exactly the state the "Selesai" button renders in, so a disable
+  // there left the phase with no way out. It is replaced by the explicit
+  // completion path in handleFinish below.
   const nextDisabled =
-    advancing ||
-    !currentQuestionAnswered ||
-    (isLastBlock && isLastStep) ||
-    (isLastBlock && gated && !allQuestionsAnswered)
+    advancing || !currentQuestionAnswered || (isLastBlock && gated && !allQuestionsAnswered)
 
   // Commit the CURRENT block's draft (if it's a question with a pending draft)
   // before we leave it. Called on every Next click — advancing within a step
@@ -148,6 +150,29 @@ export function PlayerPane({
     })
   }
 
+  // Leaving a step: mop up any as-yet-uncommitted drafts on earlier question
+  // blocks the player back-scrolled past (rare with pure forward pagination,
+  // but cheap safety). Shared by the normal advance and the terminal finish.
+  const commitRemainingDrafts = async () => {
+    if (!targetPlayerId) return
+    for (const i of questionBlockIndices) {
+      if (i === blockIndex) continue
+      if (answers[i] !== undefined || drafts[i] === undefined) continue
+      const block = current.blocks[i]
+      if (block.kind !== 'question') continue
+      const value = drafts[i]
+      const optionId = block.question.qType === 'single_choice' ? String(value) : undefined
+      await submitAnswer({
+        sessionId,
+        playerId: targetPlayerId,
+        keyId: targetPlayerId,
+        qId: `${phase.id}_${current.id}_${i}`,
+        value,
+        optionId,
+      })
+    }
+  }
+
   const handleNext = async () => {
     if (!targetPlayerId || advancing) return
     setAdvancing(true)
@@ -157,33 +182,41 @@ export function PlayerPane({
       setAdvancing(false)
       return
     }
-    // Leaving the step: mop up any as-yet-uncommitted drafts on earlier
-    // question blocks the player back-scrolled past (rare with pure forward
-    // pagination, but cheap safety).
-    for (const i of questionBlockIndices) {
-      if (i === blockIndex) continue
-      if (answers[i] !== undefined || drafts[i] === undefined) continue
-      const block = current.blocks[i]
-      if (block.kind !== 'question') continue
-      const value = drafts[i]
-      const optionId = block.question.qType === 'single_choice' ? String(value) : undefined
-      const qId = `${phase.id}_${current.id}_${i}`
-      await submitAnswer({
-        sessionId,
-        playerId: targetPlayerId,
-        keyId: targetPlayerId,
-        qId,
-        value,
-        optionId,
-      })
-    }
+    await commitRemainingDrafts()
     setStep(bounded + 1)
     setAdvancing(false)
     setViewingIndex(null) // finished a step -> back to the level picker
   }
 
+  // Terminal action for the phase's last step. `usePlayerStep`'s readers all
+  // clamp with `Math.min(step, steps.length - 1)`, so writing `steps.length`
+  // is the established "everything done" sentinel: every step then reads as
+  // past (StepPickerGrid's stepStatus -> 'done') and the host's progressPct
+  // saturates at 100%. handleNext can't express that — its `bounded + 1`
+  // clamps back onto the last step and would strand the player there.
+  const handleFinish = () => {
+    if (!targetPlayerId || advancing) return
+    setAdvancing(true)
+    void (async () => {
+      await commitCurrentDraft()
+      await commitRemainingDrafts()
+      setStep(content.steps.length)
+      setViewingIndex(null)
+      setAdvancing(false)
+    })()
+  }
+
   if (viewingIndex === null) {
-    return <StepPickerGrid content={content} bounded={bounded} onSelect={setViewingIndex} />
+    return (
+      <StepPickerGrid
+        content={content}
+        step={step}
+        onSelect={(i) => {
+          setBlockIndex(0)
+          setViewingIndex(i)
+        }}
+      />
+    )
   }
 
   if (viewingIndex !== bounded) {
@@ -192,7 +225,7 @@ export function PlayerPane({
     // through it interactively, this is just a scrollable snapshot).
     const step = content.steps[viewingIndex]
     return (
-      <StepShell>
+      <StepShell footer={<BackToPicker onBack={() => setViewingIndex(null)} />}>
         <StepBody
           stepId={step.id}
           microStepId={step.id}
@@ -215,16 +248,32 @@ export function PlayerPane({
   // Block[] because Presentation shares this component; passing a
   // single-element array shows exactly one block per Next click.
   const nextLabel = isLastBlock && isLastStep ? 'Selesai' : 'Selanjutnya'
+  // The last step's last block is the phase's terminal action; every other
+  // Next is a plain advance.
+  const terminal = isLastBlock && isLastStep
   return (
     <StepShell
       footer={
-        canWrite ? (
-          <ActionButton disabled={nextDisabled} onClick={handleNext}>
-            {nextLabel}
-          </ActionButton>
-        ) : (
-          <p className="text-center text-xs text-white/40">Your team leader controls Next.</p>
-        )
+        <div className="flex flex-col gap-2">
+          {canWrite ? (
+            <ActionButton disabled={nextDisabled} onClick={terminal ? handleFinish : handleNext}>
+              {nextLabel}
+            </ActionButton>
+          ) : (
+            <p className="text-center text-xs text-white/40">Your team leader controls Next.</p>
+          )}
+          {blockIndex > 0 ? (
+            <button
+              type="button"
+              onClick={() => setBlockIndex(blockIndex - 1)}
+              className="mx-auto flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+            >
+              &#8249; Kembali
+            </button>
+          ) : (
+            <BackToPicker onBack={() => setViewingIndex(null)} />
+          )}
+        </div>
       }
     >
       <StepBody

@@ -130,12 +130,25 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
   const improv = phase.hostScript?.improvMarker === true
   const authored = anchor.length > 0 || prompts.length > 0
 
+  // Anchored clear of the host action stack. 11.5rem = 184px, which sits
+  // 15px above the tallest one: Quiz's per-stage GradientButton, whose band
+  // reaches 169px from the card's bottom edge (`mt-auto` + `pb-10` inside
+  // the phase card). The previous bottom-24 (96px) only cleared the generic
+  // shell's own 56px button and landed inside that band, so the panel
+  // swallowed clicks on the controls it was covering.
+  // `absolute`, NOT `fixed`: fixed anchored to the raw browser viewport, so
+  // inside TabletFrame's simulated 768x1024 box (lg+) it drifted out of the
+  // device frame and needed a hand-rolled `calc(50vw - 24rem)` correction on
+  // both axes to be pulled back in. Every caller now owns a `relative`
+  // wrapper spanning that same box (pages/host/lobby's live shell plus its
+  // video/idle/microlearning early-return wrappers), so the panel is
+  // frame-locked by construction and the viewport math is gone.
+  // Callers must render it directly inside that wrapper: the panel overlays the
+  // phase card, so any intermediate full-inset overlay would need
+  // `pointer-events-none` to stay clickable-through, which the panel would then
+  // inherit and die on.
   return (
-    // Anchored above the bottom action button (every host screen pins one at
-    // the bottom of the viewport) so the two never collide. At lg+ the app is
-    // a centered 768px tablet frame, so `right` is offset to land back inside
-    // that frame instead of on the desktop backdrop.
-    <div className="fixed right-4 bottom-24 z-40 flex w-[min(90vw,26rem)] flex-col gap-2 lg:right-[calc(50vw-24rem+1rem)]">
+    <div className="absolute right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2">
       {/* The improvisation marker is deliberately outside the collapsible body:
           there is no control anywhere in this component that hides it while
           improvMarker is set, so the host cannot lose the cue. */}

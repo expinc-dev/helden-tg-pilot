@@ -6,15 +6,20 @@ import {
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
 import type { Phase } from '@helden-inc/tg-schema'
-import { serverTimestamp, set } from 'firebase/database'
 
-import { eref } from '@/lib/firebase'
+import { setDoubtSeedShared, submitDoubtSeedAnswer } from '@/lib/session/doubtSeed'
+
+import { SubmittedPane } from './SubmittedPane'
+import { cardTextIndex, submittedGalleryEntries } from './gallery'
+import { type DoubtSeedConfig, keepsVersionPrivate } from './score'
+import { useGalleryAnswers, usePlayerGalleryRoster } from './useGallery'
 
 type Card = { id: string; text: string }
 type Slot = Card | null
@@ -22,25 +27,29 @@ type Slot = Card | null
 // Doubt-seed interaction (HLN-006): a card pool (soul + distractor shuffled)
 // from which the player drags cards into N drop zones. Any arrangement is
 // valid — reflection activity, no grading. Full drag-and-drop using
-// @dnd-kit/core (reused from sort_order, C5). PointerSensor covers mouse +
-// touch on mobile. The parent (index.tsx) drives role/team handling.
+// @dnd-kit/core (reused from sort_order, C5). PointerSensor covers mouse;
+// TouchSensor covers touch — without it a phone claims the gesture for scroll
+// (pointercancel) and the card never lifts. The parent (index.tsx) drives
+// role/team handling.
+//
+// On submit the screen becomes the gallery (HLN-003, storyboard §7): the room's
+// versions scroll anonymously, so a player who finished early has something to
+// read instead of a spinner. No name and no score ever reaches this list — the
+// labels are positional ("Tim A/B/C"), which is the point of the exercise.
+// That whole post-submit screen is SubmittedPane, so it can be rendered and
+// checked without a running session.
 export function DoubtSeedPlayer({
   phase,
   sessionId,
   writerId,
-  soulCards,
-  distractorCards,
-  dropZones,
-  instructions,
+  config,
 }: {
   phase: Phase
   sessionId: string
   writerId: string
-  soulCards: Card[]
-  distractorCards: Card[]
-  dropZones: number
-  instructions: string
+  config: DoubtSeedConfig
 }) {
+  const { soulCards, distractorCards, dropZones, instructions, gallery } = config
   const phaseId = phase.id
   const pool = useMemo(
     () => shufflePool([...soulCards, ...distractorCards]),
@@ -50,9 +59,31 @@ export function DoubtSeedPlayer({
   const [active, setActive] = useState<Card | null>(null)
   const [busy, setBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [shareBusy, setShareBusy] = useState(false)
+  // Whether this player's version starts off the wall — the same predicate the
+  // answer write uses (lib/session/doubtSeed.ts), so the screen can never claim
+  // a state the stored answer disagrees with. Private is the default in
+  // `optional` mode because the alternative — shown until the player finds the
+  // opt-out — would leak the very thing the storyboard is careful about.
+  const privateByDefault = keepsVersionPrivate(gallery)
+  const [shared, setShared] = useState(!privateByDefault)
+
+  // The gallery reads are mounted from the first render, not from the submit —
+  // hooks cannot be called conditionally. They are cheap (one flat uid map plus
+  // one listener per writer), and they describe the very pool this player is
+  // about to join. `usePlayerGalleryRoster` deliberately avoids presence, which
+  // a player client may not read. A switched-off gallery subscribes to nothing:
+  // the phone is on a shared mobile connection, and there is no wall to fill.
+  const gallerySessionId = gallery.enabled ? sessionId : undefined
+  const roster = usePlayerGalleryRoster(gallerySessionId, phase)
+  const answers = useGalleryAnswers(gallerySessionId, roster, phaseId)
+  const entries = submittedGalleryEntries(roster, answers, cardTextIndex(config))
 
   const filledCount = slots.filter((s) => s !== null).length
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 8 } })
+  )
 
   const onDragStart = (e: DragStartEvent) =>
     setActive(pool.find((c) => c.id === e.active.id) ?? null)
@@ -76,29 +107,37 @@ export function DoubtSeedPlayer({
   const submit = async () => {
     if (filledCount !== dropZones || busy) return
     setBusy(true)
-    await set(eref(`sessions/${sessionId}/players/${writerId}/answers/${phaseId}`), {
-      value: slots.map((s) => s?.id).filter(Boolean),
-      submittedAt: serverTimestamp(),
-    })
+    await submitDoubtSeedAnswer(
+      sessionId,
+      writerId,
+      phaseId,
+      slots.flatMap((s) => (s ? [s.id] : [])),
+      gallery
+    )
     setSubmitted(true)
     setBusy(false)
   }
 
+  const shareToGallery = async () => {
+    if (shareBusy) return
+    setShareBusy(true)
+    try {
+      await setDoubtSeedShared(sessionId, writerId, phaseId, true)
+      setShared(true)
+    } finally {
+      setShareBusy(false)
+    }
+  }
+
   if (submitted) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#1F1F1F] p-6 text-center text-white">
-        <div className="flex gap-2">
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="size-3 animate-bounce rounded-full bg-[#FDDB00]"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
-        </div>
-        <p className="text-xl font-bold text-[#FFB800]">Jawaban tersimpan!</p>
-        <p className="text-sm text-white/50">Menunggu pemain lain menjawab…</p>
-      </div>
+      <SubmittedPane
+        entries={entries}
+        gallery={gallery}
+        shared={shared}
+        shareBusy={shareBusy}
+        onShare={shareToGallery}
+      />
     )
   }
 
@@ -200,7 +239,7 @@ function PoolCard({ card, disabled }: { card: Card; disabled: boolean }) {
       type="button"
       {...attributes}
       {...listeners}
-      className={`rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/80 transition select-none ${
+      className={`touch-none rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/80 transition select-none ${
         isDragging ? 'opacity-40' : 'hover:border-[#FFB800]'
       } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
     >

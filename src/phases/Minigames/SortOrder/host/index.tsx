@@ -125,7 +125,7 @@ export function HostSortOrder({
     : content.items
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         {ready ? (
           <button
@@ -176,7 +176,7 @@ export function HostSortOrder({
           <p className="text-lg leading-relaxed font-semibold text-white">{phase.title}</p>
         </div>
 
-        <div className="flex w-full flex-col gap-2.5">
+        <div className="flex min-h-0 w-full flex-1 flex-col gap-2.5 overflow-y-auto">
           {displayItems.map((item, i) => (
             <div
               key={item.id}
