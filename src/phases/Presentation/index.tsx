@@ -101,7 +101,7 @@ export function PresentationRenderer({
 
   const controls = role === 'host' && (
     <div
-      className="relative flex items-center justify-between gap-4 border-t px-4 py-3"
+      className="relative flex shrink-0 items-center justify-between gap-4 border-t px-4 py-3"
       style={{ borderColor: '#353535' }}
     >
       <span className="text-xs text-white/60">
@@ -167,7 +167,7 @@ export function PresentationRenderer({
   const slideView = (
     <div
       key={slide.id}
-      className={`animate-in fade-in flex w-full flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
+      className={`animate-in fade-in flex min-h-0 w-full flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
     >
       <div className="mx-auto flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
         <StepBody
@@ -220,7 +220,7 @@ export function PresentationRenderer({
   // that middle band and let the slide paint outside its container; `h-full
   // min-h-0` keeps it inside while central keeps its own `fixed inset-0` deck.
   return (
-    <div className="relative flex h-full min-h-0 flex-col" style={bgStyle}>
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden" style={bgStyle}>
       {slideView}
       <FullscreenToggle position="absolute" />
       {controls}

@@ -79,7 +79,7 @@ function SortableRow({
       style={style}
       {...attributes}
       {...listeners}
-      className={`flex items-center gap-3 border px-5 py-4 text-sm text-white select-none ${
+      className={`flex touch-none items-center gap-3 border px-5 py-4 text-sm text-white select-none ${
         disabled ? 'cursor-not-allowed opacity-60' : 'cursor-grab active:cursor-grabbing'
       }`}
     >
@@ -319,7 +319,14 @@ export function SortOrderPlayerActive({
     })
   }, [sessionId, writerId, phaseId, round])
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor))
+  // PointerSensor covers mouse; TouchSensor covers touch — without it a phone claims
+  // the gesture for scroll (pointercancel) and the row never lifts. distance: 8
+  // keeps a plain tap from starting a drag. SortableRow root also carries
+  // `touch-none` below for the same reason.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 8 } })
+  )
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e
     if (!over || active.id === over.id) return

@@ -153,14 +153,14 @@ export function VideoHostScreen({
       <Header />
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-[#08080833] p-4 sm:gap-5 sm:p-6">
-        <div className="text-center">
+        <div className="shrink-0 text-center">
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Video Control</h1>
           <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
             Anda memegang kendali penuh atas video di layar utama.
           </p>
         </div>
 
-        <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
           {videoUrl && provider === 'direct' && (
             <HostDirectPlayer
               url={videoUrl}
@@ -174,7 +174,7 @@ export function VideoHostScreen({
             />
           )}
           {videoUrl && provider === 'vimeo' && (
-            <div className="relative aspect-video w-full">
+            <div className="relative h-full max-h-full min-h-0 w-full overflow-hidden">
               <VimeoPlayer
                 url={videoUrl}
                 state={state}
@@ -200,7 +200,7 @@ export function VideoHostScreen({
             </div>
           )}
           {videoUrl && provider === 'youtube' && (
-            <div className="relative aspect-video w-full">
+            <div className="relative h-full max-h-full min-h-0 w-full overflow-hidden">
               <YoutubePlayer
                 url={videoUrl}
                 state={state}
@@ -232,7 +232,7 @@ export function VideoHostScreen({
         type="button"
         onClick={() => setConfirm('advance')}
         disabled={!canAdvance}
-        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black transition-opacity disabled:cursor-not-allowed disabled:opacity-30 sm:py-[18px] sm:text-lg"
+        className="w-full shrink-0 rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black transition-opacity disabled:cursor-not-allowed disabled:opacity-30 sm:py-[18px] sm:text-lg"
       >
         Tahap selanjutnya
       </button>

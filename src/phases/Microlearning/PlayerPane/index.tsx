@@ -15,7 +15,7 @@ import { useMyTeamId } from '@/lib/sync/useTeams'
 import { StepBody } from './StepBody'
 import { StepPickerGrid } from './StepPicker'
 import { isDraftValid } from './isDraftValid'
-import { ActionButton } from './shared'
+import { ActionButton, BackToPicker } from './shared'
 
 export function PlayerPane({
   content,
@@ -207,7 +207,16 @@ export function PlayerPane({
   }
 
   if (viewingIndex === null) {
-    return <StepPickerGrid content={content} bounded={bounded} onSelect={setViewingIndex} />
+    return (
+      <StepPickerGrid
+        content={content}
+        step={step}
+        onSelect={(i) => {
+          setBlockIndex(0)
+          setViewingIndex(i)
+        }}
+      />
+    )
   }
 
   if (viewingIndex !== bounded) {
@@ -216,7 +225,7 @@ export function PlayerPane({
     // through it interactively, this is just a scrollable snapshot).
     const step = content.steps[viewingIndex]
     return (
-      <StepShell>
+      <StepShell footer={<BackToPicker onBack={() => setViewingIndex(null)} />}>
         <StepBody
           stepId={step.id}
           microStepId={step.id}
@@ -245,13 +254,26 @@ export function PlayerPane({
   return (
     <StepShell
       footer={
-        canWrite ? (
-          <ActionButton disabled={nextDisabled} onClick={terminal ? handleFinish : handleNext}>
-            {nextLabel}
-          </ActionButton>
-        ) : (
-          <p className="text-center text-xs text-white/40">Your team leader controls Next.</p>
-        )
+        <div className="flex flex-col gap-2">
+          {canWrite ? (
+            <ActionButton disabled={nextDisabled} onClick={terminal ? handleFinish : handleNext}>
+              {nextLabel}
+            </ActionButton>
+          ) : (
+            <p className="text-center text-xs text-white/40">Your team leader controls Next.</p>
+          )}
+          {blockIndex > 0 ? (
+            <button
+              type="button"
+              onClick={() => setBlockIndex(blockIndex - 1)}
+              className="mx-auto flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+            >
+              &#8249; Kembali
+            </button>
+          ) : (
+            <BackToPicker onBack={() => setViewingIndex(null)} />
+          )}
+        </div>
       }
     >
       <StepBody

@@ -1,5 +1,7 @@
 import { TeamFocusLeader } from '../../TeamFocusLeader'
 import type { MinigameRendererProps } from '../types'
+import { CentralAnalyzeGrid } from './central'
+import { HostAnalyzeGrid } from './host'
 import { AnalyzeGridPlayer } from './player'
 import type { AnalyzeGridConfig } from './score'
 
@@ -10,11 +12,12 @@ import type { AnalyzeGridConfig } from './score'
 export function AnalyzeGridRenderer(props: MinigameRendererProps<AnalyzeGridConfig>) {
   const { config, phase, sessionId, playerId, role, teamRole } = props
 
-  if (role === 'central' || role === 'host') {
-    // No dedicated central/host view for v1 — the host shell shows the phase
-    // title + timer + advance controls. The gate + questions are leader-side.
-    return null
-  }
+  // Host gets the per-team/per-player submit spread, central the nameless
+  // count — previously both returned null, leaving a dark empty band (and on
+  // central, a bare dark page) with no in-phase next path.
+  if (role === 'central') return <CentralAnalyzeGrid sessionId={sessionId} phase={phase} />
+  if (role === 'host')
+    return <HostAnalyzeGrid sessionId={sessionId} phase={phase} config={config} />
 
   if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
   if (!playerId) {

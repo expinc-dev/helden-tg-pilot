@@ -20,7 +20,9 @@ import { useTeams } from '@/lib/sync/useTeams'
 // row mirrors that same step, matching what they'd actually see on screen.
 
 function progressPct(step: number, total: number): number {
-  const done = Math.min(step, total - 1) + 1
+  // Completed steps, not pointer+1: a fresh player (selfStep 0) is at 0%, and
+  // the finish sentinel (selfStep === total) saturates at 100%.
+  const done = Math.min(Math.max(step, 0), total)
   return Math.round((done / total) * 100)
 }
 
@@ -65,12 +67,16 @@ export function MonitorPane({
       members: members.map(([id, p]) => ({
         id,
         name: p.name,
-        step: Math.min(leaderStep, total - 1) + 1,
+        step: Math.min(Math.max(leaderStep, 0), total),
       })),
       total,
     }
   })
   const openTeam = teamRows.find((t) => t.id === openTeamId)
+  // Solo testing / pre-team lobby in a teams-on session: no teams exist yet,
+  // so a teams-only list would render empty ("tidak muncul"). Fall back to
+  // per-player rows until the first team appears.
+  const showTeams = gameType === 'Multiplayer Game' && teamRows.length > 0
 
   return (
     <div
@@ -90,7 +96,7 @@ export function MonitorPane({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
-          {gameType === 'Multiplayer Game'
+          {showTeams
             ? teamRows.map((t) => (
                 <TeamProgressRow key={t.id} team={t} onOpen={() => setOpenTeamId(t.id)} />
               ))

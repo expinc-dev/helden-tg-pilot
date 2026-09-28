@@ -29,9 +29,9 @@ export function AnalyzeGridPlayer({
   const phaseId = phase.id
   const timer = useTimer(sessionId, phase)
 
-  const [marked, setMarked] = useState<string[]>(() =>
-    config.emptyCells.map((c) => `${c.row}/${c.col}`)
-  )
+  // Starts empty: pre-marking the key auto-passed the gate before the player
+  // acted, so "Verifikasi" succeeded with zero taps.
+  const [marked, setMarked] = useState<string[]>([])
   const [attempts, setAttempts] = useState(0)
   const [gatePassed, setGatePassed] = useState(false)
   const [questionAnswers, setQuestionAnswers] = useState<unknown[]>(() =>

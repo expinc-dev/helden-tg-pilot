@@ -217,7 +217,7 @@ export function VimeoPlayer({
       src={embedUrl}
       allow="autoplay; fullscreen; picture-in-picture"
       className={
-        role === 'central' ? 'h-full w-full border-0' : 'aspect-video w-full rounded-lg border-0'
+        role === 'central' ? 'h-full w-full border-0' : 'h-full w-full rounded-lg border-0'
       }
       title="Video"
     />
@@ -325,7 +325,7 @@ export function YoutubePlayer({
       onLoad={() => send('listening')}
       allow="autoplay; fullscreen; picture-in-picture"
       className={
-        role === 'central' ? 'h-full w-full border-0' : 'aspect-video w-full rounded-lg border-0'
+        role === 'central' ? 'h-full w-full border-0' : 'h-full w-full rounded-lg border-0'
       }
       title="Video"
     />

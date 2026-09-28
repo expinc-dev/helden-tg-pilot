@@ -98,7 +98,10 @@ export function HostDirectPlayer({
   }
 
   return (
-    <div className="relative aspect-video w-full cursor-pointer bg-black" onClick={flashControls}>
+    <div
+      className="relative h-full max-h-full min-h-0 w-full cursor-pointer overflow-hidden bg-black"
+      onClick={flashControls}
+    >
       <video ref={videoRef} src={url} muted playsInline className="h-full w-full object-contain" />
       <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3 text-sm text-white">
         {title}
