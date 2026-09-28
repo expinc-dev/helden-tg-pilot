@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
@@ -56,40 +56,55 @@ export function HostView() {
   // jumping straight in, so the host gets a "brief the room" beat first.
   const [pendingPhaseId, setPendingPhaseId] = useState<string | null>(null)
 
-  const advancedRef = useRef<string | null>(null)
+  // One advance per phase. Every advance path on this route — both auto-advance
+  // effects below and every manual control rendered further down — funnels
+  // through runAdvance, so a double tap (the video confirm is never disabled by
+  // design) or a manual click landing in the same tick as an auto-advance cannot
+  // fire nextPhase/endLevel twice for one phase. flushPhaseResults assumes
+  // exactly that: its live aggregate map is a read-modify-write that is safe
+  // only once per transition (lib/session/flush.ts:208-219). Keyed by phase id,
+  // so it re-arms on the next phase with no explicit reset.
+  const advanceLockRef = useRef<string | null>(null)
+  const runAdvance = useCallback((phaseId: string | undefined, fn: () => Promise<unknown>) => {
+    if (!phaseId || advanceLockRef.current === phaseId) return
+    advanceLockRef.current = phaseId
+    // Re-arm on failure, otherwise a single RTDB error would leave the host
+    // unable to advance off this phase at all.
+    void fn().catch((e) => {
+      advanceLockRef.current = null
+      console.error('advance failed for', phaseId, e)
+    })
+  }, [])
+
   useEffect(() => {
     if (!sessionId || !phase) return
     if (
       timer.active &&
       timer.expired &&
       phase.timer?.autoAdvanceOnExpire &&
-      pointer?.activePhaseId === phase.id &&
-      advancedRef.current !== phase.id
+      pointer?.activePhaseId === phase.id
     ) {
-      advancedRef.current = phase.id
       // Modular: timer-expiry auto-advance means "end this level → back to picker",
       // not "next phase in order". Sequence: original nextPhase behaviour.
-      void (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
+      runAdvance(phase.id, () =>
+        isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)
+      )
     }
-  }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, isModular])
+  }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, isModular, runAdvance])
 
-  // codeinput's onSuccess.advance — same advance-once guard as the timer
-  // effect above, separate ref so the two auto-advance triggers can't race
-  // each other into double-advancing the same phase.
+  // codeinput's onSuccess.advance — shares runAdvance's per-phase lock with the
+  // timer effect above, so the two auto-advance triggers cannot race each other
+  // into double-advancing the same phase.
   const teamIds = teams.map((t) => t.id)
   const codeInputAllSolved = useCodeInputAllSolved(sessionId, phase, teamIds, !!config?.allowTeams)
-  const advancedOnSolveRef = useRef<string | null>(null)
   useEffect(() => {
     if (!sessionId || !phase) return
-    if (
-      codeInputAllSolved &&
-      pointer?.activePhaseId === phase.id &&
-      advancedOnSolveRef.current !== phase.id
-    ) {
-      advancedOnSolveRef.current = phase.id
-      void (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id))
+    if (codeInputAllSolved && pointer?.activePhaseId === phase.id) {
+      runAdvance(phase.id, () =>
+        isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)
+      )
     }
-  }, [sessionId, phase, codeInputAllSolved, pointer?.activePhaseId, isModular])
+  }, [sessionId, phase, codeInputAllSolved, pointer?.activePhaseId, isModular, runAdvance])
 
   if (!meta || !config || !sessionId) {
     return <div className="p-8 text-sm text-gray-500">Loading session {sessionId}…</div>
@@ -117,9 +132,14 @@ export function HostView() {
   // full-bleed layout — a panel added only to the shared shell at the bottom of
   // this function would be silently skipped by video, idle and microlearning.
   // Lobby and the modular picker are deliberately exempt: no phase is running
-  // yet, so there is no anchor script to read. Keyed by phase id so switching
-  // phases re-seeds the panel's open state from the new phase's improvMarker.
-  const scriptPanel = <HostScriptPanel key={phase?.id} phase={phase} />
+  // yet, so there is no anchor script to read. Deliberately unkeyed: every
+  // caller's wrapper carries `key={phase.id}` and remounts its whole subtree —
+  // panel included — which is what re-seeds the panel's open state from the new
+  // phase's improvMarker. A key here would duplicate the key of the phase child
+  // in the same branch and push React onto its key-map path, where the duplicate
+  // is neither matched nor deleted: that is how the stale phase card stayed
+  // mounted beside the new one.
+  const scriptPanel = <HostScriptPanel phase={phase} />
 
   // Video-phase host screen: rendered top-level so its full-bleed layout
   // escapes the standard live wrapper's padding (which would otherwise leak
@@ -127,20 +147,26 @@ export function HostView() {
   // bottom yellow button advances the phase — endLevel in modular flow,
   // nextPhase in sequential.
   if (meta.status === 'live' && phase && phase.content.type === 'video') {
-    const advance = isModular
-      ? () => endLevel(sessionId, phase.id)
-      : () => nextPhase(sessionId, pointer?.activePhaseId)
     return (
       // `relative` + the frame height: HostScriptPanel is absolute, so it needs
       // this wrapper to be its containing block — these branches bypass the
       // padded live shell, which is the only other relative ancestor.
-      <div className="relative flex h-dvh w-full flex-col lg:h-full">
+      <div
+        key={phase.id}
+        data-host-phase={phase.id}
+        className="relative flex h-dvh w-full flex-col lg:h-full"
+      >
         <VideoHostScreen
-          key={phase.id}
           sessionId={sessionId}
           videoTitle={phase.title}
           videoUrl={phase.content.videoUrl}
-          onAdvance={advance}
+          onAdvance={() =>
+            runAdvance(phase.id, () =>
+              isModular
+                ? endLevel(sessionId, phase.id)
+                : nextPhase(sessionId, pointer?.activePhaseId)
+            )
+          }
         />
         {scriptPanel}
       </div>
@@ -156,15 +182,18 @@ export function HostView() {
       // `relative` + the frame height: HostScriptPanel is absolute, so it needs
       // this wrapper to be its containing block — these branches bypass the
       // padded live shell, which is the only other relative ancestor.
-      <div className="relative flex h-dvh w-full flex-col lg:h-full">
+      <div
+        key={phase.id}
+        data-host-phase={phase.id}
+        className="relative flex h-dvh w-full flex-col lg:h-full"
+      >
         <PhaseRouter
-          key={phase.id}
           phase={phase}
           phaseStartMs={pointer?.changedAt}
           role="host"
           sessionId={sessionId}
           allowTeams={config.allowTeams}
-          onAdvance={() => nextPhase(sessionId, pointer?.activePhaseId)}
+          onAdvance={() => runAdvance(phase.id, () => nextPhase(sessionId, pointer?.activePhaseId))}
         />
         {scriptPanel}
       </div>
@@ -182,18 +211,23 @@ export function HostView() {
       // `relative` + the frame height: HostScriptPanel is absolute, so it needs
       // this wrapper to be its containing block — these branches bypass the
       // padded live shell, which is the only other relative ancestor.
-      <div className="relative flex h-dvh w-full flex-col lg:h-full">
+      <div
+        key={phase.id}
+        data-host-phase={phase.id}
+        className="relative flex h-dvh w-full flex-col lg:h-full"
+      >
         <PhaseRouter
-          key={phase.id}
           phase={phase}
           phaseStartMs={pointer?.changedAt}
           role="host"
           sessionId={sessionId}
           allowTeams={config.allowTeams}
-          onAdvance={
-            isModular
-              ? () => endLevel(sessionId, phase.id)
-              : () => nextPhase(sessionId, pointer?.activePhaseId)
+          onAdvance={() =>
+            runAdvance(phase.id, () =>
+              isModular
+                ? endLevel(sessionId, phase.id)
+                : nextPhase(sessionId, pointer?.activePhaseId)
+            )
           }
         />
         {scriptPanel}
@@ -237,9 +271,13 @@ export function HostView() {
       </div>
     )
   }
+  const phaseOrder = demoBundle.phaseOrder
+  const isLastPhase =
+    !!pointer?.activePhaseId && phaseOrder.indexOf(pointer.activePhaseId) === phaseOrder.length - 1
 
   return (
     <div
+      data-host-phase={phase?.id ?? 'none'}
       // h-dvh + overflow-hidden (not min-h-dvh) so this shell never grows
       // taller than the visible frame — at lg+ TabletFrame caps the real
       // viewport into a fixed ~1024px box, and min-h-dvh would size against
@@ -282,30 +320,25 @@ export function HostView() {
             <MinigameHostAction
               sessionId={sessionId}
               timer={timer}
-              onEndLevel={() => endLevel(sessionId, phase.id)}
+              onEndLevel={() => runAdvance(phase.id, () => endLevel(sessionId, phase.id))}
             />
           ) : (
             <button
-              onClick={() => endLevel(sessionId, phase.id)}
+              onClick={() => runAdvance(phase.id, () => endLevel(sessionId, phase.id))}
               className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
             >
               Akhiri Level
             </button>
           )
         ) : (
-          (() => {
-            const order = demoBundle.phaseOrder
-            const isLast =
-              !!pointer?.activePhaseId && order.indexOf(pointer.activePhaseId) === order.length - 1
-            return (
-              <GradientButton
-                onClick={() => nextPhase(sessionId, pointer?.activePhaseId)}
-                className="w-full py-4 text-base"
-              >
-                {isLast ? 'Akhiri Sesi' : 'Tahap Selanjutnya'}
-              </GradientButton>
-            )
-          })()
+          <GradientButton
+            onClick={() =>
+              runAdvance(pointer?.activePhaseId, () => nextPhase(sessionId, pointer?.activePhaseId))
+            }
+            className="w-full py-4 text-base"
+          >
+            {isLastPhase ? 'Akhiri Sesi' : 'Tahap Selanjutnya'}
+          </GradientButton>
         ))}
 
       {/* Rendered as a direct child of this `relative` shell: the panel positions
