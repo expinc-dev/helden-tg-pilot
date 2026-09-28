@@ -47,7 +47,10 @@ export function PlayerReflection({
   phaseId: string
   playerId: string
 }) {
+  const isCommitment = !!content.commitment
   const [text, setText] = useState('')
+  const [action, setAction] = useState('')
+  const [reason, setReason] = useState('')
   const [scale, setScale] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState<ReflectionAnswer | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -65,12 +68,18 @@ export function PlayerReflection({
     )
   }, [sessionId, playerId, phaseId])
 
-  const canSubmit = !submitted && !submitting && text.trim().length > 0 && scale !== null
+  const canSubmit =
+    !submitted &&
+    !submitting &&
+    scale !== null &&
+    (isCommitment ? action.trim().length > 0 && reason.trim().length > 0 : text.trim().length > 0)
 
   const handleSubmit = async () => {
     if (!canSubmit || scale === null) return
     setSubmitting(true)
-    const value: ReflectionAnswer = { text: text.trim(), scale }
+    const value: ReflectionAnswer = isCommitment
+      ? { action: action.trim(), reason: reason.trim(), scale }
+      : { text: text.trim(), scale }
     await submitAnswer({ sessionId, playerId, keyId: playerId, qId: phaseId, value })
     setSubmitted(value)
     setSubmitting(false)
@@ -101,28 +110,75 @@ export function PlayerReflection({
       }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <div
-          className="flex min-h-0 flex-1 flex-col rounded-lg border p-4"
-          style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.08)' }}
-        >
-          <CardHeading
-            heading={
-              content.openText.label || 'Apa pelajaran yang bisa kau ambil dari permainan ini?'
-            }
-            subtext="Ceritakan dengan kata-katamu sendiri"
-          />
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value.slice(0, content.openText.maxLen))}
-            maxLength={content.openText.maxLen}
-            placeholder="Tulis refleksimu di sini..."
-            className="mt-3 min-h-0 w-full flex-1 resize-none rounded-lg border p-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
-            style={{ borderColor: '#353535', background: 'rgba(255, 255, 255, 0.04)' }}
-          />
-          <p className="mt-2 text-right text-xs text-white/40">
-            {text.length}/{content.openText.maxLen} Karakter
-          </p>
-        </div>
+        {isCommitment && content.commitment ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <div
+              className="flex flex-col rounded-lg border p-4"
+              style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.08)' }}
+            >
+              <CardHeading heading={content.commitment.action.label || 'Saya akan'} />
+              <textarea
+                value={action}
+                onChange={(e) =>
+                  setAction(e.target.value.slice(0, content.commitment!.action.maxLen))
+                }
+                maxLength={content.commitment.action.maxLen}
+                placeholder="Tulis komitmenmu di sini..."
+                rows={2}
+                className="mt-3 w-full resize-none rounded-lg border p-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                style={{ borderColor: '#353535', background: 'rgba(255, 255, 255, 0.04)' }}
+              />
+              <p className="mt-2 text-right text-xs text-white/40">
+                {action.length}/{content.commitment.action.maxLen} Karakter
+              </p>
+            </div>
+            <div
+              className="flex flex-col rounded-lg border p-4"
+              style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.08)' }}
+            >
+              <CardHeading heading={content.commitment.reason.label || 'Supaya'} />
+              <textarea
+                value={reason}
+                onChange={(e) =>
+                  setReason(e.target.value.slice(0, content.commitment!.reason.maxLen))
+                }
+                maxLength={content.commitment.reason.maxLen}
+                placeholder="Tulis alasannya di sini..."
+                rows={2}
+                className="mt-3 w-full resize-none rounded-lg border p-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                style={{ borderColor: '#353535', background: 'rgba(255, 255, 255, 0.04)' }}
+              />
+              <p className="mt-2 text-right text-xs text-white/40">
+                {reason.length}/{content.commitment.reason.maxLen} Karakter
+              </p>
+            </div>
+          </div>
+        ) : (
+          content.openText && (
+            <div
+              className="flex min-h-0 flex-1 flex-col rounded-lg border p-4"
+              style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.08)' }}
+            >
+              <CardHeading
+                heading={
+                  content.openText.label || 'Apa pelajaran yang bisa kau ambil dari permainan ini?'
+                }
+                subtext="Ceritakan dengan kata-katamu sendiri"
+              />
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value.slice(0, content.openText!.maxLen))}
+                maxLength={content.openText.maxLen}
+                placeholder="Tulis refleksimu di sini..."
+                className="mt-3 min-h-0 w-full flex-1 resize-none rounded-lg border p-3 text-sm text-white placeholder:text-white/30 focus:outline-none"
+                style={{ borderColor: '#353535', background: 'rgba(255, 255, 255, 0.04)' }}
+              />
+              <p className="mt-2 text-right text-xs text-white/40">
+                {text.length}/{content.openText.maxLen} Karakter
+              </p>
+            </div>
+          )
+        )}
 
         <div
           className="rounded-lg border p-4"
