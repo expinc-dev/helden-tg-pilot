@@ -3,7 +3,12 @@ import type { Phase, PlayerPresence } from '@helden-inc/tg-schema'
 import { usePresence } from '@/lib/sync/useSession'
 
 export type ReflectionContent = Extract<Phase['content'], { type: 'reflection' }>
-export type ReflectionAnswer = { text: string; scale: number }
+// Two mutually exclusive submission shapes, matching the content's openText
+// vs commitment mode (BRIGHT-970) — always exactly one of `text` or
+// `action`/`reason`, never both.
+export type ReflectionAnswer = { scale: number } & (
+  { text: string } | { action: string; reason: string }
+)
 
 export type ReflectionRow = {
   id: string

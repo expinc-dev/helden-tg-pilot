@@ -46,7 +46,12 @@ export function HostReflection({
                 <span className="shrink-0 text-xs text-white/30">Belum menjawab</span>
               )}
             </div>
-            {r.answer && <p className="mt-1.5 text-xs text-white/50">{r.answer.text}</p>}
+            {/* Commitment answers (action/reason) are private/taken-home — the
+                host only sees that someone answered, never the content. Only
+                the openText mode's `text` is shown, matching prior behavior. */}
+            {r.answer && 'text' in r.answer && (
+              <p className="mt-1.5 text-xs text-white/50">{r.answer.text}</p>
+            )}
           </div>
         ))}
       </div>
