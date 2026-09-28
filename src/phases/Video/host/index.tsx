@@ -142,7 +142,7 @@ export function VideoHostScreen({
 
   return (
     <div
-      className="relative flex min-h-dvh w-full flex-col gap-2 overflow-y-auto p-3 sm:p-5"
+      className="relative flex h-dvh w-full flex-col gap-2 overflow-hidden p-3 sm:p-5 lg:h-full"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -152,7 +152,7 @@ export function VideoHostScreen({
     >
       <Header />
 
-      <div className="flex flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-[#08080833] p-4 sm:gap-5 sm:p-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/10 bg-[#08080833] p-4 sm:gap-5 sm:p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Video Control</h1>
           <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">

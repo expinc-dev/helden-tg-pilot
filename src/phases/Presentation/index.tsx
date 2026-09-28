@@ -169,7 +169,7 @@ export function PresentationRenderer({
       key={slide.id}
       className={`animate-in fade-in flex w-full flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
     >
-      <div className="mx-auto flex w-full flex-1 flex-col">
+      <div className="mx-auto flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
         <StepBody
           stepId={slide.id}
           // Inert — presentation slides always hard-fail publish if they carry
@@ -215,12 +215,15 @@ export function PresentationRenderer({
     )
   }
 
+  // Host branch: in-flow flex child of the host live shell (pages/host/lobby),
+  // NOT an absolutely-positioned overlay. `absolute inset-0` resolved against
+  // that middle band and let the slide paint outside its container; `h-full
+  // min-h-0` keeps it inside while central keeps its own `fixed inset-0` deck.
   return (
-    <div className="absolute inset-0 flex flex-col" style={bgStyle}>
+    <div className="relative flex h-full min-h-0 flex-col" style={bgStyle}>
       {slideView}
       <FullscreenToggle position="absolute" />
       {controls}
-      {indicator}
 
       {pendingPhaseEnd && (
         <PhaseEndConfirm onCancel={() => setPendingPhaseEnd(false)} onConfirm={confirmPhaseEnd} />

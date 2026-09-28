@@ -6,6 +6,7 @@ import {
   DragOverlay,
   type DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -26,8 +27,10 @@ type Slot = Card | null
 // Doubt-seed interaction (HLN-006): a card pool (soul + distractor shuffled)
 // from which the player drags cards into N drop zones. Any arrangement is
 // valid — reflection activity, no grading. Full drag-and-drop using
-// @dnd-kit/core (reused from sort_order, C5). PointerSensor covers mouse +
-// touch on mobile. The parent (index.tsx) drives role/team handling.
+// @dnd-kit/core (reused from sort_order, C5). PointerSensor covers mouse;
+// TouchSensor covers touch — without it a phone claims the gesture for scroll
+// (pointercancel) and the card never lifts. The parent (index.tsx) drives
+// role/team handling.
 //
 // On submit the screen becomes the gallery (HLN-003, storyboard §7): the room's
 // versions scroll anonymously, so a player who finished early has something to
@@ -77,7 +80,10 @@ export function DoubtSeedPlayer({
   const entries = submittedGalleryEntries(roster, answers, cardTextIndex(config))
 
   const filledCount = slots.filter((s) => s !== null).length
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 8 } })
+  )
 
   const onDragStart = (e: DragStartEvent) =>
     setActive(pool.find((c) => c.id === e.active.id) ?? null)
@@ -233,7 +239,7 @@ function PoolCard({ card, disabled }: { card: Card; disabled: boolean }) {
       type="button"
       {...attributes}
       {...listeners}
-      className={`rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/80 transition select-none ${
+      className={`touch-none rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/80 transition select-none ${
         isDragging ? 'opacity-40' : 'hover:border-[#FFB800]'
       } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
     >
