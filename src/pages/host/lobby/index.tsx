@@ -152,6 +152,7 @@ export function HostView() {
     return (
       <>
         <PhaseRouter
+          key={phase.id}
           phase={phase}
           phaseStartMs={pointer?.changedAt}
           role="host"
@@ -174,6 +175,7 @@ export function HostView() {
     return (
       <>
         <PhaseRouter
+          key={phase.id}
           phase={phase}
           phaseStartMs={pointer?.changedAt}
           role="host"
@@ -250,6 +252,7 @@ export function HostView() {
       {meta.status === 'live' && phase && (
         <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-white/20 bg-[#12121299]">
           <PhaseRouter
+            key={phase.id}
             phase={phase}
             phaseStartMs={pointer?.changedAt}
             role="host"
