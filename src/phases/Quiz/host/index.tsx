@@ -138,27 +138,29 @@ export function HostQuiz({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col items-center gap-4">
-          <div className="flex w-full items-start px-10 py-5">
-            <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
-          </div>
+          <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-4 overflow-y-auto">
+            <div className="flex w-full items-start px-10 py-5">
+              <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+            </div>
 
-          <div className="flex w-full flex-col gap-3 px-10">
-            <div className="mt-auto flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
-                  style={{ width: `${answeredPct}%` }}
-                />
+            <div className="flex w-full flex-col gap-3 px-10">
+              <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
+                    style={{ width: `${answeredPct}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-xs whitespace-nowrap text-white">
+                  <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
+                  <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
+                  menjawab
+                </span>
               </div>
-              <span className="shrink-0 text-xs whitespace-nowrap text-white">
-                <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
-                <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
-                menjawab
-              </span>
             </div>
           </div>
 
-          <div className="mt-auto flex w-full flex-col gap-3 px-10 pb-10">
+          <div className="flex w-full flex-col gap-3 px-10 pb-10">
             <GradientButton
               onClick={handleNext}
               className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
@@ -198,37 +200,39 @@ export function HostQuiz({
             />
           )}
 
-          <div className="flex w-full items-start px-10 py-5">
-            <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
-          </div>
+          <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-4 overflow-y-auto">
+            <div className="flex w-full items-start px-10 py-5">
+              <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+            </div>
 
-          <AnswerOptionsList
-            sessionId={sessionId}
-            phaseId={phaseId}
-            questionIndex={quizStep.step}
-            options={questionOptions(q)}
-            revealed={false}
-          />
+            <AnswerOptionsList
+              sessionId={sessionId}
+              phaseId={phaseId}
+              questionIndex={quizStep.step}
+              options={questionOptions(q)}
+              revealed={false}
+            />
 
-          <div className="flex w-full flex-col gap-3 px-10">
-            <div className="mt-auto flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
-                  style={{
-                    width: `${totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0}%`,
-                  }}
-                />
+            <div className="flex w-full flex-col gap-3 px-10">
+              <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
+                    style={{
+                      width: `${totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <span className="shrink-0 text-xs whitespace-nowrap text-white">
+                  <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
+                  <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
+                  menjawab
+                </span>
               </div>
-              <span className="shrink-0 text-xs whitespace-nowrap text-white">
-                <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
-                <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
-                menjawab
-              </span>
             </div>
           </div>
 
-          <div className="mt-auto flex w-full flex-col gap-3 px-10 pb-10">
+          <div className="flex w-full flex-col gap-3 px-10 pb-10">
             <GradientButton onClick={handleRevealClick} className="w-full px-6 py-3 text-base">
               Perlihatkan Jawaban
             </GradientButton>
@@ -238,20 +242,22 @@ export function HostQuiz({
 
       {quizStep.stage === 'reveal' && (
         <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="px-12 py-10">
-            <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+            <div className="px-12 py-10">
+              <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
+            </div>
+
+            <AnswerOptionsList
+              sessionId={sessionId}
+              phaseId={phaseId}
+              questionIndex={quizStep.step}
+              options={questionOptions(q)}
+              revealed
+              correctId={quizStep.correctId}
+            />
           </div>
 
-          <AnswerOptionsList
-            sessionId={sessionId}
-            phaseId={phaseId}
-            questionIndex={quizStep.step}
-            options={questionOptions(q)}
-            revealed
-            correctId={quizStep.correctId}
-          />
-
-          <div className="mt-auto flex w-full flex-col gap-3 px-10 pb-10">
+          <div className="flex w-full flex-col gap-3 px-10 pb-10">
             <GradientButton
               onClick={handleShowLeaderboard}
               className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
