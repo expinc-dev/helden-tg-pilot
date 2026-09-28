@@ -167,9 +167,9 @@ export function PresentationRenderer({
   const slideView = (
     <div
       key={slide.id}
-      className={`animate-in fade-in flex min-h-0 w-full flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
+      className={`animate-in fade-in flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden duration-200 ${transitionDir === 'right' ? 'slide-in-from-right-4' : 'slide-in-from-left-4'}`}
     >
-      <div className="mx-auto flex min-h-0 w-full flex-1 flex-col overflow-y-auto">
+      <div className="mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto">
         <StepBody
           stepId={slide.id}
           // Inert — presentation slides always hard-fail publish if they carry
@@ -220,7 +220,10 @@ export function PresentationRenderer({
   // that middle band and let the slide paint outside its container; `h-full
   // min-h-0` keeps it inside while central keeps its own `fixed inset-0` deck.
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden" style={bgStyle}>
+    <div
+      className="relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden"
+      style={bgStyle}
+    >
       {slideView}
       <FullscreenToggle position="absolute" />
       {controls}

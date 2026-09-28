@@ -248,7 +248,7 @@ export function HostView() {
       {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
       {meta.status === 'live' && phase && (
-        <div className="relative flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border border-white/20 bg-[#12121299]">
+        <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-white/20 bg-[#12121299]">
           <PhaseRouter
             phase={phase}
             phaseStartMs={pointer?.changedAt}
