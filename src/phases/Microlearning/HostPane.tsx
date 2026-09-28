@@ -80,14 +80,16 @@ export function MonitorPane({
 
   return (
     <div
-      className="flex min-h-dvh flex-col bg-cover bg-top p-4 sm:p-6"
+      className="flex h-dvh w-full flex-col overflow-hidden bg-cover bg-top p-4 sm:p-6 lg:h-full"
       style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
     >
       <div
-        className="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl border p-4 sm:p-6"
+        className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border p-4 sm:p-6"
         style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
       >
-        <HostBadge pageName={gameType} />
+        <div className="shrink-0">
+          <HostBadge pageName={gameType} />
+        </div>
         <div className="text-center">
           <h2 className="text-xl font-bold text-white">{title}</h2>
           <p className="mt-1 text-xs text-white/40">
@@ -111,9 +113,11 @@ export function MonitorPane({
         </div>
 
         {onAdvance && (
-          <GradientButton type="button" onClick={onAdvance} className="w-full py-3.5 text-sm">
-            Akhiri Level
-          </GradientButton>
+          <div className="shrink-0">
+            <GradientButton type="button" onClick={onAdvance} className="w-full py-3.5 text-sm">
+              Akhiri Level
+            </GradientButton>
+          </div>
         )}
       </div>
 

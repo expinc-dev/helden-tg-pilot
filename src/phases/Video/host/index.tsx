@@ -154,15 +154,12 @@ export function VideoHostScreen({
         <Header />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto rounded-2xl border border-white/10 bg-[#08080833] p-4 sm:gap-5 sm:p-6">
-        <div className="shrink-0 text-center">
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Video Control</h1>
-          <p className="mx-auto mt-2 max-w-md text-xs text-white/70 sm:text-sm">
-            Anda memegang kendali penuh atas video di layar utama.
-          </p>
-        </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-[#08080833] p-3 sm:gap-4 sm:p-4">
+        <h1 className="shrink-0 text-center text-lg font-bold text-white sm:text-xl">
+          Video Control
+        </h1>
 
-        <div className="relative flex min-h-72 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+        <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
           {videoUrl && provider === 'direct' && (
             <HostDirectPlayer
               url={videoUrl}
