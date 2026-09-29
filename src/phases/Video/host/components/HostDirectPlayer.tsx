@@ -14,6 +14,8 @@ export function HostDirectPlayer({
   title,
   sessionId,
   ended,
+  muted,
+  onToggleMute,
   onEnded,
   onReplayRequest,
 }: {
@@ -23,6 +25,8 @@ export function HostDirectPlayer({
   title: string
   sessionId: string
   ended: boolean
+  muted: boolean
+  onToggleMute: () => void
   onEnded: () => void
   onReplayRequest: () => void
 }) {
@@ -102,9 +106,26 @@ export function HostDirectPlayer({
       className="relative h-full max-h-full min-h-0 w-full cursor-pointer overflow-hidden bg-black"
       onClick={flashControls}
     >
-      <video ref={videoRef} src={url} muted playsInline className="h-full w-full object-contain" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent p-3 text-sm text-white">
-        {title}
+      <video
+        ref={videoRef}
+        src={url}
+        muted={muted}
+        playsInline
+        className="h-full w-full object-contain"
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 bg-gradient-to-b from-black/60 to-transparent p-3 text-sm text-white">
+        <span>{title}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleMute()
+          }}
+          className="pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-full bg-black/60 text-white"
+          aria-label={muted ? 'Suarakan video' : 'Bisukan video'}
+        >
+          <Icon icon={muted ? 'mdi:volume-off' : 'mdi:volume-high'} className="size-4" />
+        </button>
       </div>
 
       {neverPlayed && (

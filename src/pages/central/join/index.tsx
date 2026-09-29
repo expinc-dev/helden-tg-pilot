@@ -45,7 +45,6 @@ export function CentralJoin() {
     nav(`/central/${sid}`, { replace: true })
   }
 
-  const backToLanding = () => nav('/')
   const dismissErr = () => setErr(null)
 
   return (
@@ -99,7 +98,7 @@ export function CentralJoin() {
         </div>
       </form>
 
-      {err && <InvalidCodeModal message={err} onBack={backToLanding} onDismiss={dismissErr} />}
+      {err && <InvalidCodeModal message={err} onDismiss={dismissErr} />}
     </div>
   )
 }

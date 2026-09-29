@@ -19,6 +19,8 @@ export function EmbedControls({
   ended,
   currentTime,
   duration,
+  muted,
+  onToggleMute,
   onPlay,
   onPause,
   onSeekBy,
@@ -29,6 +31,8 @@ export function EmbedControls({
   ended: boolean
   currentTime: number
   duration: number
+  muted: boolean
+  onToggleMute: () => void
   onPlay: () => void
   onPause: () => void
   onSeekBy: (delta: number) => void
@@ -160,6 +164,20 @@ export function EmbedControls({
           </span>
         </div>
       )}
+
+      {/* Selalu tampil, di atas semua overlay. Mute cuma untuk monitor host —
+          central tetap yang memutar audio ke ruangan. */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleMute()
+        }}
+        className="absolute top-3 left-3 z-10 flex size-8 items-center justify-center rounded-full bg-black/60 text-white"
+        aria-label={muted ? 'Suarakan video' : 'Bisukan video'}
+      >
+        <Icon icon={muted ? 'mdi:volume-off' : 'mdi:volume-high'} className="size-4" />
+      </button>
     </div>
   )
 }
