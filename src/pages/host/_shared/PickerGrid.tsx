@@ -11,9 +11,9 @@ import { HostBadge } from './HostBadge'
 //   available → yellow "Mulai Permainan" (tappable)
 //   played    → yellow-outline "Sudah Dimainkan" (disabled)
 //   locked    → dark "Locked" (disabled; used only in modular-progressive)
-type CardStatus = 'available' | 'played' | 'locked'
+export type CardStatus = 'available' | 'played' | 'locked'
 
-interface Card {
+export interface Card {
   phase: Phase
   level: number
   status: CardStatus
@@ -101,7 +101,18 @@ function buildCards(
 }
 
 // ─── Level card ─────────────────────────────────────────────────────────────
-function LevelCard({ card, onPick }: { card: Card; onPick: () => void }) {
+export function LevelCard({
+  card,
+  onPick,
+  label,
+  chips,
+}: {
+  card: Card
+  onPick: () => void
+  // Defaults to "Level N"; PhaseStartList passes "Phase N" and its own chips.
+  label?: string
+  chips?: React.ReactNode
+}) {
   const { phase, level, status } = card
   // ponytail: static placeholder art. Wire to phase.thumbnailMediaId when the
   // CMS media resolver ships — schema field already exists (tg-schema 3.0).
@@ -114,21 +125,22 @@ function LevelCard({ card, onPick }: { card: Card; onPick: () => void }) {
       />
       <div className="col-span-2 flex flex-1 flex-col justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-white/80">Level {level}</span>
+          <span className="text-sm font-medium text-white/80">{label ?? `Level ${level}`}</span>
           <h3 className="text-helden-yellow text-lg font-bold sm:text-xl">{phase.title}</h3>
         </div>
-        {phase.durationMin !== undefined && (
-          <div className="flex flex-wrap gap-2">
-            <DurationChip minutes={phase.durationMin} />
-          </div>
-        )}
+        {chips ??
+          (phase.durationMin !== undefined && (
+            <div className="flex flex-wrap gap-2">
+              <DurationChip minutes={phase.durationMin} />
+            </div>
+          ))}
         <ActionButton status={status} onPick={onPick} />
       </div>
     </div>
   )
 }
 
-function DurationChip({ minutes }: { minutes: number }) {
+export function DurationChip({ minutes }: { minutes: number }) {
   return (
     <span className="flex items-center gap-1.5 rounded-lg bg-[#1C1C1E] px-3 py-1.5 text-xs text-white/80">
       <Icon icon="mdi:clock-outline" className="size-4 text-white/60" />

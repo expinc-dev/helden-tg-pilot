@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { Phase, Question } from '@helden-inc/tg-schema'
 import { serverTimestamp, set } from 'firebase/database'
@@ -86,21 +87,10 @@ export function AnalyzeGridPlayer({
 
   if (submitted) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#1F1F1F] p-6 text-center text-white">
-        <div className="flex gap-2">
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="size-3 animate-bounce rounded-full bg-[#FDDB00]"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
-        </div>
-        <p className="text-xl font-bold text-[#FFB800]">
-          {gateCorrect ? config.successMessage : 'Jawaban tersimpan!'}
-        </p>
-        <p className="text-sm text-white/50">Menunggu pemain lain menjawab…</p>
-      </div>
+      <AnswerSavedScreen
+        title={gateCorrect ? config.successMessage : 'Jawaban Tersimpan!'}
+        subtitle="Menunggu pemain lainnya..."
+      />
     )
   }
 

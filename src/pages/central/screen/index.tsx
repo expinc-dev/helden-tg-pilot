@@ -108,6 +108,9 @@ export function CentralView() {
 // call sites can never drift apart.
 function isFullBleedPhase(phase: Phase): boolean {
   if (phase.content.type === 'idle') return true
+  // microlearning's central view is a full-bleed question wall with its own
+  // timer band, so it must not sit inside the padded wrapper + TimerBar pill.
+  if (phase.content.type === 'microlearning') return true
   return (
     phase.content.type === 'minigame' &&
     (phase.content.templateId === 'team_selfie' ||

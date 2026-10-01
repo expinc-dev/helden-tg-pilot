@@ -7,6 +7,7 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { renderPromptBlocks } from '@/lib/richText'
+import { serverOffsetOnce } from '@/lib/session/control'
 import { scoreQuizQuestion } from '@/lib/session/quizScoring'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
@@ -58,7 +59,13 @@ export function HostQuiz({
     async (step: number) => {
       scoredRef.current = null
       if (!onDevice) await startTimer(phaseId, timers.answering)
-      await write({ step, stage: 'answering', correctId: undefined })
+      const offset = await serverOffsetOnce()
+      await write({
+        step,
+        stage: 'answering',
+        correctId: undefined,
+        startedAt: Date.now() + offset,
+      })
     },
     [write, startTimer, phaseId, timers.answering, onDevice]
   )
@@ -79,9 +86,20 @@ export function HostQuiz({
         questionIndex: quizStep.step,
         correctId,
         timerSeconds: timers.answering,
+        questionStartMs: quizStep.startedAt,
       })
     }
-  }, [clearTimer, write, sessionId, phaseId, quizStep.step, phase, content, timers.answering])
+  }, [
+    clearTimer,
+    write,
+    sessionId,
+    phaseId,
+    quizStep.step,
+    quizStep.startedAt,
+    phase,
+    content,
+    timers.answering,
+  ])
 
   // Manual reveal before time's up needs confirmation; the automatic reveal
   // on timer expiry (the effect below) already implies the host is fine with it.
@@ -93,9 +111,38 @@ export function HostQuiz({
     }
   }, [timer.active, timer.expired, handleReveal])
 
-  const handleShowLeaderboard = useCallback(() => {
-    void write({ step: quizStep.step, stage: 'leaderboard' })
-  }, [write, quizStep.step])
+  // Re-score before the board opens: scoring is idempotent per question, and by
+  // now answers that were still in flight at reveal have landed, so the board
+  // never shows a wrong/unanswered verdict for someone who did answer in time.
+  const [leaderboardBusy, setLeaderboardBusy] = useState(false)
+  const handleShowLeaderboard = useCallback(async () => {
+    if (leaderboardBusy) return
+    setLeaderboardBusy(true)
+    try {
+      await scoreQuizQuestion({
+        sessionId,
+        phase,
+        questionIndex: quizStep.step,
+        correctId: quizStep.correctId ?? '',
+        timerSeconds: timers.answering,
+        questionStartMs: quizStep.startedAt,
+      })
+    } catch (e) {
+      console.error('rescore before leaderboard failed', e)
+    } finally {
+      await write({ step: quizStep.step, stage: 'leaderboard' })
+      setLeaderboardBusy(false)
+    }
+  }, [
+    leaderboardBusy,
+    sessionId,
+    phase,
+    quizStep.step,
+    quizStep.correctId,
+    quizStep.startedAt,
+    timers.answering,
+    write,
+  ])
 
   // Last question has no button of its own: leaving the phase is the host
   // shell's single "Tahap Selanjutnya" control (with confirm).
@@ -257,7 +304,8 @@ export function HostQuiz({
 
           <div className="flex w-full flex-col gap-3 px-10 pb-10">
             <GradientButton
-              onClick={handleShowLeaderboard}
+              disabled={leaderboardBusy}
+              onClick={() => void handleShowLeaderboard()}
               className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
             >
               <Icon icon="material-symbols:leaderboard-outline-rounded" className="size-5" /> Lihat
@@ -276,6 +324,7 @@ export function HostQuiz({
               phase={phase}
               content={content}
               questionId={`${phaseId}_q${quizStep.step}`}
+              revealedCount={quizStep.step + 1}
             />
           </div>
 

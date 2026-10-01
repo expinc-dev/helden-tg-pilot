@@ -29,12 +29,7 @@ export function MicrolearningRenderer({
   // spread from HostPresenceSpread, rendered by the host page itself).
   if (role === 'central')
     return (
-      <CentralProgressPane
-        content={content}
-        title={title}
-        sessionId={sessionId}
-        phaseId={phase.id}
-      />
+      <CentralProgressPane content={content} title={title} sessionId={sessionId} phase={phase} />
     )
   return (
     <MonitorPane

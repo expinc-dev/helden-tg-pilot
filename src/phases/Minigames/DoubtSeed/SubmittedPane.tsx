@@ -1,3 +1,5 @@
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
+
 import type { GalleryCardEntry } from './gallery'
 import type { GalleryConfig } from './score'
 
@@ -91,19 +93,5 @@ export function SubmittedPane({
 // gallery off: a facilitator who does not want the wall still needs the player
 // to know the answer landed.
 function SavedConfirmation() {
-  return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#1F1F1F] p-6 text-center text-white">
-      <div className="flex gap-2">
-        {[0, 150, 300].map((delay) => (
-          <span
-            key={delay}
-            className="size-3 animate-bounce rounded-full bg-[#FDDB00]"
-            style={{ animationDelay: `${delay}ms` }}
-          />
-        ))}
-      </div>
-      <p className="text-xl font-bold text-[#FFB800]">Jawaban tersimpan!</p>
-      <p className="text-sm text-white/50">Menunggu pemain lain menjawab…</p>
-    </div>
-  )
+  return <AnswerSavedScreen />
 }

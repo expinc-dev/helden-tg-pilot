@@ -87,20 +87,22 @@ export function PresentationRenderer({
       className="relative z-50 flex shrink-0 items-center justify-between gap-4 border-t bg-[#121212] px-4 py-3"
       style={{ borderColor: '#353535' }}
     >
-      <span className="text-xs text-white/60">
-        {bounded + 1} / {content.slides.length}
-      </span>
-      <button
-        type="button"
-        onClick={() => setJumpOpen(!jumpOpen)}
-        className="rounded border px-2 py-1 text-xs text-white"
-        style={{ borderColor: '#353535' }}
-      >
-        Jump
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setJumpOpen(!jumpOpen)}
+          className="rounded-[8px] border px-4 py-2 text-sm text-white"
+          style={{ borderColor: '#353535', background: '#1B1B1B' }}
+        >
+          Jump
+        </button>
+        <span className="text-xs text-white/60">
+          {bounded + 1} / {content.slides.length}
+        </span>
+      </div>
       {jumpOpen && (
         <div
-          className="absolute bottom-14 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
+          className="absolute bottom-16 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
           style={{ borderColor: '#353535' }}
         >
           {content.slides.map((_, i) => (

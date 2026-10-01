@@ -13,6 +13,9 @@ export interface QuizStep {
   step: number
   stage: QuizStage
   correctId?: string
+  // Server-clock ms when the current question opened (host-written). Speed
+  // bonuses are measured from here, not from the start of the phase.
+  startedAt?: number
 }
 
 const DEFAULT: QuizStep = { step: 0, stage: 'answering' }
@@ -39,6 +42,7 @@ export function useQuizStep(sessionId: string | undefined) {
         step: typeof val.step === 'number' ? val.step : 0,
         stage: val.stage ?? 'answering',
         correctId: val.correctId,
+        startedAt: typeof val.startedAt === 'number' ? val.startedAt : undefined,
       })
     })
   }, [sessionId])

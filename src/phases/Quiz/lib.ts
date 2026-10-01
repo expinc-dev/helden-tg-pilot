@@ -148,6 +148,33 @@ export function useAnswerTally(
   return { correct, wrong }
 }
 
+export type RosterPlayer = {
+  id: string
+  name: string
+  answers: Record<string, { value?: unknown }> | undefined
+}
+
+// Live roster with each player's raw answers — the same node usePlayerNames
+// reads. The leaderboard derives right/wrong/unanswered from this directly.
+export function usePlayerRoster(sessionId: string | undefined): RosterPlayer[] {
+  const [roster, setRoster] = useState<RosterPlayer[]>([])
+  useEffect(() => {
+    if (!sessionId) return
+    return onValue(eref(`sessions/${sessionId}/players`), (s) => {
+      const val = s.val() as Record<
+        string,
+        { name?: string; answers?: Record<string, { value?: unknown }> }
+      > | null
+      setRoster(
+        Object.entries(val ?? {})
+          .filter(([, p]) => p?.name)
+          .map(([id, p]) => ({ id, name: p.name as string, answers: p.answers }))
+      )
+    })
+  }, [sessionId])
+  return roster
+}
+
 export function usePlayerNames(sessionId: string | undefined): Record<string, string> {
   const [names, setNames] = useState<Record<string, string>>({})
   useEffect(() => {

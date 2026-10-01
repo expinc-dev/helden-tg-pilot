@@ -11,6 +11,7 @@ import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
 import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
 import { HostScriptPanel } from '@/pages/host/_shared/HostScriptPanel'
 import { LevelIntro } from '@/pages/host/_shared/LevelIntro'
+import { PhaseStartList } from '@/pages/host/_shared/PhaseStartList'
 import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
@@ -56,6 +57,10 @@ export function HostView() {
   // Picker → intro → play: tapping a level card stages it here instead of
   // jumping straight in, so the host gets a "brief the room" beat first.
   const [pendingPhaseId, setPendingPhaseId] = useState<string | null>(null)
+  // Lobby → phase list → start. Host-local: nothing is written until the host
+  // confirms the first phase.
+  const [pickingPhase, setPickingPhase] = useState(false)
+  const [confirmStart, setConfirmStart] = useState(false)
 
   // One advance per phase. Every advance path on this route — both auto-advance
   // effects below and every manual control rendered further down — funnels
@@ -115,10 +120,35 @@ export function HostView() {
   const centralEntries = Object.entries(centrals) as [string, { connected: boolean }][]
   const connectedCentrals = centralEntries.filter(([, c]) => c.connected).length
 
+  if (meta.status === 'lobby' && pickingPhase) {
+    return (
+      <>
+        <PhaseStartList
+          bundle={demoBundle}
+          onStart={() => setConfirmStart(true)}
+          onBack={() => setPickingPhase(false)}
+        />
+        {confirmStart && (
+          <ConfirmDialog
+            title="Mulai permainan?"
+            message="Setelah dimulai, pemain yang belum bergabung tidak bisa masuk lagi. Yakin ingin memulai sekarang?"
+            confirmLabel="Ya, mulai"
+            cancelLabel="Kembali"
+            onCancel={() => setConfirmStart(false)}
+            onConfirm={() => {
+              setConfirmStart(false)
+              void startSession(sessionId)
+            }}
+          />
+        )}
+      </>
+    )
+  }
+
   if (meta.status === 'lobby') {
     return (
       <LobbyView
-        sessionId={sessionId}
+        onProceed={() => setPickingPhase(true)}
         joinCode={config.joinCode}
         allowTeams={!!config.allowTeams}
         connectedCentrals={connectedCentrals}
@@ -421,14 +451,14 @@ function MinigameHostAction({
 // tile opens a modal offering the two join-role links (central vs player),
 // since the underlying code is the SAME string used by both routes.
 function LobbyView({
-  sessionId,
+  onProceed,
   joinCode,
   allowTeams,
   connectedCentrals,
   teams,
   players,
 }: {
-  sessionId: string
+  onProceed: () => void
   joinCode: string
   allowTeams: boolean
   connectedCentrals: number
@@ -436,7 +466,6 @@ function LobbyView({
   players: [string, PlayerPresence][]
 }) {
   const [copyOpen, setCopyOpen] = useState(false)
-  const [confirmStart, setConfirmStart] = useState(false)
 
   const copyJoinLink = (role: 'central' | 'player') => {
     const url = `${window.location.origin}/join/${role}?code=${joinCode}`
@@ -498,25 +527,11 @@ function LobbyView({
 
       <button
         type="button"
-        onClick={() => setConfirmStart(true)}
+        onClick={onProceed}
         className="bg-helden-yellow-gradient mt-auto w-full shrink-0 rounded-lg py-4 text-center text-lg font-medium text-black"
       >
-        Mulai Permainan
+        Pilih Phase
       </button>
-
-      {confirmStart && (
-        <ConfirmDialog
-          title="Mulai permainan?"
-          message="Setelah dimulai, pemain yang belum bergabung tidak bisa masuk lagi. Yakin ingin memulai sekarang?"
-          confirmLabel="Ya, mulai"
-          cancelLabel="Kembali"
-          onCancel={() => setConfirmStart(false)}
-          onConfirm={() => {
-            setConfirmStart(false)
-            void startSession(sessionId)
-          }}
-        />
-      )}
 
       {copyOpen && <CopyCodeModal onDismiss={() => setCopyOpen(false)} onCopy={copyJoinLink} />}
     </div>

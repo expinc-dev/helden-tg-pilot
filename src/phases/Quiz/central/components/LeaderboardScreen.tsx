@@ -12,29 +12,39 @@ export function LeaderboardScreen({
   phase,
   content,
   questionId,
+  revealedCount,
 }: {
   sessionId: string
   phase: Phase
   content: QuizContent
   questionId?: string
+  revealedCount: number
 }) {
+  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
   return (
     <div
-      className="fixed inset-0 flex flex-col items-center gap-8 p-12"
+      className="fixed inset-0 flex flex-col items-center gap-10 px-[5.5%] py-[4%]"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.central})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
     >
-      <h1 className="text-4xl font-bold text-white">Leaderboard</h1>
+      <h1 className="text-5xl font-medium text-white">
+        {isTeam ? 'Kemajuan Tim' : 'Kemajuan Pemain'}
+      </h1>
 
-      <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-black/20">
+      <div
+        className="min-h-0 w-full flex-1 overflow-y-auto rounded-md border"
+        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.6)' }}
+      >
         <LeaderboardRows
           sessionId={sessionId}
           phase={phase}
           content={content}
           questionId={questionId}
+          revealedCount={revealedCount}
+          variant="segments"
         />
       </div>
     </div>

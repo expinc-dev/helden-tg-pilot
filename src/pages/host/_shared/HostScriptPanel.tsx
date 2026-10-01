@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { Block, Phase } from '@helden-inc/tg-schema'
 
@@ -131,32 +131,84 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null)
 
+  // Pull `cur` back inside the positioned frame. The rendered rect already
+  // includes `cur`, so subtract it to get the un-offset base position. When the
+  // panel is larger than the frame the range collapses to its top-left edge
+  // (never inverts), so the drag handle at the top stays reachable.
+  const clampOffset = useCallback((cur: { dx: number; dy: number }) => {
+    const el = rootRef.current
+    const parent = el?.offsetParent as HTMLElement | null
+    if (!el || !parent) return cur
+    const pr = parent.getBoundingClientRect()
+    const r = el.getBoundingClientRect()
+    const baseLeft = r.left - cur.dx
+    const baseTop = r.top - cur.dy
+    const minDx = pr.left - baseLeft
+    const maxDx = Math.max(minDx, pr.right - (baseLeft + r.width))
+    const minDy = pr.top - baseTop
+    const maxDy = Math.max(minDy, pr.bottom - (baseTop + r.height))
+    return {
+      dx: Math.min(Math.max(cur.dx, minDx), maxDx),
+      dy: Math.min(Math.max(cur.dy, minDy), maxDy),
+    }
+  }, [])
+
+  const reclamp = useCallback(() => {
+    setOffset((prev) => {
+      const c = clampOffset(prev)
+      return Math.abs(c.dx - prev.dx) < 0.5 && Math.abs(c.dy - prev.dy) < 0.5 ? prev : c
+    })
+  }, [clampOffset])
+
+  // Re-clamp whenever the panel's size can change (script opened, long text,
+  // phase swap) or the frame does (resize / rotation), not only while dragging.
+  // ResizeObserver also fires once on observe, so the initial position is covered.
+  useEffect(() => {
+    const el = rootRef.current
+    const parent = el?.offsetParent as HTMLElement | null
+    if (!el) return
+    const ro = new ResizeObserver(reclamp)
+    ro.observe(el)
+    if (parent) ro.observe(parent)
+    window.addEventListener('resize', reclamp)
+    window.addEventListener('orientationchange', reclamp)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', reclamp)
+      window.removeEventListener('orientationchange', reclamp)
+    }
+  }, [reclamp])
+  useEffect(() => {
+    savedOffset = offset
+  }, [offset])
+
   const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
     dragRef.current = { x: e.clientX, y: e.clientY, dx: offset.dx, dy: offset.dy }
   }
   const onDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const d = dragRef.current
+    if (!d) return
+    // Clamp against the currently rendered position, then apply the pointer delta.
+    const base = { dx: d.dx + (e.clientX - d.x), dy: d.dy + (e.clientY - d.y) }
     const el = rootRef.current
-    if (!d || !el) return
-    let dx = d.dx + (e.clientX - d.x)
-    let dy = d.dy + (e.clientY - d.y)
-    // Keep the panel inside its `relative` frame. The rect includes the current
-    // offset, so shift it back to the un-offset position to compute the bounds.
-    const parent = el.offsetParent as HTMLElement | null
-    if (parent) {
-      const pr = parent.getBoundingClientRect()
-      const r = el.getBoundingClientRect()
-      const baseLeft = r.left - offset.dx
-      const baseTop = r.top - offset.dy
-      dx = Math.min(Math.max(dx, pr.left - baseLeft), pr.right - (baseLeft + r.width))
-      dy = Math.min(Math.max(dy, pr.top - baseTop), pr.bottom - (baseTop + r.height))
-    }
-    setOffset({ dx, dy })
+    const parent = el?.offsetParent as HTMLElement | null
+    if (!el || !parent) return setOffset(base)
+    const pr = parent.getBoundingClientRect()
+    const r = el.getBoundingClientRect()
+    const baseLeft = r.left - offset.dx
+    const baseTop = r.top - offset.dy
+    const minDx = pr.left - baseLeft
+    const maxDx = Math.max(minDx, pr.right - (baseLeft + r.width))
+    const minDy = pr.top - baseTop
+    const maxDy = Math.max(minDy, pr.bottom - (baseTop + r.height))
+    setOffset({
+      dx: Math.min(Math.max(base.dx, minDx), maxDx),
+      dy: Math.min(Math.max(base.dy, minDy), maxDy),
+    })
   }
   const onDragEnd = () => {
     dragRef.current = null
-    savedOffset = offset
   }
 
   if (!phase) return null
@@ -187,7 +239,9 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
     <div
       ref={rootRef}
       style={{ transform: `translate(${offset.dx}px, ${offset.dy}px)` }}
-      className="absolute right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2"
+      // max-h: frame height minus the 11.5rem bottom anchor and a 0.75rem top margin,
+      // so the panel can never grow past the top edge; long scripts scroll inside.
+      className="absolute right-4 bottom-[11.5rem] z-40 flex max-h-[calc(100%-12.25rem)] w-[min(90vw,26rem)] flex-col gap-2"
     >
       {/* Drag handle: the toggle below stays a plain button, so a tap on it
           never turns into a drag. touch-none keeps tablets from scrolling. */}
@@ -196,8 +250,9 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
         onPointerMove={onDragMove}
         onPointerUp={onDragEnd}
         onPointerCancel={onDragEnd}
+        onDoubleClick={() => setOffset({ dx: 0, dy: 0 })}
         aria-label="Geser panel naskah"
-        className="mx-auto flex h-5 w-24 cursor-grab touch-none items-center justify-center rounded-full bg-[#121212f2] active:cursor-grabbing"
+        className="mx-auto flex h-8 w-24 shrink-0 cursor-grab touch-none items-center justify-center rounded-full bg-[#121212f2] active:cursor-grabbing"
       >
         <span className="h-1 w-10 rounded-full bg-white/40" />
       </div>
@@ -206,18 +261,18 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
           there is no control anywhere in this component that hides it while
           improvMarker is set, so the host cannot lose the cue. */}
       {improv && (
-        <div className="rounded-lg bg-[#FFB800] px-3 py-2 text-center text-sm font-black tracking-wide text-black uppercase">
+        <div className="shrink-0 rounded-lg bg-[#FFB800] px-3 py-2 text-center text-sm font-black tracking-wide text-black uppercase">
           Host Improvisation
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121212f2] shadow-lg">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#121212f2] shadow-lg">
         {authored ? (
           <>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+              className="flex w-full shrink-0 items-center justify-between gap-2 px-3 py-2 text-left"
             >
               <span className="text-helden-yellow text-xs font-semibold tracking-wider uppercase">
                 Naskah Host
@@ -226,7 +281,7 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
             </button>
 
             {open && (
-              <div className="flex max-h-[55vh] flex-col gap-4 overflow-y-auto border-t border-white/10 p-3">
+              <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-white/10 p-3">
                 {anchor.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <span className="text-[0.65rem] font-semibold tracking-wider text-white/40 uppercase">

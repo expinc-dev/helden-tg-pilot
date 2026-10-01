@@ -1,4 +1,5 @@
 import { assets } from '@/assets'
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
 
 import { renderPromptBlocks } from '@/lib/richText'
 
@@ -35,6 +36,8 @@ export function ScaleStage({
 }) {
   const [minLabel, maxLabel] = question.labels ?? []
 
+  if (submitted !== null) return <AnswerSavedScreen />
+
   return (
     <div
       className="flex min-h-dvh flex-col"
@@ -45,12 +48,7 @@ export function ScaleStage({
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {submitted !== null ? (
-        <div className="-mt-10 flex flex-1 flex-col items-center justify-center gap-4 px-10">
-          <p className="text-4xl font-semibold text-white">Jawaban tersimpan!</p>
-          <p className="text-center text-xl text-white/90">Menunggu pemain lain menjawab...</p>
-        </div>
-      ) : (
+      {
         <>
           <div className="px-8 pt-10">
             <p className="text-2xl leading-relaxed font-normal text-white">
@@ -98,7 +96,7 @@ export function ScaleStage({
             )}
           </div>
         </>
-      )}
+      }
     </div>
   )
 }

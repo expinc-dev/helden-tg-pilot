@@ -12,10 +12,12 @@ import { usePlayerStep } from '@/lib/sync/usePlayerStep'
 import { useTeamOwner, useTeamRole } from '@/lib/sync/useTeamRole'
 import { useMyTeamId } from '@/lib/sync/useTeams'
 
+import { QuestionDoneScreen, QuestionScreen } from './QuestionScreen'
 import { StepBody } from './StepBody'
 import { StepPickerGrid } from './StepPicker'
 import { isDraftValid } from './isDraftValid'
 import { ActionButton, BackToPicker } from './shared'
+import { exampleHint, isSequentialSimple, questionBlockIndex } from './simpleFlow'
 
 export function PlayerPane({
   content,
@@ -52,9 +54,16 @@ export function PlayerPane({
   // synced — reconnect drops back to blockIndex=0 within the current step
   // (persisting mid-step position would need another RTDB write path;
   // deferred, and cheap to skip because steps are short).
-  const [blockIndex, setBlockIndex] = useState(0)
+  const [blockIndexState, setBlockIndex] = useState(0)
+  // Sequential phases made only of [text?] + one simple question run as one
+  // question per screen (QuestionScreen): the question block is the only page,
+  // so the block cursor is pinned to it and the question is always "the last
+  // block" of its step.
+  const oneQuestionPerScreen = isSequentialSimple(content)
+  const blockIndex = oneQuestionPerScreen ? questionBlockIndex(current) : blockIndexState
   const currentBlock = current.blocks[blockIndex]
-  const isLastBlock = blockIndex >= current.blocks.length - 1
+  const isLastBlock = oneQuestionPerScreen || blockIndex >= current.blocks.length - 1
+  // "Lainnya" free text (kept local; written next to the choice on commit).
 
   // `answers` = server-committed values, recovered on reconnect (below) — the
   // source of truth for "already answered". `drafts` = local, uncommitted
@@ -204,6 +213,28 @@ export function PlayerPane({
       setViewingIndex(null)
       setAdvancing(false)
     })()
+  }
+
+  if (oneQuestionPerScreen) {
+    if (step >= content.steps.length) return <QuestionDoneScreen />
+    if (currentBlock?.kind === 'question') {
+      return (
+        <QuestionScreen
+          question={currentBlock.question}
+          phase={phase}
+          sessionId={sessionId}
+          answer={answers[blockIndex] ?? null}
+          draft={drafts[blockIndex]}
+          onDraftChange={(value) => setDrafts((prev) => ({ ...prev, [blockIndex]: value }))}
+          disabled={!canWrite || advancing}
+          placeholder={exampleHint(current)}
+          actionLabel={isLastStep ? 'Kumpulkan' : 'Selanjutnya'}
+          actionDisabled={nextDisabled}
+          onAction={isLastStep ? handleFinish : handleNext}
+          canWrite={canWrite}
+        />
+      )
+    }
   }
 
   if (viewingIndex === null) {

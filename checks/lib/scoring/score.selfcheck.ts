@@ -61,4 +61,44 @@ eq(scoreAnswer(csCfg, { ...base, correct: false, elapsedMs: 0 }), 0, 'combo sala
 eq(scoreAnswer({ mode: 'none' }, { ...base, correct: true }), 0, 'mode none')
 eq(scoreAnswer(undefined, { ...base, correct: true }), 0, 'cfg undefined')
 
+// Config shaped like the CMS Phase-settings output for a graded quiz
+// (correctness_and_speed, 1000 base + up to 500 speed over 20s): a correct
+// answer must always score > 0, measured from the QUESTION start — a late
+// question must not lose its bonus just because the phase began long ago.
+const cmsCfg: ScoringConfig = {
+  mode: 'correctness_and_speed',
+  maxPoints: 1000,
+  speedBonus: { maxBonus: 500, decaySeconds: 20 },
+}
+const phaseStart = 0
+const q2Start = 120_000 // second question opens 2 minutes into the phase
+const q2Submit = q2Start + 5_000
+eq(
+  scoreAnswer(cmsCfg, {
+    ...base,
+    correct: true,
+    elapsedMs: q2Submit - q2Start,
+    phaseDurationMs: 20_000,
+  }),
+  1375,
+  'cms config, soal ke-2, 5s dari awal soal'
+)
+eq(
+  scoreAnswer(cmsCfg, {
+    ...base,
+    correct: true,
+    elapsedMs: q2Submit - phaseStart,
+    phaseDurationMs: 20_000,
+  }),
+  1000,
+  'regresi: diukur dari awal fase = tanpa bonus'
+)
+eq(
+  scoreAnswer(cmsCfg, { ...base, correct: false, elapsedMs: 1_000, phaseDurationMs: 20_000 }),
+  0,
+  'cms config, salah = 0'
+)
+// maxPoints kosong (yang kini ditolak CMS saat publish) = 0 — alasan validasinya.
+eq(scoreAnswer({ mode: 'correctness' }, { ...base, correct: true }), 0, 'maxPoints kosong = 0')
+
 console.log('score.selfcheck: OK')
