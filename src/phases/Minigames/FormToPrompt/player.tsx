@@ -110,7 +110,6 @@ export function FormToPromptPlayer({
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="flex flex-col items-center gap-1 pb-5 text-center">
           <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-          <h1 className="text-xl font-bold text-[#FFB800]">{phase.title}</h1>
         </div>
 
         {submitted && selected ? (

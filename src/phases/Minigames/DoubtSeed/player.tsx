@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import {
   DndContext,
   type DragEndEvent,
@@ -58,6 +59,7 @@ export function DoubtSeedPlayer({
   const [slots, setSlots] = useState<Slot[]>(() => Array.from({ length: dropZones }, () => null))
   const [active, setActive] = useState<Card | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [shareBusy, setShareBusy] = useState(false)
   // Whether this player's version starts off the wall — the same predicate the
@@ -146,7 +148,6 @@ export function DoubtSeedPlayer({
       <div className="mx-auto w-full max-w-md flex-1">
         <div className="flex flex-col items-center gap-1 pb-5 text-center">
           <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-          <h1 className="text-xl font-bold text-[#FFB800]">{phase.title}</h1>
         </div>
         {instructions && <p className="pb-4 text-center text-sm text-white/50">{instructions}</p>}
 
@@ -181,11 +182,24 @@ export function DoubtSeedPlayer({
         <button
           type="button"
           disabled={filledCount !== dropZones || busy}
-          onClick={submit}
+          onClick={() => setConfirmSubmit(true)}
           className="w-full rounded-lg bg-[#FFB800] py-3.5 text-center text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-[#2A2A2A] disabled:text-white/30"
         >
           {busy ? 'Mengirim…' : filledCount === dropZones ? 'Selanjutnya' : 'Isi semua slot dulu'}
         </button>
+        {confirmSubmit && (
+          <ConfirmDialog
+            title="Apakah kamu yakin?"
+            message="Jawaban yang sudah dikirim tidak bisa diubah lagi."
+            confirmLabel="Ya, kirim"
+            cancelLabel="Periksa lagi"
+            onCancel={() => setConfirmSubmit(false)}
+            onConfirm={() => {
+              setConfirmSubmit(false)
+              void submit()
+            }}
+          />
+        )}
       </div>
     </div>
   )

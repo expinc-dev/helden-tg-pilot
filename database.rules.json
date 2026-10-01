@@ -220,6 +220,20 @@
                   }
                 }
               },
+              "questionOutcome": {
+                "$qId": {
+                  "$keyId": {
+                    ".validate": "newData.val() === 'correct' || newData.val() === 'wrong'"
+                  }
+                }
+              },
+              "questionScores": {
+                "$qId": {
+                  "$keyId": {
+                    ".validate": "newData.isNumber()"
+                  }
+                }
+              },
               "scores": {
                 "$playerId": {
                   ".validate": "newData.isNumber()"

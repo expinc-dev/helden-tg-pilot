@@ -6,8 +6,6 @@ import type { Phase } from '@helden-inc/tg-schema'
 
 import { StepBody } from '@/phases/Microlearning/PlayerPane/StepBody'
 
-import { demoBundle } from '@/lib/demoBundle'
-import { endLevel, nextPhase } from '@/lib/session/control'
 import { useCentralStep } from '@/lib/sync/useCentralStep'
 
 import type { Role } from '../PhaseRouter'
@@ -38,7 +36,6 @@ export function PresentationRenderer({
   const canControl = role === content.controlledBy
   const isLastSlide = bounded === content.slides.length - 1
 
-  const [pendingPhaseEnd, setPendingPhaseEnd] = useState(false)
   const [jumpOpen, setJumpOpen] = useState(false)
   const prevBoundedRef = useRef(bounded)
   const [transitionDir, setTransitionDir] = useState<'right' | 'left'>('right')
@@ -85,39 +82,27 @@ export function PresentationRenderer({
     )
   }
 
-  const requestAdvance = (kind: 'slide' | 'phase') => {
-    if (kind === 'phase') {
-      setPendingPhaseEnd(true)
-      return
-    }
-    setStep(bounded + 1)
-  }
-
-  const confirmPhaseEnd = () => {
-    setPendingPhaseEnd(false)
-    const isModular = (demoBundle.flowMode ?? 'sequential') !== 'sequential'
-    void (isModular ? endLevel(sessionId, phaseId) : nextPhase(sessionId, phaseId))
-  }
-
   const controls = role === 'host' && (
     <div
       className="relative z-50 flex shrink-0 items-center justify-between gap-4 border-t bg-[#121212] px-4 py-3"
       style={{ borderColor: '#353535' }}
     >
-      <span className="text-xs text-white/60">
-        {bounded + 1} / {content.slides.length}
-      </span>
-      <button
-        type="button"
-        onClick={() => setJumpOpen(!jumpOpen)}
-        className="rounded border px-2 py-1 text-xs text-white"
-        style={{ borderColor: '#353535' }}
-      >
-        Jump
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setJumpOpen(!jumpOpen)}
+          className="rounded-[8px] border px-4 py-2 text-sm text-white"
+          style={{ borderColor: '#353535', background: '#1B1B1B' }}
+        >
+          Jump
+        </button>
+        <span className="text-xs text-white/60">
+          {bounded + 1} / {content.slides.length}
+        </span>
+      </div>
       {jumpOpen && (
         <div
-          className="absolute bottom-14 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
+          className="absolute bottom-16 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
           style={{ borderColor: '#353535' }}
         >
           {content.slides.map((_, i) => (
@@ -145,12 +130,14 @@ export function PresentationRenderer({
         >
           Previous
         </button>
+        {/* Last slide has no phase-advance button on purpose: the host shell owns
+            the single "Tahap Selanjutnya" control (with confirm). */}
         <GradientButton
-          disabled={!canControl}
-          onClick={() => requestAdvance(isLastSlide ? 'phase' : 'slide')}
+          disabled={!canControl || isLastSlide}
+          onClick={() => setStep(bounded + 1)}
           className="px-6 py-2 text-sm"
         >
-          {isLastSlide ? 'Next phase' : 'Next'}
+          Next
         </GradientButton>
       </div>
     </div>
@@ -225,57 +212,8 @@ export function PresentationRenderer({
       style={bgStyle}
     >
       {slideView}
-      <FullscreenToggle position="absolute" />
+      {/* No fullscreen toggle here: the host live shell already renders Header's. */}
       {controls}
-
-      {pendingPhaseEnd && (
-        <PhaseEndConfirm onCancel={() => setPendingPhaseEnd(false)} onConfirm={confirmPhaseEnd} />
-      )}
-    </div>
-  )
-}
-
-function PhaseEndConfirm({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
-  return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-8 backdrop-blur-md">
-      <div
-        className="w-full max-w-sm overflow-hidden rounded-lg border"
-        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
-      >
-        <div
-          className="flex items-center justify-between gap-4 border-b px-5 py-4"
-          style={{ borderColor: '#353535', background: '#181818' }}
-        >
-          <h2 className="font-semibold text-yellow-400">Lanjut ke Fase Berikutnya?</h2>
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Close"
-            className="text-white/70 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-5">
-          <p className="text-sm text-white/80">
-            Presentasi akan ditutup dan sesi akan lanjut ke fase berikutnya. Tindakan ini tidak bisa
-            dibatalkan.
-          </p>
-          <div className="mt-5 flex gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 rounded-lg border py-2.5 text-sm text-white"
-              style={{ borderColor: '#353535', background: '#1B1B1B' }}
-            >
-              Batal
-            </button>
-            <GradientButton type="button" onClick={onConfirm} className="flex-1 py-2.5 text-sm">
-              Lanjut
-            </GradientButton>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { assets } from '@/assets'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 import { Icon } from '@iconify/react'
 import { onValue } from 'firebase/database'
@@ -51,6 +52,7 @@ export function PlayerReflection({
   const [scale, setScale] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState<ReflectionAnswer | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
 
   // Reconnect recovery: if this player already submitted, land them straight
   // on the "thanks" screen instead of a blank form.
@@ -95,7 +97,7 @@ export function PlayerReflection({
       title={title}
       subtitle={content.prompt}
       footer={
-        <SubmitButton disabled={!canSubmit} onClick={handleSubmit}>
+        <SubmitButton disabled={!canSubmit} onClick={() => setConfirmSubmit(true)}>
           Selanjutnya
         </SubmitButton>
       }
@@ -140,25 +142,35 @@ export function PlayerReflection({
                   key={mood.value}
                   type="button"
                   onClick={() => setScale(mood.value)}
-                  className="flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition"
+                  aria-label={mood.label}
+                  title={mood.label}
+                  className="flex items-center justify-center rounded-lg border p-3 transition"
                   style={{
                     borderColor: selected ? '#FFB800' : '#353535',
                     backgroundColor: selected ? `${mood.color}26` : 'transparent',
                     opacity: selected ? 1 : 0.64,
                   }}
                 >
-                  <Icon icon={mood.icon} className="size-7" style={{ color: mood.color }} />
-                  <span
-                    className={`text-xs leading-[120%] tracking-[-0.48px] ${selected ? 'font-semibold text-white' : 'font-normal text-[#CCC]'}`}
-                  >
-                    {mood.label}
-                  </span>
+                  <Icon icon={mood.icon} className="size-10" style={{ color: mood.color }} />
                 </button>
               )
             })}
           </div>
         </div>
       </div>
+      {confirmSubmit && (
+        <ConfirmDialog
+          title="Apakah kamu yakin?"
+          message="Jawaban yang sudah dikirim tidak bisa diubah lagi."
+          confirmLabel="Ya, kirim"
+          cancelLabel="Periksa lagi"
+          onCancel={() => setConfirmSubmit(false)}
+          onConfirm={() => {
+            setConfirmSubmit(false)
+            void handleSubmit()
+          }}
+        />
+      )}
     </ReflectionShell>
   )
 }
@@ -169,12 +181,11 @@ export function PlayerReflection({
 function ReflectionShell({
   children,
   footer,
-  title,
   subtitle,
 }: {
   children: React.ReactNode
   footer?: React.ReactNode
-  title: string
+  title?: string // phase title is host-only; accepted but not rendered
   subtitle?: string
 }) {
   return (
@@ -188,7 +199,6 @@ function ReflectionShell({
       >
         <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
           <div className="mb-6 text-center">
-            <h1 className="text-xl font-bold text-white sm:text-2xl">{title}</h1>
             {subtitle && <p className="mx-auto mt-2 max-w-md text-sm text-white/60">{subtitle}</p>}
           </div>
           {children}

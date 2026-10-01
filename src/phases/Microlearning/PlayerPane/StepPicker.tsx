@@ -200,7 +200,8 @@ function StepCard({
   return (
     <button
       type="button"
-      disabled={locked}
+      // A finished step stays visible (green check) but cannot be reopened.
+      disabled={locked || status === 'done'}
       onClick={onSelect}
       className="relative aspect-square overflow-hidden rounded-lg text-left disabled:cursor-not-allowed"
       style={cardStateStyle(status)}

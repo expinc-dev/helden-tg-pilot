@@ -4,7 +4,21 @@ import type { Phase } from '@helden-inc/tg-schema'
 
 import { useTeams } from '@/lib/sync/useTeams'
 
-import { type QuizContent, useAnswerTally, usePlayerNames, useScoresMap } from '../lib'
+import {
+  type QuizContent,
+  useAnswerTally,
+  usePlayerRoster,
+  useQuestionScores,
+  useScoresMap,
+} from '../lib'
+import { type QuestionOutcome, questionOutcomes } from '../outcomes'
+
+const SEGMENT_COLOR: Record<QuestionOutcome, string> = {
+  correct: '#4FD18B',
+  wrong: '#E21B3C',
+  unanswered: '#FDDB00',
+  pending: '#6B6B6B',
+}
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -13,44 +27,96 @@ function initials(name: string): string {
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
-// Shared row list (rank, avatar initials, name, correct/wrong bar, score) used
-// by both central's full-bleed LeaderboardScreen and the host's floating
-// LeaderboardPanel — same data, two different chrome wrappers around it.
-// Each row's bar denominator is this quiz's total question count: green/red
-// are cumulative correct/wrong so far, the remainder is questions not yet reached.
+// Shared row list (rank, avatar initials, name, per-question verdicts, score)
+// used by both central's full-bleed LeaderboardScreen and the host's leaderboard
+// stage — same data, two different chrome wrappers around it.
+//
+// Right / wrong / unanswered per question is derived live from the players'
+// own answers (the same source as the host's red/green option marks), so it
+// never waits on the host's scoring pass; only the points come from the host's
+// aggregates. Team modes keep the team aggregates (a team verdict needs the
+// leader/majority rule), shown as green/red then grey.
 export function LeaderboardRows({
   sessionId,
   phase,
   content,
+  questionId,
+  revealedCount,
+  variant = 'bar',
 }: {
   sessionId: string
   phase: Phase
   content: QuizContent
+  // When set, each row also shows the points earned on that question ("+N").
+  questionId?: string
+  // How many questions have been opened to the room (questions at or beyond
+  // this index are still "pending").
+  revealedCount: number
+  // 'segments' = central "Kemajuan" board: one segment per question. Default
+  // 'bar' keeps the host panel's single bar.
+  variant?: 'bar' | 'segments'
 }) {
   const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
   const scores = useScoresMap(sessionId, phase)
-  const playerNames = usePlayerNames(sessionId)
+  const roster = usePlayerRoster(sessionId)
   const teams = useTeams(sessionId)
   const tally = useAnswerTally(sessionId, phase)
+  const questionScores = useQuestionScores(sessionId, questionId ?? '_none')
   const totalQuestions = content.questions.length
 
-  const teamNames = useMemo(
-    () => Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id])),
-    [teams]
-  )
-
   const rows = useMemo(() => {
-    const names = isTeam ? teamNames : playerNames
-    return Object.entries(scores)
-      .sort(([, a], [, b]) => b - a)
-      .map(([id, score]) => ({
-        id,
-        name: names[id] ?? id.slice(0, 6),
-        score,
-        correct: tally.correct[id] ?? 0,
-        wrong: tally.wrong[id] ?? 0,
+    type Row = {
+      id: string
+      name: string
+      score: number
+      gained: number
+      outcomes: QuestionOutcome[]
+    }
+    let list: Row[]
+    if (isTeam) {
+      const names = Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id]))
+      list = Object.entries(scores).map(([id, score]) => {
+        const correct = tally.correct[id] ?? 0
+        const wrong = tally.wrong[id] ?? 0
+        const outcomes: QuestionOutcome[] = Array.from({ length: totalQuestions }, (_, k) =>
+          k < correct ? 'correct' : k < correct + wrong ? 'wrong' : 'pending'
+        )
+        return {
+          id,
+          name: names[id] ?? id.slice(0, 6),
+          score,
+          gained: questionScores[id] ?? 0,
+          outcomes,
+        }
+      })
+    } else {
+      list = roster.map((p) => ({
+        id: p.id,
+        name: p.name,
+        score: scores[p.id] ?? 0,
+        gained: questionScores[p.id] ?? 0,
+        outcomes: questionOutcomes({
+          questions: content.questions,
+          answers: p.answers,
+          phaseId: phase.id,
+          revealedCount,
+        }),
       }))
-  }, [scores, tally, playerNames, teamNames, isTeam])
+    }
+    const correctOf = (r: Row) => r.outcomes.filter((o) => o === 'correct').length
+    return list.sort((a, b) => b.score - a.score || correctOf(b) - correctOf(a))
+  }, [
+    isTeam,
+    teams,
+    scores,
+    tally,
+    roster,
+    questionScores,
+    content.questions,
+    phase.id,
+    revealedCount,
+    totalQuestions,
+  ])
 
   if (rows.length === 0) {
     return <p className="p-8 text-center text-white/40">Belum ada skor</p>
@@ -59,8 +125,36 @@ export function LeaderboardRows({
   return (
     <>
       {rows.map((row, i) => {
-        const correctPct = totalQuestions > 0 ? (row.correct / totalQuestions) * 100 : 0
-        const wrongPct = totalQuestions > 0 ? (row.wrong / totalQuestions) * 100 : 0
+        if (variant === 'segments') {
+          return (
+            <div key={row.id} className="flex items-center gap-8 px-10 py-5">
+              <span className="w-10 shrink-0 text-3xl font-medium text-white">{i + 1}.</span>
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-white text-2xl font-bold text-black ring-2 ring-[#FDDB00]">
+                {initials(row.name)}
+              </div>
+              <span className="w-72 shrink-0 truncate text-3xl text-white">{row.name}</span>
+              <div className="flex flex-1 items-center gap-5">
+                {row.outcomes.map((o, k) => (
+                  <div
+                    key={k}
+                    className="h-6 flex-1 rounded transition-colors duration-300"
+                    style={{ background: SEGMENT_COLOR[o] }}
+                  />
+                ))}
+              </div>
+              <div className="flex w-36 shrink-0 items-baseline justify-end gap-3">
+                {questionId && (
+                  <span className="text-xl font-semibold text-[#4FD18B]">+{row.gained}</span>
+                )}
+                <span className="text-3xl font-bold text-[#FFB800]">{row.score}</span>
+              </div>
+            </div>
+          )
+        }
+        const correct = row.outcomes.filter((o) => o === 'correct').length
+        const missed = row.outcomes.filter((o) => o === 'wrong' || o === 'unanswered').length
+        const correctPct = totalQuestions > 0 ? (correct / totalQuestions) * 100 : 0
+        const wrongPct = totalQuestions > 0 ? (missed / totalQuestions) * 100 : 0
         return (
           <div
             key={row.id}
@@ -75,6 +169,11 @@ export function LeaderboardRows({
               <div className="h-full bg-[#34D399]" style={{ width: `${correctPct}%` }} />
               <div className="h-full bg-[#E21B3C]" style={{ width: `${wrongPct}%` }} />
             </div>
+            {questionId && (
+              <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#34D399]">
+                +{row.gained}
+              </span>
+            )}
             <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">{row.score}</span>
           </div>
         )

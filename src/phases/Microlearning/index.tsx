@@ -28,6 +28,16 @@ export function MicrolearningRenderer({
   // when this phase actually wants one (host already gets the full per-player
   // spread from HostPresenceSpread, rendered by the host page itself).
   if (role === 'central')
-    return <CentralProgressPane content={content} title={title} sessionId={sessionId} />
-  return <MonitorPane content={content} title={title} sessionId={sessionId} onAdvance={onAdvance} />
+    return (
+      <CentralProgressPane content={content} title={title} sessionId={sessionId} phase={phase} />
+    )
+  return (
+    <MonitorPane
+      content={content}
+      title={title}
+      sessionId={sessionId}
+      phaseId={phase.id}
+      onAdvance={onAdvance}
+    />
+  )
 }

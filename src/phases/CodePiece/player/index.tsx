@@ -154,11 +154,10 @@ function LetterSlots({
 // (StepShell / ReflectionShell / SortOrderShell) — a single static card,
 // no footer action needed since there's nothing to submit here.
 function CodePieceShell({
-  title,
   subtitle,
   children,
 }: {
-  title: string
+  title?: string // phase title is host-only; accepted but not rendered
   subtitle?: string
   children: React.ReactNode
 }) {
@@ -170,7 +169,7 @@ function CodePieceShell({
       <div className="w-full max-w-md rounded-2xl border border-[#353535] bg-black/50 p-6 shadow-2xl backdrop-blur-md">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            {title || 'Fragmen Data Diterima!'}
+            Fragmen Data Diterima!
           </h1>
           <p className="mt-2 text-sm text-white/70">
             {subtitle || 'Tugas tim Anda telah selesai, simpan potongan urutan berikut.'}

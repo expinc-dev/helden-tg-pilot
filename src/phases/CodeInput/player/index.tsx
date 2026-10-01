@@ -133,11 +133,10 @@ export function CodeInputPlayer({
 // SortOrderShell — the paired phase to this one, so the two don't read as
 // different apps back to back.
 function CodeInputShell({
-  title,
   timerLabel,
   children,
 }: {
-  title: string
+  title?: string // phase title is host-only; accepted but not rendered
   timerLabel?: string
   children: React.ReactNode
 }) {
@@ -154,7 +153,6 @@ function CodeInputShell({
               <span>{timerLabel}</span>
             </div>
           )}
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h1>
         </div>
         {children}
       </div>

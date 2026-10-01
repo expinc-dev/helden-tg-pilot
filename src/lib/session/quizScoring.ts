@@ -4,17 +4,25 @@ import { get, update } from 'firebase/database'
 import { eref } from '@/lib/firebase'
 import { scoreAnswer } from '@/lib/scoring/score'
 
-// Host-only. Called on reveal: reads all player answers for the current question,
-// computes scores against the correct answer from secrets/, and writes accumulated
-// scores to aggregates/scores (individual) or aggregates/teamScores (team modes).
+import { type Outcome, type QuestionResult, applyQuestionResults } from './quizTotals'
+
+// Host-only. Called on reveal and again when the leaderboard opens: reads all
+// player answers for the question, scores them against the correct answer and
+// folds the result into aggregates/scores (individual) or aggregates/teamScores
+// (team modes). Idempotent per question (see quizTotals.ts) — running it twice
+// replaces that question's contribution instead of adding it again, so answers
+// that land just after the first pass are picked up by the second.
 export async function scoreQuizQuestion(opts: {
   sessionId: string
   phase: Phase
   questionIndex: number
   correctId: string
   timerSeconds: number
+  // Server-clock ms when this question opened (centralStep.startedAt). Falls
+  // back to the phase start for steps written before startedAt existed.
+  questionStartMs?: number
 }) {
-  const { sessionId, phase, questionIndex, correctId, timerSeconds } = opts
+  const { sessionId, phase, questionIndex, correctId, timerSeconds, questionStartMs } = opts
   const qId = `${phase.id}_q${questionIndex}`
   const phaseDurationMs = timerSeconds * 1000
 
@@ -26,12 +34,13 @@ export async function scoreQuizQuestion(opts: {
     string,
     { answers?: Record<string, { value: unknown; submittedAt?: number }>; teamId?: string }
   >
-  const phaseStartMs = (pointerSnap.val()?.changedAt as number | undefined) ?? Date.now()
+  const phaseStartMs =
+    questionStartMs ?? (pointerSnap.val()?.changedAt as number | undefined) ?? Date.now()
 
   const isTeamMode =
     phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
 
-  // Collect per-player scores
+  // Raw per-player verdicts: score, correctness, and (team modes) the votes.
   const playerScores: Record<string, number> = {}
   const playerCorrect: Record<string, boolean> = {}
   const teamAnswers: Record<string, { optionId: string; submittedAt: number }[]> = {}
@@ -39,10 +48,7 @@ export async function scoreQuizQuestion(opts: {
   for (const [playerId, p] of Object.entries(players)) {
     if (!p) continue
     const ans = p.answers?.[qId]
-    if (!ans) {
-      playerScores[playerId] = 0
-      continue
-    }
+    if (!ans) continue
     const submittedAt = typeof ans.submittedAt === 'number' ? ans.submittedAt : Date.now()
     const elapsedMs = Math.max(0, submittedAt - phaseStartMs)
     const correct = ans.value === correctId
@@ -53,31 +59,24 @@ export async function scoreQuizQuestion(opts: {
       teamAnswers[p.teamId].push({ optionId: String(ans.value), submittedAt })
     }
 
-    const score = scoreAnswer(phase.scoring, {
+    playerScores[playerId] = scoreAnswer(phase.scoring, {
       correct,
       answered: true,
       elapsedMs,
       phaseDurationMs,
     })
-    playerScores[playerId] = score
   }
 
-  // Build the scores patch
-  const patch: Record<string, unknown> = {}
+  // Result per scoring key (playerId, or teamId in team modes). Not answering is
+  // a `wrong` outcome with 0 points.
+  const results: Record<string, QuestionResult> = {}
+  const outcomeOf = (correct: boolean | undefined): Outcome => (correct ? 'correct' : 'wrong')
 
   if (isTeamMode) {
     // team_leader_only: leader's score = team score
     // team_collaborative: majority vote determines correctness, earliest majority timestamp for speed
-    const [teamsSnap, priorSnap, priorCorrectSnap, priorWrongSnap] = await Promise.all([
-      get(eref(`sessions/${sessionId}/teams`)),
-      get(eref(`sessions/${sessionId}/aggregates/teamScores`)),
-      get(eref(`sessions/${sessionId}/aggregates/teamCorrectCount/${phase.id}`)),
-      get(eref(`sessions/${sessionId}/aggregates/teamWrongCount/${phase.id}`)),
-    ])
+    const teamsSnap = await get(eref(`sessions/${sessionId}/teams`))
     const teams = (teamsSnap.val() ?? {}) as Record<string, { ownerPlayerId?: string }>
-    const prior = (priorSnap.val() ?? {}) as Record<string, number>
-    const priorCorrect = (priorCorrectSnap.val() ?? {}) as Record<string, number>
-    const priorWrong = (priorWrongSnap.val() ?? {}) as Record<string, number>
 
     for (const [teamId, team] of Object.entries(teams)) {
       let teamScore = 0
@@ -113,34 +112,48 @@ export async function scoreQuizQuestion(opts: {
           })
         }
       }
-      patch[`teamScores/${teamId}`] = (prior[teamId] ?? 0) + teamScore
-      if (teamCorrect !== undefined) {
-        const key = teamCorrect ? 'teamCorrectCount' : 'teamWrongCount'
-        const priorMap = teamCorrect ? priorCorrect : priorWrong
-        patch[`${key}/${phase.id}/${teamId}`] = (priorMap[teamId] ?? 0) + 1
-      }
+      results[teamId] = { score: teamScore, outcome: outcomeOf(teamCorrect) }
     }
   } else {
-    // individual mode
-    const [priorSnap, priorCorrectSnap, priorWrongSnap] = await Promise.all([
-      get(eref(`sessions/${sessionId}/aggregates/scores`)),
-      get(eref(`sessions/${sessionId}/aggregates/correctCount/${phase.id}`)),
-      get(eref(`sessions/${sessionId}/aggregates/wrongCount/${phase.id}`)),
-    ])
-    const prior = (priorSnap.val() ?? {}) as Record<string, number>
-    const priorCorrect = (priorCorrectSnap.val() ?? {}) as Record<string, number>
-    const priorWrong = (priorWrongSnap.val() ?? {}) as Record<string, number>
-    for (const [playerId, score] of Object.entries(playerScores)) {
-      patch[`scores/${playerId}`] = (prior[playerId] ?? 0) + score
-      if (playerId in playerCorrect) {
-        const key = playerCorrect[playerId] ? 'correctCount' : 'wrongCount'
-        const priorMap = playerCorrect[playerId] ? priorCorrect : priorWrong
-        patch[`${key}/${phase.id}/${playerId}`] = (priorMap[playerId] ?? 0) + 1
+    // Everyone present is scored, answered or not.
+    for (const playerId of Object.keys(players)) {
+      if (!players[playerId]) continue
+      results[playerId] = {
+        score: playerScores[playerId] ?? 0,
+        outcome: outcomeOf(playerCorrect[playerId]),
       }
     }
   }
 
-  if (Object.keys(patch).length > 0) {
-    await update(eref(`sessions/${sessionId}/aggregates`), patch)
+  if (Object.keys(results).length === 0) return
+
+  const base = `sessions/${sessionId}/aggregates`
+  const totalsKey = isTeamMode ? 'teamScores' : 'scores'
+  const correctKey = isTeamMode ? 'teamCorrectCount' : 'correctCount'
+  const wrongKey = isTeamMode ? 'teamWrongCount' : 'wrongCount'
+  const [totalsSnap, correctSnap, wrongSnap, prevScoresSnap, prevOutcomesSnap] = await Promise.all([
+    get(eref(`${base}/${totalsKey}`)),
+    get(eref(`${base}/${correctKey}/${phase.id}`)),
+    get(eref(`${base}/${wrongKey}/${phase.id}`)),
+    get(eref(`${base}/questionScores/${qId}`)),
+    get(eref(`${base}/questionOutcome/${qId}`)),
+  ])
+  const folded = applyQuestionResults({
+    results,
+    prevScores: (prevScoresSnap.val() ?? {}) as Record<string, number>,
+    prevOutcomes: (prevOutcomesSnap.val() ?? {}) as Record<string, Outcome>,
+    totals: (totalsSnap.val() ?? {}) as Record<string, number>,
+    correctCount: (correctSnap.val() ?? {}) as Record<string, number>,
+    wrongCount: (wrongSnap.val() ?? {}) as Record<string, number>,
+  })
+
+  const patch: Record<string, unknown> = {}
+  for (const [key, r] of Object.entries(results)) {
+    patch[`${totalsKey}/${key}`] = folded.totals[key]
+    patch[`${correctKey}/${phase.id}/${key}`] = folded.correctCount[key]
+    patch[`${wrongKey}/${phase.id}/${key}`] = folded.wrongCount[key]
+    patch[`questionScores/${qId}/${key}`] = r.score
+    patch[`questionOutcome/${qId}/${key}`] = r.outcome
   }
+  await update(eref(base), patch)
 }

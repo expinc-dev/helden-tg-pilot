@@ -1,12 +1,13 @@
 import { useState } from 'react'
 
 import { assets } from '@/assets'
-import { GradientButton } from '@/components/GradientButton'
 import { HostBadge } from '@/pages/host/_shared/HostBadge'
+import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
 import type { MicrolearningContent } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { useGameType } from '@/lib/sync/useGameType'
+import { readSelfStep } from '@/lib/sync/usePlayerStep'
 import { usePresence } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
 
@@ -39,11 +40,13 @@ export function MonitorPane({
   content,
   title,
   sessionId,
+  phaseId,
   onAdvance,
 }: {
   content: MicrolearningContent
   title: string
   sessionId: string
+  phaseId: string
   onAdvance?: () => void
 }) {
   const { players } = usePresence(sessionId)
@@ -52,13 +55,16 @@ export function MonitorPane({
   const total = content.steps.length
   const entries = Object.entries(players) as [
     string,
-    (typeof players)[string] & { selfStep?: number },
+    (typeof players)[string] & { selfStep?: unknown },
   ][]
   const [openTeamId, setOpenTeamId] = useState<string | null>(null)
 
   const teamRows: TeamRowData[] = teams.map((t) => {
     const members = entries.filter(([, p]) => p.teamId === t.id)
-    const leaderStep = members.find(([id]) => id === t.ownerPlayerId)?.[1].selfStep ?? 0
+    const leaderStep = readSelfStep(
+      members.find(([id]) => id === t.ownerPlayerId)?.[1].selfStep,
+      phaseId
+    )
     return {
       id: t.id,
       name: t.teamName ?? t.id,
@@ -106,7 +112,7 @@ export function MonitorPane({
                 <PlayerProgressRow
                   key={id}
                   name={p.name}
-                  pct={progressPct(p.selfStep ?? 0, total)}
+                  pct={progressPct(readSelfStep(p.selfStep, phaseId), total)}
                   connected={p.connected}
                 />
               ))}
@@ -114,9 +120,7 @@ export function MonitorPane({
 
         {onAdvance && (
           <div className="shrink-0">
-            <GradientButton type="button" onClick={onAdvance} className="w-full py-3.5 text-sm">
-              Akhiri Level
-            </GradientButton>
+            <HostNextPhaseButton onConfirm={onAdvance} className="w-full py-3.5 text-sm" />
           </div>
         )}
       </div>

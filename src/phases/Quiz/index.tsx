@@ -14,6 +14,7 @@ export function QuizRenderer({
   playerId,
   teamId,
   phase,
+  onAdvance,
 }: {
   content: QuizContent
   role: Role
@@ -22,6 +23,7 @@ export function QuizRenderer({
   playerId?: string
   teamId?: string
   phase: Phase
+  onAdvance?: () => void
 }) {
   if (role === 'player')
     return (
@@ -36,5 +38,13 @@ export function QuizRenderer({
     )
   if (role === 'central')
     return <CentralQuiz content={content} sessionId={sessionId} phaseId={phaseId} phase={phase} />
-  return <HostQuiz content={content} sessionId={sessionId} phaseId={phaseId} phase={phase} />
+  return (
+    <HostQuiz
+      content={content}
+      sessionId={sessionId}
+      phaseId={phaseId}
+      phase={phase}
+      onAdvance={onAdvance}
+    />
+  )
 }

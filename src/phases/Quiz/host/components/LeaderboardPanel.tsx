@@ -10,17 +10,24 @@ export function LeaderboardPanel({
   sessionId,
   phase,
   content,
+  revealedCount,
   onClose,
 }: {
   sessionId: string
   phase: Phase
   content: QuizContent
+  revealedCount: number
   onClose: () => void
 }) {
   return (
     <Modal title="Leaderboard" onClose={onClose} maxWidthClassName="max-w-3xl">
       <div className="-m-5">
-        <LeaderboardRows sessionId={sessionId} phase={phase} content={content} />
+        <LeaderboardRows
+          sessionId={sessionId}
+          phase={phase}
+          content={content}
+          revealedCount={revealedCount}
+        />
       </div>
     </Modal>
   )

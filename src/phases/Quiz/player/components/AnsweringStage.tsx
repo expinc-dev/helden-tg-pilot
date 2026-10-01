@@ -1,14 +1,20 @@
-import { assets } from '@/assets'
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import { Icon } from '@iconify/react'
 
 import { TimerRing } from '../../TimerRing'
 import { type ChoiceOption, OPTION_ICONS } from '../../lib'
 
+const TILE_CLASS = [
+  'bg-quiz-red-gradient',
+  'bg-quiz-blue-gradient',
+  'bg-quiz-yellow-gradient',
+  'bg-quiz-green-gradient',
+]
+
 export function AnsweringStage({
   timer,
   timers,
-  // step,
-  // total,
   submitted,
   selectedId,
   canAnswer,
@@ -25,80 +31,52 @@ export function AnsweringStage({
   options: ChoiceOption[]
   onAnswer: (optionId: string) => void
 }) {
-  // A 2-option question (e.g. the AI Myth Quiz's Benar/Salah) otherwise makes
-  // both buttons span a whole column of this `flex-1` grid as a single row,
-  // and with only one row the implicit track stretches to the full container
-  // height — two tiles swallowing the screen. Capping that lone row at 50%
-  // gives exactly the tile height an equivalent 4-option 2x2 question gets;
-  // `content-center` keeps the pair mid-screen instead of jammed under the
-  // timer.
+  if (submitted) return <AnswerSavedScreen />
+
+  // A 2-option question (e.g. the AI Myth Quiz's Benar/Salah) would otherwise
+  // make both tiles span the whole panel height as a single stretched row;
+  // capping that lone row keeps them as tall tiles centred under the ring.
   const singleRow = options.length <= 2
 
   return (
-    <div
-      className="flex min-h-dvh flex-col"
-      style={{
-        backgroundImage: `url(${assets.images.backgrounds.auth})`,
-        backgroundSize: '100% 100%',
-        backgroundPosition: 'top',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {/* <div className="h-1.5 w-full bg-white/10">
-        <div
-          className="h-full rounded-r-full bg-[#FFB800] transition-all duration-500"
-          style={{ width: `${((step + 1) / total) * 100}%` }}
-        />
-      </div> */}
-
+    <PlayerScreenFrame panelClassName="gap-6 p-4">
       {timer.active && (
-        <div className="flex flex-col items-center px-4 py-12">
+        <div className="flex shrink-0 justify-center pt-6">
           <TimerRing
             remainingSec={timer.remainingSec}
             totalSec={timers.answering}
             expired={timer.expired}
-            size={120}
+            size={90}
           />
         </div>
       )}
 
-      {submitted ? (
-        <div className="-mt-10 flex flex-1 flex-col items-center justify-center gap-4">
-          <p className="text-4xl font-semibold text-white">Jawaban tersimpan!</p>
-          <p className="text-xl text-white/90">Menunggu pemain lain menjawab...</p>
-        </div>
-      ) : (
-        <div
-          className={`grid flex-1 grid-cols-2 gap-3 p-4 px-10 pb-8 ${singleRow ? 'auto-rows-[50%] content-center' : ''}`}
-        >
-          {options.map((opt, i) => {
-            const icon = OPTION_ICONS[i % OPTION_ICONS.length]
-            const isSelected = selectedId === opt.id
-            const isDeselected = selectedId !== null && !isSelected
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                disabled={!canAnswer}
-                onClick={() => onAnswer(opt.id)}
-                aria-label={opt.label}
-                className={`relative flex items-center justify-center rounded-xl text-white shadow-lg transition-all duration-200 ease-out active:scale-[0.97] disabled:cursor-not-allowed ${i === 0 ? 'bg-quiz-red-gradient' : i === 1 ? 'bg-quiz-blue-gradient' : i === 2 ? 'bg-quiz-yellow-gradient' : 'bg-quiz-green-gradient'} ${
-                  isSelected
-                    ? 'z-10 scale-105 opacity-100 shadow-2xl ring-4 ring-white'
-                    : isDeselected
-                      ? 'scale-95 opacity-30'
-                      : 'disabled:opacity-40'
-                }`}
-              >
-                {isSelected && (
-                  <span className="absolute inset-0 animate-ping rounded-xl ring-4 ring-white" />
-                )}
-                <Icon icon={icon} className="size-16" />
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
+      <div
+        className={`grid flex-1 grid-cols-2 gap-3 ${singleRow ? 'auto-rows-[70%] content-center' : ''}`}
+      >
+        {options.map((opt, i) => {
+          const isSelected = selectedId === opt.id
+          const isDeselected = selectedId !== null && !isSelected
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              disabled={!canAnswer}
+              onClick={() => onAnswer(opt.id)}
+              aria-label={opt.label}
+              className={`relative flex items-center justify-center rounded-lg text-white shadow-lg transition-all duration-200 ease-out active:scale-[0.97] disabled:cursor-not-allowed ${TILE_CLASS[i % TILE_CLASS.length]} ${
+                isSelected
+                  ? 'z-10 scale-[1.03] opacity-100 ring-4 ring-[#FDDB00]'
+                  : isDeselected
+                    ? 'scale-95 opacity-30'
+                    : 'disabled:opacity-40'
+              }`}
+            >
+              <Icon icon={OPTION_ICONS[i % OPTION_ICONS.length]} className="size-12" />
+            </button>
+          )
+        })}
+      </div>
+    </PlayerScreenFrame>
   )
 }

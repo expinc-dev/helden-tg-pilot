@@ -10,3 +10,4 @@ test-results
 playwright-report
 e2e/firebase-debug.log
 e2e/database-debug.log
+AGENTS.md

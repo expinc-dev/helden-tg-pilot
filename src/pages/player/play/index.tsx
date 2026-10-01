@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 
 import { EndScreen } from '@/pages/extra/end-screen'
 
+import { isSequentialSimple } from '@/phases/Microlearning/PlayerPane/simpleFlow'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { TimerBar } from '@/phases/TimerBar'
 
@@ -148,7 +149,10 @@ export function PlayerView() {
   if (phase && sessionId) {
     return (
       <div className="flex min-h-dvh flex-col gap-4 bg-[#121212]">
-        <TimerBar sessionId={sessionId} phase={phase} role="player" />
+        {/* One-question-per-screen microlearning draws its own timer ring. */}
+        {!(phase.content.type === 'microlearning' && isSequentialSimple(phase.content)) && (
+          <TimerBar sessionId={sessionId} phase={phase} role="player" />
+        )}
         <PhaseRouter
           phase={phase}
           phaseStartMs={pointer?.changedAt}

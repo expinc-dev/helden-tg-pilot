@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { Phase, Question } from '@helden-inc/tg-schema'
 import { serverTimestamp, set } from 'firebase/database'
 
@@ -39,6 +41,10 @@ export function AnalyzeGridPlayer({
   )
   const [busy, setBusy] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  // One analysis question per screen; both gate check and final submit go
+  // through an "apakah kamu yakin" confirm, correct or not.
+  const [qIndex, setQIndex] = useState(0)
+  const [confirm, setConfirm] = useState<'gate' | 'submit' | null>(null)
 
   // Up to 3 marks per the AC (the 4×6 board has exactly 3 empty cells).
   const maxMarks = config.emptyCells.length
@@ -81,21 +87,10 @@ export function AnalyzeGridPlayer({
 
   if (submitted) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#1F1F1F] p-6 text-center text-white">
-        <div className="flex gap-2">
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="size-3 animate-bounce rounded-full bg-[#FDDB00]"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
-        </div>
-        <p className="text-xl font-bold text-[#FFB800]">
-          {gateCorrect ? config.successMessage : 'Jawaban tersimpan!'}
-        </p>
-        <p className="text-sm text-white/50">Menunggu pemain lain menjawab…</p>
-      </div>
+      <AnswerSavedScreen
+        title={gateCorrect ? config.successMessage : 'Jawaban Tersimpan!'}
+        subtitle="Menunggu pemain lainnya..."
+      />
     )
   }
 
@@ -104,7 +99,6 @@ export function AnalyzeGridPlayer({
       <div className="mx-auto w-full max-w-md flex-1">
         <div className="flex flex-col items-center gap-1 pb-5 text-center">
           <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-          <h1 className="text-xl font-bold text-[#FFB800]">{phase.title}</h1>
         </div>
 
         {!gatePassed ? (
@@ -160,7 +154,7 @@ export function AnalyzeGridPlayer({
 
             <ActionButton
               disabled={marked.length !== maxMarks || timer.expired}
-              onClick={checkGate}
+              onClick={() => setConfirm('gate')}
             >
               Verifikasi
             </ActionButton>
@@ -168,31 +162,77 @@ export function AnalyzeGridPlayer({
         ) : (
           <div className="space-y-4">
             <SectionHeading text={config.successMessage} />
-            {config.analysisQuestions.map((q, i) => (
-              <div key={i} className="space-y-2">
-                <p className="text-sm text-white/60">
-                  {i + 1}. {qTypePrompt(q)}
-                </p>
-                <QuestionView
-                  question={q as Question}
-                  answer={questionAnswers[i]}
-                  draft={questionAnswers[i]}
-                  onDraftChange={(v) =>
-                    setQuestionAnswers((prev) => prev.map((x, j) => (j === i ? v : x)))
-                  }
-                  disabled={submitted || timer.expired}
-                  sessionId={sessionId}
-                  phase={phase}
-                  playerId={writerId}
-                />
-              </div>
-            ))}
-            <ActionButton disabled={!allAnswered || busy || timer.expired} onClick={submitAnswers}>
-              {busy ? 'Mengirim…' : 'Selanjutnya'}
-            </ActionButton>
+            {(() => {
+              const total = config.analysisQuestions.length
+              const i = Math.min(qIndex, total - 1)
+              const q = config.analysisQuestions[i]
+              const isLast = i === total - 1
+              return (
+                <>
+                  <div key={i} className="space-y-2">
+                    <p className="text-xs text-white/40">
+                      Pertanyaan {i + 1} dari {total}
+                    </p>
+                    <p className="text-sm text-white/60">{qTypePrompt(q)}</p>
+                    <QuestionView
+                      question={q as Question}
+                      answer={questionAnswers[i]}
+                      draft={questionAnswers[i]}
+                      onDraftChange={(v) =>
+                        setQuestionAnswers((prev) => prev.map((x, j) => (j === i ? v : x)))
+                      }
+                      disabled={submitted || timer.expired}
+                      sessionId={sessionId}
+                      phase={phase}
+                      playerId={writerId}
+                    />
+                  </div>
+                  <ActionButton
+                    disabled={
+                      questionAnswers[i] === null ||
+                      busy ||
+                      timer.expired ||
+                      (isLast && !allAnswered)
+                    }
+                    onClick={() => (isLast ? setConfirm('submit') : setQIndex(i + 1))}
+                  >
+                    {busy ? 'Mengirim…' : isLast ? 'Kirim Jawaban' : 'Selanjutnya'}
+                  </ActionButton>
+                  {i > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setQIndex(i - 1)}
+                      className="mx-auto block text-xs text-white/40 hover:text-white/70"
+                    >
+                      &#8249; Kembali
+                    </button>
+                  )}
+                </>
+              )
+            })()}
           </div>
         )}
       </div>
+
+      {confirm && (
+        <ConfirmDialog
+          title="Apakah kamu yakin?"
+          message={
+            confirm === 'gate'
+              ? 'Jawaban kotakmu akan diverifikasi sekarang.'
+              : 'Jawabanmu akan dikirim dan tidak bisa diubah lagi.'
+          }
+          confirmLabel={confirm === 'gate' ? 'Verifikasi' : 'Kirim'}
+          cancelLabel="Periksa lagi"
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            const kind = confirm
+            setConfirm(null)
+            if (kind === 'gate') checkGate()
+            else void submitAnswers()
+          }}
+        />
+      )}
     </div>
   )
 }

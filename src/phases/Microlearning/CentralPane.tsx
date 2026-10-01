@@ -1,39 +1,69 @@
-import type { MicrolearningContent } from '@helden-inc/tg-schema'
+import { CentralQuestionWall } from '@/components/CentralQuestionWall'
+import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
 
+import { useAnsweredCount } from '@/phases/Quiz/lib'
+
+import { renderPromptBlocks } from '@/lib/richText'
 import { usePlayerBoard } from '@/lib/sync/usePlayerStep'
+import { usePresenceCounts } from '@/lib/sync/useSession'
+import { useTimer } from '@/lib/sync/useTimer'
 
-// ─── Central: optional, nameless summary ─────────────────────────────────────
-// Public-facing screen — no per-player names, just how far along the room is.
-// "Optional" because central isn't part of the required monitoring path (host
-// already has HostPresenceSpread); this is a lighter nice-to-have for rooms
-// that keep a central screen up during self-paced steps.
-
+// ─── Central: the question the room is on + how many have answered ──────────
+// Self-paced phase, so players sit on different steps; the wall follows the
+// step most connected players are currently on (ties go to the earlier step,
+// everyone finished → the last step). Nameless by design — public screen.
 export function CentralProgressPane({
   content,
   title,
   sessionId,
+  phase,
 }: {
   content: MicrolearningContent
   title: string
   sessionId: string
+  phase: Phase
 }) {
-  const rows = usePlayerBoard(sessionId)
+  const rows = usePlayerBoard(sessionId, phase.id)
+  const { players: connectedPlayers } = usePresenceCounts(sessionId)
+  const timer = useTimer(sessionId, phase)
+
   const total = content.steps.length
-  const doneCounts = rows.map((r) => Math.min(Math.max(r.selfStep, 0), total))
-  const finished = doneCounts.filter((d) => d === total).length
-  const avgPct = rows.length
-    ? Math.round((doneCounts.reduce((a, b) => a + b, 0) / (rows.length * total)) * 100)
-    : 0
+  const counts = new Map<number, number>()
+  for (const r of rows) {
+    if (!r.connected) continue
+    const s = Math.min(Math.max(r.selfStep, 0), total - 1)
+    counts.set(s, (counts.get(s) ?? 0) + 1)
+  }
+  let stepIndex = 0
+  let best = -1
+  for (const [s, n] of [...counts.entries()].sort((a, b) => a[0] - b[0])) {
+    if (n > best) {
+      best = n
+      stepIndex = s
+    }
+  }
+
+  const step = content.steps[stepIndex]
+  const questionIndex = step.blocks.findIndex((b) => b.kind === 'question')
+  const questionBlock = questionIndex >= 0 ? step.blocks[questionIndex] : undefined
+  const prompt =
+    questionBlock && questionBlock.kind === 'question'
+      ? renderPromptBlocks(questionBlock.question.prompt)
+      : (step.title ?? title)
+
+  const answered = useAnsweredCount(
+    sessionId,
+    questionIndex >= 0 ? `${phase.id}_${step.id}_${questionIndex}` : '_none'
+  )
+
+  const timerVisible = timer.active && (phase.timer?.visibleTo ?? []).includes('central')
 
   return (
-    <div className="flex flex-col items-center gap-3 p-6 text-center text-white">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="h-3 w-64 overflow-hidden rounded-full bg-gray-200">
-        <div className="h-3 rounded-full bg-black transition-all" style={{ width: `${avgPct}%` }} />
-      </div>
-      <p className="text-xs text-gray-400">
-        {finished}/{rows.length} pemain selesai · {avgPct}% rata-rata progres
-      </p>
-    </div>
+    <CentralQuestionWall
+      prompt={prompt}
+      timer={{ ...timer, active: timerVisible }}
+      answered={questionIndex >= 0 ? answered : undefined}
+      total={connectedPlayers}
+    />
   )
 }

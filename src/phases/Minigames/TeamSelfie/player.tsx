@@ -103,7 +103,7 @@ export function TeamSelfiePlayer({
     <div className="bg-helden-base flex min-h-dvh flex-col p-6 text-white">
       <div className="bg-helden-surface-gradient mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden rounded-2xl p-8">
         <h2 className="text-helden-title text-center text-[28px] leading-9 font-bold tracking-tight">
-          {phase.title || 'Your team selfie'}
+          Your team selfie
         </h2>
         <p className="text-helden-sub mt-2 text-center text-base leading-6 font-light">
           {config.finalLine}

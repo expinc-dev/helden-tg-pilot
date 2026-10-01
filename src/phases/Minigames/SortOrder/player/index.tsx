@@ -182,7 +182,6 @@ export function SortOrderPlayerActive({
   sessionId: string
   writerId: string // playerId that owns the write path (solo=self, leader=leader)
 }) {
-  const title = phase.title
   const phaseId = phase.id
   const timer = useTimer(sessionId, phase)
   const totalSec = phase.timer?.seconds ?? 60
@@ -441,7 +440,6 @@ export function SortOrderPlayerActive({
       <SortOrderShell timer={timer} totalSec={totalSec}>
         <div className="flex flex-col items-center gap-1 pb-5 text-center">
           <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-          <h1 className="text-xl font-bold text-[#FFB800]">{title}</h1>
           <p className="text-sm text-white/50">Urutan yang benar</p>
         </div>
         <ol className="flex flex-col gap-2.5">
@@ -470,7 +468,6 @@ export function SortOrderPlayerActive({
     >
       <div className="flex flex-col items-center gap-1 pb-5 text-center">
         <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-        <h1 className="text-xl font-bold text-[#FFB800]">{title}</h1>
         <p className="text-sm text-white/50">
           Seret setiap langkah ke urutan yang benar, lalu lanjutkan.
         </p>
