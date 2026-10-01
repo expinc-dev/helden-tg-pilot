@@ -14,8 +14,10 @@ import {
   questionOptions,
   resolveTimers,
   useAnsweredCount,
+  useDistribution,
   useTotalPlayers,
 } from '../lib'
+import { isScaleQuestion, scaleOptionId, scalePoints } from '../scale'
 import { LeaderboardScreen } from './components/LeaderboardScreen'
 
 // Ribbon/tag notch on the right edge of each answer bar — fixed pixel depth
@@ -41,6 +43,49 @@ const ANSWER_COLORS = [
   },
 ]
 
+function ScaleDistribution({
+  points,
+  labels,
+  counts,
+  optionId,
+}: {
+  points: number[]
+  labels?: [string, string]
+  counts: Record<string, number>
+  optionId: (v: number) => string
+}) {
+  const max = Math.max(1, ...points.map((v) => counts[optionId(v)] ?? 0))
+  return (
+    <div className="flex w-full px-10">
+      <div className="mx-auto flex w-full flex-col gap-3 rounded-lg border border-white/15 bg-black/20 px-5 py-4">
+        <div className="flex items-end justify-center gap-6">
+          {points.map((v) => {
+            const n = counts[optionId(v)] ?? 0
+            return (
+              <div key={v} className="flex w-24 flex-col items-center gap-2">
+                <span className="text-helden-yellow text-3xl font-bold">{n}</span>
+                <div className="flex h-24 w-full items-end overflow-hidden rounded bg-white/10">
+                  <div
+                    className="w-full rounded bg-[#FFB800] transition-all duration-500"
+                    style={{ height: `${(n / max) * 100}%` }}
+                  />
+                </div>
+                <span className="text-lg font-semibold text-white">{v}</span>
+              </div>
+            )
+          })}
+        </div>
+        {labels && (
+          <div className="flex justify-between text-sm text-white/60">
+            <span>{labels[0]}</span>
+            <span>{labels[1]}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function CentralQuiz({
   content,
   sessionId,
@@ -57,16 +102,23 @@ export function CentralQuiz({
   const q = content.questions[quizStep.step]
   const answeredCount = useAnsweredCount(sessionId, `${phaseId}_q${quizStep.step}`)
   const totalPlayers = useTotalPlayers(sessionId)
+  const distribution = useDistribution(sessionId, `${phaseId}_q${quizStep.step}`)
   const timers = resolveTimers(content)
 
   // HLN-012: on_device quizzes are ungraded and single-stage — no leaderboard,
-  // no timer, no reveal, and deliberately no live distribution. The room's
-  // positions stay private; the aggregate is read back later (L3) from
-  // `aggregates/distribution`, never projected here.
+  // no timer, no reveal. Scale questions show the per-point vote count once
+  // anyone has voted (counts only, never who voted what).
   const onDevice = content.mode === 'on_device'
 
   if (!onDevice && quizStep.stage === 'leaderboard') {
-    return <LeaderboardScreen sessionId={sessionId} phase={phase} content={content} />
+    return (
+      <LeaderboardScreen
+        sessionId={sessionId}
+        phase={phase}
+        content={content}
+        questionId={`${phaseId}_q${quizStep.step}`}
+      />
+    )
   }
 
   if (!q) return null
@@ -96,6 +148,15 @@ export function CentralQuiz({
 
           <p className="shrink-0 text-lg text-white/70">Jawab di perangkatmu</p>
         </div>
+
+        {isScaleQuestion(q) && answeredCount > 0 && (
+          <ScaleDistribution
+            points={scalePoints(q)}
+            labels={q.labels}
+            counts={distribution}
+            optionId={scaleOptionId}
+          />
+        )}
 
         {totalPlayers > 0 && (
           <div className="flex w-full px-10">

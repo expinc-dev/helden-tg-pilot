@@ -37,9 +37,12 @@ type RouterProps = {
 // straight to the normal switch.
 export function PhaseRouter(props: RouterProps) {
   if (props.role === 'player' && props.playerId) {
-    return <PlayerPhaseGate {...props} playerId={props.playerId} />
+    return <PlayerPhaseGate key={props.phase.id} {...props} playerId={props.playerId} />
   }
-  return <PhaseContentSwitch {...props} teamRole="solo" />
+  // key = phase id: two consecutive phases of the same content type would
+  // otherwise reuse one component instance and carry local state (drafts,
+  // viewed step, submitted flags) across the phase boundary.
+  return <PhaseContentSwitch key={props.phase.id} {...props} teamRole="solo" />
 }
 
 function PlayerPhaseGate(props: RouterProps & { playerId: string }) {
@@ -47,7 +50,7 @@ function PlayerPhaseGate(props: RouterProps & { playerId: string }) {
   if (props.phase.teamMode === 'team_leader_only' && teamRole === 'member') {
     return <TeamFocusLeader phaseId={props.phase.id} />
   }
-  return <PhaseContentSwitch {...props} teamRole={teamRole} />
+  return <PhaseContentSwitch key={props.phase.id} {...props} teamRole={teamRole} />
 }
 
 // Discriminate on phase.content (the real discriminated union). phase.type is a
@@ -149,6 +152,7 @@ function PhaseContentSwitch({
           playerId={playerId}
           teamId={teamId}
           phase={phase}
+          onAdvance={onAdvance}
         />
       )
     case 'microlearning':

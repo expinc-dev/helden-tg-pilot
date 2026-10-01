@@ -41,7 +41,7 @@ export function PlayerPane({
     phase.teamMode
   )
 
-  const [step, setStep] = usePlayerStep(sessionId, targetPlayerId, phase.syncMode)
+  const [step, setStep] = usePlayerStep(sessionId, targetPlayerId, phase.syncMode, phase.id)
   const bounded = Math.min(step, content.steps.length - 1)
   const current = content.steps[bounded]
   const isLastStep = bounded === content.steps.length - 1
@@ -212,6 +212,7 @@ export function PlayerPane({
         content={content}
         step={step}
         onSelect={(i) => {
+          if (i < step) return // already answered/finished: not reopenable
           setBlockIndex(0)
           setViewingIndex(i)
         }}

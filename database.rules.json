@@ -220,6 +220,13 @@
                   }
                 }
               },
+              "questionScores": {
+                "$qId": {
+                  "$keyId": {
+                    ".validate": "newData.isNumber()"
+                  }
+                }
+              },
               "scores": {
                 "$playerId": {
                   ".validate": "newData.isNumber()"

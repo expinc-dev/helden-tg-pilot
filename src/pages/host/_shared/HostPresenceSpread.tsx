@@ -15,7 +15,7 @@ export function HostPresenceSpread({
   phase: Phase
   players: Record<string, PlayerPresence>
 }) {
-  const rows = usePlayerBoard(sessionId)
+  const rows = usePlayerBoard(sessionId, phase.id)
   // Reflection and CodePiece have no step concept (single screen, own
   // dedicated host pane already shows per-player state) — a step-based
   // spread would just show a meaningless "Langkah 1" for everyone.

@@ -2,12 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
+import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
-import { demoBundle } from '@/lib/demoBundle'
 import { renderPromptBlocks } from '@/lib/richText'
-import { endLevel, nextPhase } from '@/lib/session/control'
 import { scoreQuizQuestion } from '@/lib/session/quizScoring'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
@@ -28,11 +27,13 @@ export function HostQuiz({
   sessionId,
   phaseId,
   phase,
+  onAdvance,
 }: {
   content: QuizContent
   sessionId: string
   phaseId: string
   phase: Phase
+  onAdvance?: () => void
 }) {
   const { quizStep, started, write, startTimer, clearTimer } = useQuizStep(sessionId)
   const timer = useTimer(sessionId, phase)
@@ -96,14 +97,11 @@ export function HostQuiz({
     void write({ step: quizStep.step, stage: 'leaderboard' })
   }, [write, quizStep.step])
 
+  // Last question has no button of its own: leaving the phase is the host
+  // shell's single "Tahap Selanjutnya" control (with confirm).
   const handleNext = useCallback(() => {
-    if (isLastQuestion) {
-      const isModular = (demoBundle.flowMode ?? 'sequential') !== 'sequential'
-      void (isModular ? endLevel(sessionId, phaseId) : nextPhase(sessionId, phaseId))
-    } else {
-      void handleStartQuestion(quizStep.step + 1)
-    }
-  }, [isLastQuestion, sessionId, phaseId, quizStep.step, handleStartQuestion])
+    if (!isLastQuestion) void handleStartQuestion(quizStep.step + 1)
+  }, [isLastQuestion, quizStep.step, handleStartQuestion])
 
   useEffect(() => {
     if (!timer.active || !timer.expired) return
@@ -161,18 +159,18 @@ export function HostQuiz({
           </div>
 
           <div className="flex w-full flex-col gap-3 px-10 pb-10">
-            <GradientButton
-              onClick={handleNext}
-              className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
-            >
-              {isLastQuestion ? (
-                <>
-                  <Icon icon="mdi:check-circle" className="size-5" /> Selesai
-                </>
-              ) : (
-                'Pernyataan Berikutnya →'
-              )}
-            </GradientButton>
+            {isLastQuestion ? (
+              onAdvance && (
+                <HostNextPhaseButton onConfirm={onAdvance} className="w-full px-6 py-3 text-base" />
+              )
+            ) : (
+              <GradientButton
+                onClick={handleNext}
+                className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+              >
+                Pernyataan Berikutnya →
+              </GradientButton>
+            )}
           </div>
         </div>
       </div>
@@ -273,22 +271,27 @@ export function HostQuiz({
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-10">
           <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
           <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20">
-            <LeaderboardRows sessionId={sessionId} phase={phase} content={content} />
+            <LeaderboardRows
+              sessionId={sessionId}
+              phase={phase}
+              content={content}
+              questionId={`${phaseId}_q${quizStep.step}`}
+            />
           </div>
 
           <div className="flex w-full flex-col gap-3 pb-10">
-            <GradientButton
-              onClick={handleNext}
-              className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
-            >
-              {isLastQuestion ? (
-                <>
-                  <Icon icon="mdi:check-circle" className="size-5" /> Selesai
-                </>
-              ) : (
-                'Soal Berikutnya →'
-              )}
-            </GradientButton>
+            {isLastQuestion ? (
+              onAdvance && (
+                <HostNextPhaseButton onConfirm={onAdvance} className="w-full px-6 py-3 text-base" />
+              )
+            ) : (
+              <GradientButton
+                onClick={handleNext}
+                className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
+              >
+                Soal Berikutnya →
+              </GradientButton>
+            )}
           </div>
         </div>
       )}

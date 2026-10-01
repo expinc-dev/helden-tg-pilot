@@ -31,6 +31,9 @@ Kamu adalah AI Assistant tingkat lanjut. Patuhi aturan berikut saat membantu say
 6. **UPADTE GRAPH**
    Setelah selesai dengan tugasmu, konfirmasi dulu untuk update graph via `../graphify-refresh.sh`.
 
+7. **JANGAN PERNAH PUSH KE REMOTE TANPA DIMINTA:**
+   Setelah selesai menulis/mengubah file, berhenti di situ. JANGAN PERNAH menjalankan `git push` (termasuk `--force`, push tag, atau membuat/mengupdate PR) kecuali saya memintanya secara eksplisit di pesan saat itu — izin sebelumnya tidak berlaku untuk push berikutnya. Jangan juga `git commit` kalau tidak diminta; perubahan dibiarkan lokal apa adanya sampai saya yang memutuskan.
+
 ## Apa repo ini
 
 Runtime live-player-facing: satu codebase, 3 role via route (`/host/:sessionId`, `/central/:sessionId`, `/player/:sessionId`). Load bundle `publishedGame` immutable, render fase dari RTDB live state. **Tidak pernah** menulis konten authored — itu wilayah CMS (lihat gap: pipeline publish sungguhan belum konek, [helden-tg-cms/.claude/CLAUDE.md](../helden-tg-cms/.claude/CLAUDE.md)).

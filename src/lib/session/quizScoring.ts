@@ -114,6 +114,7 @@ export async function scoreQuizQuestion(opts: {
         }
       }
       patch[`teamScores/${teamId}`] = (prior[teamId] ?? 0) + teamScore
+      patch[`questionScores/${qId}/${teamId}`] = teamScore
       if (teamCorrect !== undefined) {
         const key = teamCorrect ? 'teamCorrectCount' : 'teamWrongCount'
         const priorMap = teamCorrect ? priorCorrect : priorWrong
@@ -132,6 +133,7 @@ export async function scoreQuizQuestion(opts: {
     const priorWrong = (priorWrongSnap.val() ?? {}) as Record<string, number>
     for (const [playerId, score] of Object.entries(playerScores)) {
       patch[`scores/${playerId}`] = (prior[playerId] ?? 0) + score
+      patch[`questionScores/${qId}/${playerId}`] = score
       if (playerId in playerCorrect) {
         const key = playerCorrect[playerId] ? 'correctCount' : 'wrongCount'
         const priorMap = playerCorrect[playerId] ? priorCorrect : priorWrong

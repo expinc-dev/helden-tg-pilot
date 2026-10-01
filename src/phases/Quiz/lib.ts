@@ -63,7 +63,10 @@ export function useTotalPlayers(sessionId: string | undefined): number {
   useEffect(() => {
     if (!sessionId) return
     return onValue(eref(`sessions/${sessionId}/players`), (s) => {
-      setCount(s.val() ? Object.keys(s.val()).length : 0)
+      // Connected only, matching usePresenceCounts (central waiting screen +
+      // host lobby) so every screen agrees on the player count.
+      const v = (s.val() ?? {}) as Record<string, { connected?: boolean }>
+      setCount(Object.values(v).filter((p) => p?.connected).length)
     })
   }, [sessionId])
   return count
@@ -84,6 +87,22 @@ export function usePlayerScore(
     })
   }, [sessionId, path])
   return score
+}
+
+// Points earned on ONE question (per player, or per team in team modes),
+// written by scoreQuizQuestion on reveal. Empty until that question is scored.
+export function useQuestionScores(
+  sessionId: string | undefined,
+  qId: string
+): Record<string, number> {
+  const [scores, setScores] = useState<Record<string, number>>({})
+  useEffect(() => {
+    if (!sessionId) return
+    return onValue(eref(`sessions/${sessionId}/aggregates/questionScores/${qId}`), (s) => {
+      setScores((s.val() as Record<string, number>) ?? {})
+    })
+  }, [sessionId, qId])
+  return scores
 }
 
 export function useScoresMap(sessionId: string | undefined, phase: Phase): Record<string, number> {

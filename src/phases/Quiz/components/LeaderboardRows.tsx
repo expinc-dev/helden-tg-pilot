@@ -4,7 +4,13 @@ import type { Phase } from '@helden-inc/tg-schema'
 
 import { useTeams } from '@/lib/sync/useTeams'
 
-import { type QuizContent, useAnswerTally, usePlayerNames, useScoresMap } from '../lib'
+import {
+  type QuizContent,
+  useAnswerTally,
+  usePlayerNames,
+  useQuestionScores,
+  useScoresMap,
+} from '../lib'
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -22,16 +28,20 @@ export function LeaderboardRows({
   sessionId,
   phase,
   content,
+  questionId,
 }: {
   sessionId: string
   phase: Phase
   content: QuizContent
+  // When set, each row also shows the points earned on that question ("+N").
+  questionId?: string
 }) {
   const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
   const scores = useScoresMap(sessionId, phase)
   const playerNames = usePlayerNames(sessionId)
   const teams = useTeams(sessionId)
   const tally = useAnswerTally(sessionId, phase)
+  const questionScores = useQuestionScores(sessionId, questionId ?? '_none')
   const totalQuestions = content.questions.length
 
   const teamNames = useMemo(
@@ -47,10 +57,11 @@ export function LeaderboardRows({
         id,
         name: names[id] ?? id.slice(0, 6),
         score,
+        gained: questionScores[id] ?? 0,
         correct: tally.correct[id] ?? 0,
         wrong: tally.wrong[id] ?? 0,
       }))
-  }, [scores, tally, playerNames, teamNames, isTeam])
+  }, [scores, tally, playerNames, teamNames, isTeam, questionScores])
 
   if (rows.length === 0) {
     return <p className="p-8 text-center text-white/40">Belum ada skor</p>
@@ -75,6 +86,11 @@ export function LeaderboardRows({
               <div className="h-full bg-[#34D399]" style={{ width: `${correctPct}%` }} />
               <div className="h-full bg-[#E21B3C]" style={{ width: `${wrongPct}%` }} />
             </div>
+            {questionId && (
+              <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#34D399]">
+                +{row.gained}
+              </span>
+            )}
             <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">{row.score}</span>
           </div>
         )

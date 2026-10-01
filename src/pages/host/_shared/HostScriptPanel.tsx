@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import type { Block, Phase } from '@helden-inc/tg-schema'
 
@@ -117,11 +117,47 @@ function HostBlock({ block }: { block: Block }) {
   }
 }
 
+// Drag offset (from the default bottom-right anchor) survives phase changes:
+// callers remount the panel per phase, and the host should not have to drag it
+// back every time. Module-level on purpose — session-lifetime only.
+let savedOffset = { dx: 0, dy: 0 }
+
 export function HostScriptPanel({ phase }: { phase: Phase | null }) {
   // Seeded from improvMarker so the marker is showing the moment the host
   // lands on an improvisation step. Callers key this component by phase id, so
   // moving between phases re-seeds instead of carrying the previous state.
   const [open, setOpen] = useState(phase?.hostScript?.improvMarker === true)
+  const [offset, setOffset] = useState(savedOffset)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null)
+
+  const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { x: e.clientX, y: e.clientY, dx: offset.dx, dy: offset.dy }
+  }
+  const onDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current
+    const el = rootRef.current
+    if (!d || !el) return
+    let dx = d.dx + (e.clientX - d.x)
+    let dy = d.dy + (e.clientY - d.y)
+    // Keep the panel inside its `relative` frame. The rect includes the current
+    // offset, so shift it back to the un-offset position to compute the bounds.
+    const parent = el.offsetParent as HTMLElement | null
+    if (parent) {
+      const pr = parent.getBoundingClientRect()
+      const r = el.getBoundingClientRect()
+      const baseLeft = r.left - offset.dx
+      const baseTop = r.top - offset.dy
+      dx = Math.min(Math.max(dx, pr.left - baseLeft), pr.right - (baseLeft + r.width))
+      dy = Math.min(Math.max(dy, pr.top - baseTop), pr.bottom - (baseTop + r.height))
+    }
+    setOffset({ dx, dy })
+  }
+  const onDragEnd = () => {
+    dragRef.current = null
+    savedOffset = offset
+  }
 
   if (!phase) return null
 
@@ -148,7 +184,24 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
   // `pointer-events-none` to stay clickable-through, which the panel would then
   // inherit and die on.
   return (
-    <div className="absolute right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2">
+    <div
+      ref={rootRef}
+      style={{ transform: `translate(${offset.dx}px, ${offset.dy}px)` }}
+      className="absolute right-4 bottom-[11.5rem] z-40 flex w-[min(90vw,26rem)] flex-col gap-2"
+    >
+      {/* Drag handle: the toggle below stays a plain button, so a tap on it
+          never turns into a drag. touch-none keeps tablets from scrolling. */}
+      <div
+        onPointerDown={onDragStart}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerCancel={onDragEnd}
+        aria-label="Geser panel naskah"
+        className="mx-auto flex h-5 w-24 cursor-grab touch-none items-center justify-center rounded-full bg-[#121212f2] active:cursor-grabbing"
+      >
+        <span className="h-1 w-10 rounded-full bg-white/40" />
+      </div>
+
       {/* The improvisation marker is deliberately outside the collapsible body:
           there is no control anywhere in this component that hides it while
           improvMarker is set, so the host cannot lose the cue. */}

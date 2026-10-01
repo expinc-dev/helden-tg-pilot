@@ -11,10 +11,12 @@ export function LeaderboardScreen({
   sessionId,
   phase,
   content,
+  questionId,
 }: {
   sessionId: string
   phase: Phase
   content: QuizContent
+  questionId?: string
 }) {
   return (
     <div
@@ -28,7 +30,12 @@ export function LeaderboardScreen({
       <h1 className="text-4xl font-bold text-white">Leaderboard</h1>
 
       <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-black/20">
-        <LeaderboardRows sessionId={sessionId} phase={phase} content={content} />
+        <LeaderboardRows
+          sessionId={sessionId}
+          phase={phase}
+          content={content}
+          questionId={questionId}
+        />
       </div>
     </div>
   )

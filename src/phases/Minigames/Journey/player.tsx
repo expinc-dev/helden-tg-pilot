@@ -43,7 +43,6 @@ import {
 // player-facing screen. `choiceLabel` degrades to undefined by contract, so a
 // seed arriving here simply has no `category`.
 export function JourneyPlayer({
-  phase,
   sessionId,
   writerId,
   config,
@@ -71,7 +70,6 @@ export function JourneyPlayer({
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="flex flex-col items-center gap-1 pb-5 text-center">
           <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-          <h1 className="text-xl font-bold text-[#FFB800]">{phase.title}</h1>
         </div>
 
         <div className="flex flex-col gap-6 pb-8">

@@ -3,7 +3,7 @@
 // A scale question replaces the option grid with an ordered set of points
 // (min..max). It only exists in `on_device` mode: the statement sits on the
 // player's own screen, there is no correct answer and there is no reveal — the
-// host never scores it, the central screen never shows a distribution.
+// host never scores it. Central shows the per-point vote counts (no names).
 //
 // Deliberately free of Firebase/React/`@/` imports so that
 // `checks/phases/quiz/scale.selfcheck.ts` can import it under plain `npx tsx`.

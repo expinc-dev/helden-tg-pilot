@@ -9,17 +9,29 @@ import { eref } from '@/lib/firebase'
 // lockstep  -> sessions/{id}/playerSharedStep (one shared step; host is the usual
 //              writer, but the hook itself doesn't gate writes — see BLUEPRINT_schema
 //              §7, that's a security-rules concern, not a hook concern).
-// self_paced -> sessions/{id}/players/{playerId}/selfStep (per-player, unchanged
+// self_paced -> sessions/{id}/players/{playerId}/selfStep (per-player per-phase: selfStep/{phaseId}, unchanged
 //              from before this ticket).
 // `playerId` is the EFFECTIVE target, not necessarily "me" — team_leader_only
 // members pass the team leader's playerId (see useTeamRole + resolveStepTarget in
 // teamStep.ts) so they read the leader's step instead of having their own.
 // ponytail: selfStep sits on the same players/{id} node as presence. Split into
 // a live/ subtree if two sources ever race writes.
+// selfStep is stored per phase (players/{id}/selfStep/{phaseId}) so progress and
+// "done" marks from one phase never bleed into another. A legacy bare number
+// (pre-per-phase data) is ignored rather than reinterpreted.
+export function readSelfStep(raw: unknown, phaseId: string): number {
+  if (raw && typeof raw === 'object') {
+    const v = (raw as Record<string, unknown>)[phaseId]
+    return typeof v === 'number' ? v : 0
+  }
+  return 0
+}
+
 export function usePlayerStep(
   sessionId: string | undefined,
   playerId: string | undefined,
-  syncMode: SyncMode
+  syncMode: SyncMode,
+  phaseId: string
 ) {
   const [step, setStep] = useState(0)
 
@@ -29,7 +41,7 @@ export function usePlayerStep(
         ? `sessions/${sessionId}/playerSharedStep/step`
         : undefined
       : sessionId && playerId
-        ? `sessions/${sessionId}/players/${playerId}/selfStep`
+        ? `sessions/${sessionId}/players/${playerId}/selfStep/${phaseId}`
         : undefined
 
   useEffect(() => {
@@ -46,16 +58,18 @@ export function usePlayerStep(
         return update(eref(`sessions/${sessionId}/playerSharedStep`), { step: n })
       }
       if (!playerId) return
-      return update(eref(`sessions/${sessionId}/players/${playerId}`), { selfStep: n })
+      return update(eref(`sessions/${sessionId}/players/${playerId}`), {
+        [`selfStep/${phaseId}`]: n,
+      })
     },
-    [sessionId, playerId, syncMode]
+    [sessionId, playerId, syncMode, phaseId]
   )
   return [step, write] as const
 }
 
 export type PlayerRow = { id: string; name: string; connected: boolean; selfStep: number }
 
-export function usePlayerBoard(sessionId: string | undefined) {
+export function usePlayerBoard(sessionId: string | undefined, phaseId: string) {
   const [rows, setRows] = useState<PlayerRow[]>([])
   useEffect(() => {
     if (!sessionId) return
@@ -67,11 +81,11 @@ export function usePlayerBoard(sessionId: string | undefined) {
           id: c.key!,
           name: v.name ?? '?',
           connected: !!v.connected,
-          selfStep: v.selfStep ?? 0,
+          selfStep: readSelfStep(v.selfStep, phaseId),
         })
       })
       setRows(out)
     })
-  }, [sessionId])
+  }, [sessionId, phaseId])
   return rows
 }

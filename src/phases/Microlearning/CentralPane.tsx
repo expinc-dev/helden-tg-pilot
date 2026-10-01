@@ -12,12 +12,14 @@ export function CentralProgressPane({
   content,
   title,
   sessionId,
+  phaseId,
 }: {
   content: MicrolearningContent
   title: string
   sessionId: string
+  phaseId: string
 }) {
-  const rows = usePlayerBoard(sessionId)
+  const rows = usePlayerBoard(sessionId, phaseId)
   const total = content.steps.length
   const doneCounts = rows.map((r) => Math.min(Math.max(r.selfStep, 0), total))
   const finished = doneCounts.filter((d) => d === total).length

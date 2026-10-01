@@ -7,6 +7,7 @@ import { GradientButton } from '@/components/GradientButton'
 import { Modal } from '@/components/Modal'
 import { EndScreen } from '@/pages/extra/end-screen'
 import { Header } from '@/pages/host/_shared/Header'
+import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
 import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
 import { HostScriptPanel } from '@/pages/host/_shared/HostScriptPanel'
 import { LevelIntro } from '@/pages/host/_shared/LevelIntro'
@@ -305,6 +306,11 @@ export function HostView() {
             role="host"
             sessionId={sessionId}
             allowTeams={config.allowTeams}
+            onAdvance={() =>
+              runAdvance(phase.id, () =>
+                isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)
+              )
+            }
           />
         </div>
       )}
@@ -313,8 +319,11 @@ export function HostView() {
         <HostPresenceSpread sessionId={sessionId} phase={phase} players={players} />
       )}
 
+      {/* Quiz owns the single bottom button (its own step controls, then
+          "Tahap Selanjutnya" at the end) — the shell must not add a second one. */}
       {meta.status === 'live' &&
         phase &&
+        phase.content.type !== 'quiz' &&
         (isModular ? (
           phase.content.type === 'minigame' ? (
             <MinigameHostAction
@@ -331,14 +340,12 @@ export function HostView() {
             </button>
           )
         ) : (
-          <GradientButton
-            onClick={() =>
+          <HostNextPhaseButton
+            isLast={isLastPhase}
+            onConfirm={() =>
               runAdvance(pointer?.activePhaseId, () => nextPhase(sessionId, pointer?.activePhaseId))
             }
-            className="w-full py-4 text-base"
-          >
-            {isLastPhase ? 'Akhiri Sesi' : 'Tahap Selanjutnya'}
-          </GradientButton>
+          />
         ))}
 
       {/* Rendered as a direct child of this `relative` shell: the panel positions
@@ -438,7 +445,9 @@ function LobbyView({
     setCopyOpen(false)
   }
 
-  const totalUnits = allowTeams ? teams.length : players.length
+  // Connected players only — the same rule central's waiting screen uses
+  // (usePresenceCounts), so both screens always show the same number.
+  const totalUnits = allowTeams ? teams.length : players.filter(([, p]) => p.connected).length
   const unitsLabel = allowTeams ? 'Total Tim' : 'Total Pemain'
   const gameType = useGameType()
 
