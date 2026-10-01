@@ -102,6 +102,11 @@ export function VideoHostScreen({
   // for free from the native <video> element's timeupdate event.
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  // Default true (sama seperti perilaku lama): central-lah yang memutar audio
+  // ke ruangan. Host bisa menyalakan suara di monitornya sendiri untuk cek
+  // audio tanpa memengaruhi central.
+  const [muted, setMuted] = useState(true)
+  const toggleMute = () => setMuted((m) => !m)
 
   const provider = videoUrl ? detectProvider(videoUrl) : null
 
@@ -167,6 +172,8 @@ export function VideoHostScreen({
               title={videoTitle}
               sessionId={sessionId}
               ended={ended}
+              muted={muted}
+              onToggleMute={toggleMute}
               onEnded={() => setEnded(true)}
               onReplayRequest={() => setConfirm('replay')}
             />
@@ -177,7 +184,7 @@ export function VideoHostScreen({
                 url={videoUrl}
                 state={state}
                 positionSec={positionSec}
-                muted
+                muted={muted}
                 role="host"
                 positionRef={positionRef}
                 onEnded={() => setEnded(true)}
@@ -189,6 +196,8 @@ export function VideoHostScreen({
                 ended={ended}
                 currentTime={currentTime}
                 duration={duration}
+                muted={muted}
+                onToggleMute={toggleMute}
                 onPlay={play}
                 onPause={pause}
                 onSeekBy={seekBy}
@@ -203,7 +212,7 @@ export function VideoHostScreen({
                 url={videoUrl}
                 state={state}
                 positionSec={positionSec}
-                muted
+                muted={muted}
                 role="host"
                 positionRef={positionRef}
                 onEnded={() => setEnded(true)}
@@ -215,6 +224,8 @@ export function VideoHostScreen({
                 ended={ended}
                 currentTime={currentTime}
                 duration={duration}
+                muted={muted}
+                onToggleMute={toggleMute}
                 onPlay={play}
                 onPause={pause}
                 onSeekBy={seekBy}

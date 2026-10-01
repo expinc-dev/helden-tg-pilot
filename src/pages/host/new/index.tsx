@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { assets } from '@/assets'
 import { Header } from '@/pages/host/_shared/Header'
 import { Icon } from '@iconify/react'
 
+import { clearReconnect, loadReconnect, saveReconnect } from '@/lib/reconnect'
 import { createSession } from '@/lib/session/create'
+import { useSessionMeta } from '@/lib/sync/useSession'
 
 type GameMode = 'multiplayer' | 'single'
 
@@ -18,6 +20,16 @@ export function HostNew() {
   const [maxPlayers, setMaxPlayers] = useState('')
   const [maxCentralScreens, setMaxCentralScreens] = useState('')
   const [maxMembers, setMaxMembers] = useState('')
+
+  // Sesi host terakhir di device ini. Tombol "Lanjutkan sesi" baru tampil kalau
+  // meta-nya benar-benar ada dan belum 'ended' (useSessionMeta = null selama
+  // loading / sesi tidak ada); pointer yang sudah basi dibersihkan.
+  const [reconnectSessionId] = useState(() => loadReconnect('host'))
+  const reconnectMeta = useSessionMeta(reconnectSessionId ?? undefined)
+  useEffect(() => {
+    if (reconnectMeta?.status === 'ended') clearReconnect()
+  }, [reconnectMeta?.status])
+  const canResume = !!reconnectSessionId && !!reconnectMeta && reconnectMeta.status !== 'ended'
 
   const submit = async () => {
     setBusy(true)
@@ -36,6 +48,7 @@ export function HostNew() {
         // Only meaningful when allowTeams; createSession drops it otherwise.
         maxMembers: mode === 'multiplayer' ? Number(maxMembers) || undefined : undefined,
       })
+      saveReconnect('host', sessionId)
       nav(`/host/${sessionId}`, { replace: true })
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
@@ -118,6 +131,15 @@ export function HostNew() {
         >
           {busy ? 'Memulai…' : 'Mulai Permainan'}
         </button>
+        {canResume && (
+          <button
+            type="button"
+            onClick={() => nav(`/host/${reconnectSessionId}`, { replace: true })}
+            className="w-full rounded-lg border border-white/10 py-3 text-center text-sm font-semibold text-white/80 hover:text-white"
+          >
+            Lanjutkan sesi
+          </button>
+        )}
         {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
       </div>
     </div>

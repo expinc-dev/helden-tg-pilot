@@ -30,7 +30,6 @@ export function PlayerJoin() {
     nav(`/player/${lastSessionId}`, { replace: true })
   }
 
-  const backToLanding = () => nav('/')
   const dismissErr = () => setErr(null)
 
   const joinByCode = async (e: React.FormEvent) => {
@@ -114,7 +113,7 @@ export function PlayerJoin() {
         )}
       </form>
 
-      {err && <InvalidCodeModal message={err} onBack={backToLanding} onDismiss={dismissErr} />}
+      {err && <InvalidCodeModal message={err} onDismiss={dismissErr} />}
     </div>
   )
 }

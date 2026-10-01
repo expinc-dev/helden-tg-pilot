@@ -429,6 +429,7 @@ function LobbyView({
   players: [string, PlayerPresence][]
 }) {
   const [copyOpen, setCopyOpen] = useState(false)
+  const [confirmStart, setConfirmStart] = useState(false)
 
   const copyJoinLink = (role: 'central' | 'player') => {
     const url = `${window.location.origin}/join/${role}?code=${joinCode}`
@@ -488,11 +489,25 @@ function LobbyView({
 
       <button
         type="button"
-        onClick={() => startSession(sessionId)}
+        onClick={() => setConfirmStart(true)}
         className="bg-helden-yellow-gradient mt-auto w-full shrink-0 rounded-lg py-4 text-center text-lg font-medium text-black"
       >
         Mulai Permainan
       </button>
+
+      {confirmStart && (
+        <ConfirmDialog
+          title="Mulai permainan?"
+          message="Setelah dimulai, pemain yang belum bergabung tidak bisa masuk lagi. Yakin ingin memulai sekarang?"
+          confirmLabel="Ya, mulai"
+          cancelLabel="Kembali"
+          onCancel={() => setConfirmStart(false)}
+          onConfirm={() => {
+            setConfirmStart(false)
+            void startSession(sessionId)
+          }}
+        />
+      )}
 
       {copyOpen && <CopyCodeModal onDismiss={() => setCopyOpen(false)} onCopy={copyJoinLink} />}
     </div>
