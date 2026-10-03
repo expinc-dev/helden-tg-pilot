@@ -4,14 +4,20 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { assets } from '@/assets'
 import { GradientButton } from '@/components/GradientButton'
 import { InvalidCodeModal } from '@/components/InvalidCodeModal'
-import { Header } from '@/pages/host/_shared/Header'
+import { PlayerAppBar } from '@/components/PlayerAppBar'
 
 import { loadIdentity, loadLastSession } from '@/lib/identity'
 import { resolveJoinCode } from '@/lib/session/join'
 
-// Dedicated player join page — styled per the Helden Inc. lobby design.
-// Rendered inside TabletFrame (player is a phone-sized role), unlike the
-// central join page which owns the whole viewport.
+const FIELD_LABEL = 'text-sm font-medium tracking-[-0.04em] text-white'
+const FIELD_INPUT =
+  'h-12 w-full rounded-lg border bg-[#1B1B1B] px-4 text-base font-medium tracking-[-0.04em] text-white placeholder:text-[#5D5D5D]'
+
+// Dedicated player join page — Figma "Insert Name Screen": app bar on top, the
+// form card pinned to the bottom edge (24px padding, 32px gap, 44px bottom),
+// 48px fields and a 48px gold "Mulai" button inside the card. Rendered inside
+// TabletFrame (player is a phone-sized role), unlike the central join page
+// which owns the whole viewport.
 export function PlayerJoin() {
   const nav = useNavigate()
   const [sp] = useSearchParams()
@@ -51,7 +57,7 @@ export function PlayerJoin() {
 
   return (
     <div
-      className="relative flex min-h-screen w-full flex-col bg-neutral-950 bg-cover bg-center p-6"
+      className="relative flex min-h-dvh w-full flex-col bg-[#1E1E1E] bg-cover bg-center"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.player})`,
         backgroundSize: '100% 100%',
@@ -59,58 +65,61 @@ export function PlayerJoin() {
         backgroundPosition: 'center',
       }}
     >
-      <Header isShowLogo={true} />
+      <PlayerAppBar />
 
-      <form onSubmit={joinByCode} className="mt-auto flex w-full flex-col gap-4">
-        <div
-          className="flex w-full flex-col gap-4 rounded-[16px] border p-4"
-          style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
-        >
-          <div className="flex w-full flex-col gap-2">
-            <label htmlFor="join-code" className="text-sm text-white/70">
+      <form
+        onSubmit={joinByCode}
+        className="mt-auto flex w-full flex-col gap-8 border-t px-6 pt-6 pb-11 backdrop-blur-xl"
+        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
+      >
+        <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-3">
+            <label htmlFor="join-code" className={FIELD_LABEL}>
               Kode Ruangan
             </label>
             <input
               id="join-code"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="Masukkan kode ruangan"
+              placeholder="00000"
               maxLength={6}
               autoFocus
-              className="w-full rounded-[8px] border px-4 py-3 font-mono tracking-widest text-white uppercase placeholder:font-sans placeholder:tracking-normal placeholder:text-white/30 placeholder:normal-case"
-              style={{ borderColor: '#353535', background: '#1B1B1B' }}
+              className={`${FIELD_INPUT} uppercase placeholder:normal-case`}
+              style={{ borderColor: '#353535' }}
             />
           </div>
 
-          <div className="flex w-full flex-col gap-2">
-            <label htmlFor="player-name" className="text-sm text-white/70">
-              Nama player
+          <div className="flex w-full flex-col gap-3">
+            <label htmlFor="player-name" className={FIELD_LABEL}>
+              Nama Player
             </label>
             <input
               id="player-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Masukkan nama pemain"
-              className="w-full rounded-[8px] border px-4 py-3 text-white placeholder:text-white/30"
-              style={{ borderColor: '#353535', background: '#1B1B1B' }}
+              className={FIELD_INPUT}
+              style={{ borderColor: '#353535' }}
             />
           </div>
         </div>
 
-        <GradientButton disabled={busy || code.length !== 6} className="w-full py-3">
-          {busy ? 'Bergabung…' : 'Bergabung'}
-        </GradientButton>
+        <div className="flex flex-col gap-3">
+          <GradientButton disabled={busy || code.length !== 6} className="h-12 w-full text-sm">
+            {busy ? 'Bergabung…' : 'Mulai'}
+          </GradientButton>
 
-        {existing && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={rejoin}
-            className="text-sm text-white/60 underline disabled:opacity-50"
-          >
-            {`Rejoin as ${existing.name ?? 'yourself'}`}
-          </button>
-        )}
+          {existing && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={rejoin}
+              className="text-sm text-white/60 underline disabled:opacity-50"
+            >
+              {`Gabung kembali sebagai ${existing.name ?? 'dirimu'}`}
+            </button>
+          )}
+        </div>
       </form>
 
       {err && <InvalidCodeModal message={err} onDismiss={dismissErr} />}

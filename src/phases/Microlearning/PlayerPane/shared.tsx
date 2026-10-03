@@ -1,16 +1,34 @@
+import { useState } from 'react'
+
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 import { Icon } from '@iconify/react'
 
+import { BACK_TO_PICKER_CONFIRM } from './confirmCopy'
+
 export function BackToPicker({ onBack }: { onBack: () => void }) {
+  const [open, setOpen] = useState(false)
   return (
-    <button
-      type="button"
-      onClick={onBack}
-      className="mb-4 flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
-    >
-      <Icon icon="mdi:chevron-left" className="size-4" />
-      Kembali ke Daftar Level
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mb-4 flex items-center gap-1 text-xs text-white/40 hover:text-white/70"
+      >
+        <Icon icon="mdi:chevron-left" className="size-4" />
+        Kembali ke Daftar Level
+      </button>
+      {open && (
+        <ConfirmDialog
+          {...BACK_TO_PICKER_CONFIRM}
+          onCancel={() => setOpen(false)}
+          onConfirm={() => {
+            setOpen(false)
+            onBack()
+          }}
+        />
+      )}
+    </>
   )
 }
 
@@ -31,14 +49,14 @@ export function ActionButton({
       <button
         type="button"
         disabled
-        className="w-full rounded-lg bg-[#2A2A2A] py-3.5 text-center text-sm font-semibold text-white/30"
+        className="h-12 w-full rounded-lg bg-[#2A2A2A] text-center text-sm font-semibold text-white/30"
       >
         {children}
       </button>
     )
   }
   return (
-    <GradientButton type="button" onClick={onClick} className="w-full py-3.5 text-sm">
+    <GradientButton type="button" onClick={onClick} className="h-12 w-full text-sm">
       {children}
     </GradientButton>
   )

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { assets } from '@/assets'
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
 import { onValue, ref } from 'firebase/database'
 
@@ -12,9 +14,10 @@ import { usePlayerStep } from '@/lib/sync/usePlayerStep'
 import { useTeamOwner, useTeamRole } from '@/lib/sync/useTeamRole'
 import { useMyTeamId } from '@/lib/sync/useTeams'
 
-import { QuestionDoneScreen, QuestionScreen } from './QuestionScreen'
+import { StepScreen } from './QuestionScreen'
 import { StepBody } from './StepBody'
 import { StepPickerGrid } from './StepPicker'
+import { BACK_TO_PICKER_CONFIRM } from './confirmCopy'
 import { isDraftValid } from './isDraftValid'
 import { ActionButton, BackToPicker } from './shared'
 import { exampleHint, isSequentialSimple, questionBlockIndex } from './simpleFlow'
@@ -55,11 +58,14 @@ export function PlayerPane({
   // (persisting mid-step position would need another RTDB write path;
   // deferred, and cheap to skip because steps are short).
   const [blockIndexState, setBlockIndex] = useState(0)
-  // Sequential phases made only of [text?] + one simple question run as one
-  // question per screen (QuestionScreen): the question block is the only page,
-  // so the block cursor is pinned to it and the question is always "the last
-  // block" of its step.
+  // Sequential phases whose steps are only text/buttons + simple questions run
+  // one step per screen (StepScreen): the cursor is pinned to the first
+  // question (the rest are committed by commitRemainingDrafts) and the step's
+  // single page is always "the last block".
   const oneQuestionPerScreen = isSequentialSimple(content)
+  // Level list opened from the question screen's back icon (after a confirm).
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [confirmBack, setConfirmBack] = useState(false)
   const blockIndex = oneQuestionPerScreen ? questionBlockIndex(current) : blockIndexState
   const currentBlock = current.blocks[blockIndex]
   const isLastBlock = oneQuestionPerScreen || blockIndex >= current.blocks.length - 1
@@ -133,8 +139,11 @@ export function PlayerPane({
   // block is exactly the state the "Selesai" button renders in, so a disable
   // there left the phase with no way out. It is replaced by the explicit
   // completion path in handleFinish below.
-  const nextDisabled =
-    advancing || !currentQuestionAnswered || (isLastBlock && gated && !allQuestionsAnswered)
+  // One-screen steps show every question at once, so ALL must be answered
+  // (a step with no questions is never blocked).
+  const nextDisabled = oneQuestionPerScreen
+    ? advancing || !allQuestionsAnswered
+    : advancing || !currentQuestionAnswered || (isLastBlock && gated && !allQuestionsAnswered)
 
   // Commit the CURRENT block's draft (if it's a question with a pending draft)
   // before we leave it. Called on every Next click — advancing within a step
@@ -216,16 +225,30 @@ export function PlayerPane({
   }
 
   if (oneQuestionPerScreen) {
-    if (step >= content.steps.length) return <QuestionDoneScreen />
-    if (currentBlock?.kind === 'question') {
+    if (step >= content.steps.length) return <AnswerSavedScreen />
+    if (pickerOpen) {
       return (
-        <QuestionScreen
-          question={currentBlock.question}
+        <StepPickerGrid
+          content={content}
+          step={step}
+          onSelect={(i) => {
+            if (i < step) return // already answered: not reopenable
+            setPickerOpen(false)
+          }}
+        />
+      )
+    }
+    return (
+      <>
+        <StepScreen
+          onBack={bounded > 0 ? () => setConfirmBack(true) : undefined}
+          step={current}
           phase={phase}
           sessionId={sessionId}
-          answer={answers[blockIndex] ?? null}
-          draft={drafts[blockIndex]}
-          onDraftChange={(value) => setDrafts((prev) => ({ ...prev, [blockIndex]: value }))}
+          playerId={playerId}
+          answers={answers}
+          drafts={drafts}
+          onDraftChange={(index, value) => setDrafts((prev) => ({ ...prev, [index]: value }))}
           disabled={!canWrite || advancing}
           placeholder={exampleHint(current)}
           actionLabel={isLastStep ? 'Kumpulkan' : 'Selanjutnya'}
@@ -233,8 +256,19 @@ export function PlayerPane({
           onAction={isLastStep ? handleFinish : handleNext}
           canWrite={canWrite}
         />
-      )
-    }
+        {confirmBack && (
+          <ConfirmDialog
+            {...BACK_TO_PICKER_CONFIRM}
+            onCancel={() => setConfirmBack(false)}
+            onConfirm={() => {
+              setConfirmBack(false)
+              setDrafts({})
+              setPickerOpen(true)
+            }}
+          />
+        )}
+      </>
+    )
   }
 
   if (viewingIndex === null) {

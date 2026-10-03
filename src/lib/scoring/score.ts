@@ -23,7 +23,8 @@ export function scoreSpeed(cfg: ScoringConfig, ctx: ScoreContext): number {
   if (decaySeconds <= 0) return 0
   const elapsedSec = ctx.elapsedMs / 1000
   const bonus = maxBonus * (1 - elapsedSec / decaySeconds)
-  return Math.max(0, Math.min(maxBonus, bonus))
+  // Whole points only — a fractional bonus leaks into every board (+1380.56…).
+  return Math.round(Math.max(0, Math.min(maxBonus, bonus)))
 }
 
 export function scoreParticipation(cfg: ScoringConfig, ctx: ScoreContext): number {

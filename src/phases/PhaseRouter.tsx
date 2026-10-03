@@ -48,7 +48,7 @@ export function PhaseRouter(props: RouterProps) {
 function PlayerPhaseGate(props: RouterProps & { playerId: string }) {
   const teamRole = useTeamRole(props.sessionId, props.playerId, props.phase)
   if (props.phase.teamMode === 'team_leader_only' && teamRole === 'member') {
-    return <TeamFocusLeader phaseId={props.phase.id} />
+    return <TeamFocusLeader sessionId={props.sessionId} playerId={props.playerId} />
   }
   return <PhaseContentSwitch key={props.phase.id} {...props} teamRole={teamRole} />
 }

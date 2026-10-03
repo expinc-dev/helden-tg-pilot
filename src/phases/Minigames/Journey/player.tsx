@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 import { onValue } from 'firebase/database'
@@ -65,68 +66,64 @@ export function JourneyPlayer({
 
   const hasAnything = seeds.length > 0 || !!prompt || !!commitment
 
+  // Figma "Ringkasan": title + hint, then the recap as bordered cards inside
+  // one scrolling panel.
   return (
-    <div className="flex min-h-dvh flex-col bg-[#1F1F1F] p-4 text-white sm:p-6">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <div className="flex flex-col items-center gap-1 pb-5 text-center">
-          <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-        </div>
-
-        <div className="flex flex-col gap-6 pb-8">
-          {config.instructions && (
-            <p className="text-sm leading-6 whitespace-pre-line text-white/70">
-              {config.instructions}
-            </p>
-          )}
-
-          {seeds.length > 0 && (
-            <Section heading={config.seedsHeading}>
-              {seeds.map((seed, i) => (
-                <SeedCard key={`${seed.source}-${i}`} seed={seed} />
-              ))}
-            </Section>
-          )}
-
-          {prompt && (
-            <Section heading={config.promptHeading}>
-              {prompt.pathLabel && (
-                <p className="text-xs font-semibold tracking-wide text-[#FFB800]/80 uppercase">
-                  {prompt.pathLabel}
-                </p>
-              )}
-              {/* Scrollable + monospace: the L4 prompt is far taller than a
-                  phone screen, and the participant recognises it by its shape. */}
-              <pre className="max-h-56 overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-3 text-[11px] leading-5 whitespace-pre-wrap text-white/70">
-                {prompt.prompt}
-              </pre>
-            </Section>
-          )}
-
-          {commitment && (
-            <Section heading={config.commitmentHeading}>
-              <p className="rounded-lg border border-[#FFB800]/30 bg-[#FFB800]/5 p-4 text-base leading-7 whitespace-pre-wrap text-white">
-                {commitment.text}
-              </p>
-            </Section>
-          )}
-
-          {/* A participant who somehow reached the recap with nothing written
-              still gets the closing line — it is addressed to them, not to the
-              data. Saying so plainly beats three empty sections. */}
-          {!hasAnything && (
-            <p className="text-sm leading-6 text-white/40">
-              Belum ada yang tercatat dari sesi ini.
-            </p>
-          )}
-
-          {config.closingLine && (
-            <p className="border-t border-white/10 pt-6 text-center text-base leading-7 font-semibold text-[#FFB800]">
-              {config.closingLine}
-            </p>
-          )}
-        </div>
+    <PlayerScreenFrame panelClassName="gap-5 p-4">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <h2 className="text-xl leading-[1.2] font-semibold tracking-[-0.04em] text-white">
+          Ringkasan
+        </h2>
+        {config.instructions && (
+          <p className="text-sm leading-[1.4] tracking-[-0.04em] whitespace-pre-line text-[#ccc]">
+            {config.instructions}
+          </p>
+        )}
       </div>
-    </div>
+
+      {seeds.length > 0 && (
+        <Section heading={config.seedsHeading}>
+          {seeds.map((seed, i) => (
+            <SeedCard key={`${seed.source}-${i}`} seed={seed} />
+          ))}
+        </Section>
+      )}
+
+      {prompt && (
+        <Section heading={config.promptHeading}>
+          {prompt.pathLabel && (
+            <p className="text-xs font-semibold tracking-wide text-[#FDDB00] uppercase">
+              {prompt.pathLabel}
+            </p>
+          )}
+          {/* Scrollable + monospace: the L4 prompt is far taller than a phone
+              screen, and the participant recognises it by its shape. */}
+          <pre className="max-h-56 overflow-y-auto rounded-lg border border-[#353535] bg-black/40 p-3 text-[11px] leading-5 whitespace-pre-wrap text-white/70">
+            {prompt.prompt}
+          </pre>
+        </Section>
+      )}
+
+      {commitment && (
+        <Section heading={config.commitmentHeading}>
+          <p className="rounded-lg border border-[#FDDB00]/40 bg-[#FDDB00]/5 p-4 text-base leading-7 whitespace-pre-wrap text-white">
+            {commitment.text}
+          </p>
+        </Section>
+      )}
+
+      {/* A participant who reached the recap with nothing written still gets
+          the closing line — it is addressed to them, not to the data. */}
+      {!hasAnything && (
+        <p className="text-sm leading-6 text-white/40">Belum ada yang tercatat dari sesi ini.</p>
+      )}
+
+      {config.closingLine && (
+        <p className="border-t border-[#353535] pt-5 text-center text-base leading-7 font-semibold text-[#FDDB00]">
+          {config.closingLine}
+        </p>
+      )}
+    </PlayerScreenFrame>
   )
 }
 
@@ -189,7 +186,7 @@ function useOwnAnswer<T>(
 
 function Section({ heading, children }: { heading: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2.5">
+    <section className="flex flex-col gap-2.5 rounded-lg border border-[#353535] p-4">
       {heading && (
         <h2 className="text-xs font-semibold tracking-wide text-white/40 uppercase">{heading}</h2>
       )}
@@ -206,7 +203,7 @@ function Section({ heading, children }: { heading: string; children: ReactNode }
 // screens that show a seed say the same thing about where it came from.
 function SeedCard({ seed }: { seed: Seed }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 p-3.5">
+    <div className="flex flex-col gap-1 rounded-lg bg-white/[0.04] p-3.5">
       <span className="flex items-center gap-1.5 text-[11px] text-white/40">
         <Icon icon="mdi:sprout-outline" className="size-3.5" />
         {seedSourceLabel(seed.source)}

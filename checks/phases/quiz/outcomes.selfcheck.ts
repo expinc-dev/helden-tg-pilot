@@ -54,7 +54,7 @@ eq(
     revealedCount: 1,
     answers: { p1_q0: { value: 'a' } },
   }),
-  ['wrong'],
+  ['correct'], // opinion question (no answer key): answering is the positive outcome
   'no correctId'
 )
 

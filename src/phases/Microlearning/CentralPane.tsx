@@ -1,3 +1,4 @@
+import { CentralOverallProgress } from '@/components/CentralOverallProgress'
 import { CentralQuestionWall } from '@/components/CentralQuestionWall'
 import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
 
@@ -57,6 +58,13 @@ export function CentralProgressPane({
   )
 
   const timerVisible = timer.active && (phase.timer?.visibleTo ?? []).includes('central')
+
+  // Late in the phase (≥76% of the room done — Figma "76–102") the wall gives
+  // way to the overall-progress screen.
+  const finished = rows.filter((r) => r.connected && r.selfStep >= total).length
+  if (connectedPlayers > 0 && (finished / connectedPlayers) * 100 >= 76) {
+    return <CentralOverallProgress finished={finished} total={connectedPlayers} />
+  }
 
   return (
     <CentralQuestionWall

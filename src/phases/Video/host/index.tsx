@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { assets } from '@/assets'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { Header } from '@/pages/host/_shared/Header'
+import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
+import { HostScreenFrame } from '@/pages/host/_shared/HostScreenFrame'
 import type { VideoContent } from '@helden-inc/tg-schema'
 
 import { pauseVideo, playVideo, setVideoPlayback } from '@/lib/session/videoControl'
@@ -28,11 +28,7 @@ export function HostVideo({
   const positionRef = useRef<number>(0)
 
   if (!url) {
-    return (
-      <div className="p-8 text-sm text-gray-500">
-        Video URL not set (content.videoUrl is empty for this slide).
-      </div>
-    )
+    return <div className="p-8 text-sm text-gray-500">URL video belum diisi untuk fase ini.</div>
   }
 
   const provider = detectProvider(url)
@@ -95,7 +91,7 @@ export function VideoHostScreen({
   const positionRef = useRef<number>(positionSec)
 
   const [ended, setEnded] = useState(false)
-  const [confirm, setConfirm] = useState<null | 'replay' | 'advance'>(null)
+  const [confirm, setConfirm] = useState<null | 'replay'>(null)
   // Vimeo/YouTube's own postMessage timeupdate — NOT the RTDB-synced
   // positionSec, which only moves on an explicit play/pause/seek — is what
   // gives the seek bar the same smooth live movement HostDirectPlayer gets
@@ -145,25 +141,18 @@ export function VideoHostScreen({
   }
 
   return (
-    <div
-      className="relative flex h-dvh w-full flex-col gap-2 overflow-hidden p-3 sm:p-5 lg:h-full"
-      style={{
-        backgroundImage: `url(${assets.images.backgrounds.auth})`,
-        backgroundSize: '100% 100%',
-        backgroundPosition: 'top',
-        backgroundRepeat: 'no-repeat',
-      }}
+    <HostScreenFrame
+      title="Mission Control"
+      subtitle="Anda memegang kendali penuh atas video di layar utama."
+      footer={
+        <HostNextPhaseButton
+          onConfirm={onAdvance}
+          className="h-16 w-full shrink-0 text-lg font-medium! tracking-[-0.04em]"
+        />
+      }
     >
-      <div className="shrink-0">
-        <Header />
-      </div>
-
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-[#08080833] p-3 sm:gap-4 sm:p-4">
-        <h1 className="shrink-0 text-center text-lg font-bold text-white sm:text-xl">
-          Video Control
-        </h1>
-
-        <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#121212]">
+      <>
+        <div className="relative flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#121212]">
           {videoUrl && provider === 'direct' && (
             <HostDirectPlayer
               url={videoUrl}
@@ -235,21 +224,7 @@ export function VideoHostScreen({
             </div>
           )}
         </div>
-      </div>
-
-      {/* Never disabled. The video is a host-side aid: the phase gate is
-          phasePointer, players fold in from it, and nothing downstream reads
-          `ended` — so gating this button on the video's end (vimeo/youtube only
-          report it via postMessage) stranded a host on a video that is
-          unwatchable in their room, with no way to skip. `ended` now only drives
-          the replay overlay. */}
-      <button
-        type="button"
-        onClick={() => setConfirm('advance')}
-        className="w-full shrink-0 rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black transition-opacity sm:py-[18px] sm:text-lg"
-      >
-        Tahap selanjutnya
-      </button>
+      </>
 
       {confirm === 'replay' && (
         <ConfirmDialog
@@ -266,20 +241,6 @@ export function VideoHostScreen({
           }}
         />
       )}
-      {confirm === 'advance' && (
-        <ConfirmDialog
-          title="Lanjut ke tahap berikutnya"
-          message="Apakah anda yakin untuk melanjutkan ke tahap berikutnya?"
-          confirmLabel="Lanjut"
-          confirmIcon="mdi:arrow-right"
-          cancelLabel="Kembali"
-          onCancel={() => setConfirm(null)}
-          onConfirm={() => {
-            setConfirm(null)
-            onAdvance()
-          }}
-        />
-      )}
-    </div>
+    </HostScreenFrame>
   )
 }

@@ -23,14 +23,14 @@ export function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-8 backdrop-blur-md"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-8 backdrop-blur-md"
       onClick={dismissOnBackdrop ? onClose : undefined}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className={`w-full ${maxWidthClassName} overflow-hidden rounded-lg border`}
-        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
+        className={`w-full ${maxWidthClassName} overflow-hidden rounded-lg border shadow-2xl`}
+        style={{ borderColor: '#353535', background: '#121212' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div

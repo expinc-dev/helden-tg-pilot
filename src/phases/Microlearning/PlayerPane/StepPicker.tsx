@@ -1,4 +1,5 @@
 import { assets } from '@/assets'
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import type { Block, MicrolearningContent } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
@@ -38,38 +39,30 @@ export function StepPickerGrid({
   const pct = Math.round((capped / total) * 100)
 
   return (
-    <div
-      className="flex min-h-dvh flex-col bg-cover bg-top p-4 sm:p-6"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
-    >
-      <div
-        className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto rounded-2xl border p-4 sm:p-6"
-        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
-      >
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-white">Pilih Level</h1>
-          <p className="mt-1 text-xs text-white/40">
-            {content.mode === 'free'
-              ? 'Pilih langkah mana saja untuk memulai'
-              : 'Selesaikan setiap langkah secara berurutan'}
-          </p>
-        </div>
-
-        <LevelProgressBar pct={pct} />
-
-        <div className="grid grid-cols-2 gap-3">
-          {content.steps.map((step, i) => (
-            <StepCard
-              key={step.id}
-              step={step}
-              index={i}
-              status={stepStatus(i, capped, content.mode, total)}
-              onSelect={() => onSelect(i)}
-            />
-          ))}
-        </div>
+    <PlayerScreenFrame panelClassName="gap-5 p-4">
+      <div className="text-center">
+        <h1 className="text-xl font-medium text-white">Pilih Level</h1>
+        <p className="mt-1 text-base text-white">
+          {content.mode === 'free'
+            ? 'Pilih langkah mana saja untuk memulai'
+            : 'Selesaikan semua secara berurutan'}
+        </p>
       </div>
-    </div>
+
+      <LevelProgressBar pct={pct} />
+
+      <div className="grid grid-cols-2 gap-3">
+        {content.steps.map((step, i) => (
+          <StepCard
+            key={step.id}
+            step={step}
+            index={i}
+            status={stepStatus(i, capped, content.mode, total)}
+            onSelect={() => onSelect(i)}
+          />
+        ))}
+      </div>
+    </PlayerScreenFrame>
   )
 }
 
@@ -113,19 +106,21 @@ function LevelProgressBar({ pct }: { pct: number }) {
           }}
         />
         <div
-          className="absolute inset-y-0 left-0 flex items-center justify-end gap-1 pr-3 transition-all"
+          className="absolute inset-y-0 left-0 flex items-center justify-end gap-1 pr-4 transition-all"
           style={{
             width: `${Math.max(pct, 12)}%`,
             // Rounded left, FLAT right — the arrow butts flush against this
             // edge and forms the point itself, instead of a separately rounded
             // corner fighting a small triangle overlaid on top of it.
-            borderRadius: '9999px',
+            borderRadius: '9999px 0 0 9999px',
             background: '#FCDC07',
+            // Pointed head, as in the design.
+            clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
           }}
         >
           {/* No background of its own — rides on top of the fill, moving with
           it, instead of a separate pinned pill. */}
-          <span className="text-[10px] font-bold whitespace-nowrap text-black">{pct}%</span>
+          <span className="text-xs font-bold whitespace-nowrap text-black">{pct}%</span>
         </div>
         {/* <ProgressArrow
           className="absolute top-0 h-8 w-auto -translate-x-px transition-all"
@@ -150,19 +145,14 @@ function LevelProgressBar({ pct }: { pct: number }) {
 function cardStateStyle(status: StepStatus): React.CSSProperties {
   if (status === 'done') {
     return {
-      border: '0.5px solid #FDDB00',
-      background: CARD_GRADIENT,
-      boxShadow: '0 0 12px 0 rgba(253, 164, 0, 0.20)',
+      border: '1px solid #FDDB00',
+      boxShadow: '0 0 14px 0 rgba(253, 164, 0, 0.35)',
     }
   }
   if (status === 'available') {
-    return {
-      border: '0.5px solid #FFF',
-      background: CARD_GRADIENT,
-      boxShadow: '0 0 12px 0 rgba(253, 164, 0, 0.20)',
-    }
+    return { border: '1px solid rgba(253, 219, 0, 0.45)' }
   }
-  return { border: '0.5px solid rgba(255, 255, 255, 0.15)', background: CARD_GRADIENT }
+  return { border: '1px solid rgba(253, 219, 0, 0.22)' }
 }
 
 function StepCard({
@@ -197,44 +187,56 @@ function StepCard({
   const thumbnail =
     step.thumbnailUrl ?? firstImageBlock?.url ?? assets.images.presentation.classroomExample
 
+  // One-line teaser under the title: first sentence of the step's first text
+  // block (headings/markdown stripped). Hidden when the step has no text.
+  const teaser = firstTextBlock
+    ? parseTextBlock(firstTextBlock.markdown)
+        .segments.flatMap((seg) => (seg.type === 'paragraph' ? [seg.text] : seg.items))
+        .join(' ')
+        .replace(/[*_#`]/g, '')
+        .trim()
+    : ''
+
   return (
     <button
       type="button"
-      // A finished step stays visible (green check) but cannot be reopened.
+      // A finished step stays visible (check ribbon) but cannot be reopened.
       disabled={locked || status === 'done'}
       onClick={onSelect}
-      className="relative aspect-square overflow-hidden rounded-lg text-left disabled:cursor-not-allowed"
+      className="relative aspect-[3/5] overflow-hidden rounded-[10px] bg-[#121212] text-left disabled:cursor-not-allowed"
       style={cardStateStyle(status)}
     >
-      <img
-        src={thumbnail}
-        alt=""
-        className={`absolute inset-0 size-full object-cover ${locked ? 'grayscale' : ''}`}
-      />
+      <img src={thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
       <div
         className={`absolute inset-0 ${
-          locked ? 'bg-black/70' : 'bg-gradient-to-t from-black/85 via-black/20 to-transparent'
+          status === 'done' ? 'bg-black/10' : status === 'available' ? 'bg-black/55' : 'bg-black/80'
         }`}
       />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
 
       {status === 'done' && (
-        <span className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-[#22C55E] text-white">
-          <Icon icon="mdi:check" className="size-4" />
-        </span>
+        <>
+          <span
+            className="absolute top-0 right-0 size-14"
+            style={{ background: GOLD_GRADIENT, clipPath: 'polygon(0 0, 100% 0, 100% 100%)' }}
+          />
+          <Icon icon="mdi:check" className="absolute top-1 right-1 size-5 text-white" />
+        </>
       )}
       {locked && (
-        <span className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-black/60 text-white/60">
-          <Icon icon="mdi:lock" className="size-3.5" />
+        <span className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-black/60 text-white/60">
+          <Icon icon="mdi:lock" className="size-3" />
         </span>
       )}
 
-      <div className="absolute bottom-0 left-0 flex flex-col p-3">
-        <span className={`text-2xl font-black ${locked ? 'text-white/30' : 'text-[#FFB800]'}`}>
+      <div className="absolute inset-x-0 bottom-0 flex items-end gap-2 p-3">
+        <span className="text-3xl leading-none font-light text-[#FDDB00]">
           {String(index + 1).padStart(2, '0')}
         </span>
-        <span className={`text-xs font-semibold ${locked ? 'text-white/30' : 'text-white'}`}>
-          {label}
-        </span>
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-sm font-medium text-[#FDDB00]">{label}</span>
+          {teaser && <span className="truncate text-[10px] text-white">{teaser}</span>}
+        </div>
       </div>
     </button>
   )

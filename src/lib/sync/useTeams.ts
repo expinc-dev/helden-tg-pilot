@@ -27,7 +27,7 @@ export function useTeams(sessionId: string | undefined): TeamRow[] {
 export function useMyTeamId(sessionId: string | undefined, playerId: string): string | undefined {
   const [teamId, setTeamId] = useState<string | undefined>(undefined)
   useEffect(() => {
-    if (!sessionId) return
+    if (!sessionId || !playerId) return
     return onValue(eref(`sessions/${sessionId}/players/${playerId}/teamId`), (s) =>
       setTeamId(s.val() ?? undefined)
     )

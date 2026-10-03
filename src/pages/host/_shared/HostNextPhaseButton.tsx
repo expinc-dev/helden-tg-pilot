@@ -3,12 +3,14 @@ import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 
+import { NEXT_PHASE_CONFIRM } from './confirmCopy'
+
 // The one "go to next phase" control on the host. Every advance path renders
 // this so the confirm popup is guaranteed and there is exactly one button.
 export function HostNextPhaseButton({
   isLast = false,
   onConfirm,
-  className = 'w-full py-4 text-base',
+  className = 'h-16 w-full text-lg font-medium! tracking-[-0.04em]',
 }: {
   isLast?: boolean
   onConfirm: () => void
@@ -22,14 +24,14 @@ export function HostNextPhaseButton({
       </GradientButton>
       {open && (
         <ConfirmDialog
-          title={isLast ? 'Akhiri sesi?' : 'Lanjut ke tahap berikutnya?'}
+          title={isLast ? 'Akhiri sesi?' : NEXT_PHASE_CONFIRM.title}
           message={
             isLast
               ? 'Sesi akan diakhiri untuk semua peserta. Tindakan ini tidak bisa dibatalkan.'
-              : 'Tahap ini akan ditutup dan semua peserta pindah ke tahap berikutnya. Tindakan ini tidak bisa dibatalkan.'
+              : NEXT_PHASE_CONFIRM.message
           }
-          confirmLabel={isLast ? 'Akhiri' : 'Lanjut'}
-          cancelLabel="Batal"
+          confirmLabel={isLast ? 'Akhiri' : NEXT_PHASE_CONFIRM.confirmLabel}
+          cancelLabel={NEXT_PHASE_CONFIRM.cancelLabel}
           onCancel={() => setOpen(false)}
           onConfirm={() => {
             setOpen(false)

@@ -1,7 +1,10 @@
 import { useState } from 'react'
 
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
+
+import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
 import { submitCommitmentAnswer } from '@/lib/session/commitment'
 
@@ -59,75 +62,71 @@ export function CommitmentPlayer({
     }
   }
 
+  const field =
+    'min-h-24 w-full resize-none rounded-lg border border-[#353535] bg-[#1C1C1E] p-4 text-sm text-white placeholder:text-white/30 focus:border-[#FDDB00] focus:outline-none'
+
+  if (submittedSentence !== null) {
+    return (
+      <PlayerScreenFrame panelClassName="gap-6 p-4">
+        <DonePane sentence={submittedSentence} doneCopy={config.doneCopy} />
+      </PlayerScreenFrame>
+    )
+  }
+
+  // Figma "Lengkapi Komitmen": title + hint, one bordered card holding the two
+  // labelled boxes, the action button under the panel.
   return (
-    <div className="flex min-h-dvh flex-col bg-[#1F1F1F] p-4 text-white sm:p-6">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <div className="flex flex-col items-center gap-1 pb-5 text-center">
-          <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-        </div>
-
-        {submittedSentence !== null ? (
-          <DonePane sentence={submittedSentence} doneCopy={config.doneCopy} />
-        ) : (
-          <div className="flex flex-col gap-5 pb-6">
-            {config.instructions && (
-              <p className="text-sm leading-6 whitespace-pre-line text-white/70">
-                {config.instructions}
-              </p>
-            )}
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-white/80">{config.actionLabel}</span>
-              <textarea
-                rows={2}
-                value={action}
-                placeholder={config.actionPlaceholder}
-                onChange={(e) => setAction(e.target.value)}
-                className="resize-none rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white transition placeholder:text-white/25 placeholder:italic focus:border-[#FFB800] focus:outline-none"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-white/80">{config.reasonLabel}</span>
-              <textarea
-                rows={2}
-                value={reason}
-                placeholder={config.reasonPlaceholder}
-                onChange={(e) => setReason(e.target.value)}
-                className="resize-none rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white transition placeholder:text-white/25 placeholder:italic focus:border-[#FFB800] focus:outline-none"
-              />
-            </label>
-
-            {/* Live, per keystroke: the participant is meant to read their own
-                commitment back and notice when it says something they did not
-                mean. `pre` + wrap so the authored pattern's punctuation and an
-                accidental blank slot both show exactly as they will be stored. */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs text-white/50">Komitmenmu</span>
-              <pre className="rounded-lg border border-white/15 bg-black/40 p-3 text-sm leading-6 whitespace-pre-wrap text-white">
-                {sentence}
-              </pre>
-            </div>
-
-            <button
-              type="button"
-              disabled={!canSubmit || busy}
-              onClick={() => void submit()}
-              className="w-full rounded-lg bg-[#FFB800] py-3.5 text-center text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white disabled:opacity-50"
-            >
-              {busy ? 'Mengirim…' : 'Simpan komitmenku'}
-            </button>
-
-            {!canSubmit && (
-              <p className="text-xs text-white/40">
-                Isi dua-duanya — langkahnya, dan alasannya. Kalimatnya baru lengkap kalau keduanya
-                ada.
-              </p>
-            )}
-          </div>
+    <PlayerScreenFrame
+      panelClassName="gap-5 px-4 pt-8 pb-4"
+      footer={
+        <ActionButton disabled={!canSubmit || busy} onClick={() => void submit()}>
+          {busy ? 'Mengirim…' : 'Selanjutnya'}
+        </ActionButton>
+      }
+    >
+      <div className="flex flex-col items-center gap-2 text-center">
+        <h2 className="text-xl leading-[1.2] font-semibold tracking-[-0.04em] text-white">
+          Lengkapi Komitmen
+        </h2>
+        {config.instructions && (
+          <p className="text-sm leading-[1.4] tracking-[-0.04em] whitespace-pre-line text-[#ccc]">
+            {config.instructions}
+          </p>
         )}
       </div>
-    </div>
+
+      <div className="flex flex-col gap-4 rounded-lg border border-[#353535] p-4">
+        <label className="flex flex-col gap-2">
+          <span className="text-base tracking-[-0.04em] text-white">{config.actionLabel}</span>
+          <textarea
+            rows={3}
+            value={action}
+            placeholder={config.actionPlaceholder}
+            onChange={(e) => setAction(e.target.value)}
+            className={field}
+          />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-base tracking-[-0.04em] text-white">{config.reasonLabel}</span>
+          <textarea
+            rows={3}
+            value={reason}
+            placeholder={config.reasonPlaceholder}
+            onChange={(e) => setReason(e.target.value)}
+            className={field}
+          />
+        </label>
+      </div>
+
+      {/* Live, per keystroke: the participant reads their own commitment back
+          and notices when it says something they did not mean. */}
+      <div className="flex flex-col gap-2">
+        <span className="text-xs text-white/50">Komitmenmu</span>
+        <pre className="rounded-lg border border-[#353535] bg-black/40 p-3 text-sm leading-6 whitespace-pre-wrap text-white">
+          {sentence}
+        </pre>
+      </div>
+    </PlayerScreenFrame>
   )
 }
 

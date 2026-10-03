@@ -16,7 +16,7 @@ export function CentralIdleScreen({ sessionId }: { sessionId: string }) {
 
   return (
     <div
-      className="flex min-h-screen flex-col items-center bg-neutral-950 bg-cover bg-center p-8"
+      className="flex min-h-screen flex-col items-center bg-neutral-950 bg-cover bg-center"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.central})`,
         backgroundSize: '100% 100%',
@@ -26,16 +26,16 @@ export function CentralIdleScreen({ sessionId }: { sessionId: string }) {
     >
       <FullscreenToggle />
 
-      <div className="flex flex-1 items-center justify-center gap-10">
-        <HeldenLogoLotties className="h-52 w-auto" />
+      <div className="flex flex-1 items-center justify-center gap-[4.17vw] pb-[5.6vw]">
+        <HeldenLogoLotties className="h-auto w-[45.4vw]" />
 
         {joinUrl && (
           <>
-            <div className="h-40 w-px bg-white/30" />
+            <div className="h-[8vw] w-px bg-white/30" />
 
-            <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4">
-              <QRCode value={joinUrl} size={128} />
-              <p className="text-xs text-neutral-500">scan to play</p>
+            <div className="flex w-[9.57vw] flex-col items-center gap-[0.3vw] rounded-lg bg-white px-[0.34vw] pt-[0.29vw] pb-[0.4vw]">
+              <QRCode value={joinUrl} style={{ width: '100%', height: 'auto' }} />
+              <p className="text-[0.94vw] leading-[1.2] text-black">scan to play</p>
             </div>
           </>
         )}

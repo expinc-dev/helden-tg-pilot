@@ -1,10 +1,14 @@
-import { assets } from '@/assets'
+import { useState } from 'react'
+
 import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
+import { LetterOption } from '@/components/LetterOption'
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
+
+import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
 import { renderPromptBlocks } from '@/lib/richText'
 
 import type { ScaleQuestion } from '../../scale'
-import { scaleOptionId } from '../../scale'
 
 // HLN-012. A scale statement is private and ungraded: the player taps one point
 // and the answer is sealed immediately — no reveal, no right/wrong, no score,
@@ -23,7 +27,6 @@ export function ScaleStage({
   question,
   points,
   submitted,
-  selectedValue,
   canAnswer,
   onAnswer,
 }: {
@@ -35,68 +38,46 @@ export function ScaleStage({
   onAnswer: (value: number) => void
 }) {
   const [minLabel, maxLabel] = question.labels ?? []
+  const [picked, setPicked] = useState<number | null>(null)
 
   if (submitted !== null) return <AnswerSavedScreen />
 
+  // Figma Question-5: lettered rows, A = the strongest agreement. Only the two
+  // ends carry authored labels; the points between show their number.
+  const ordered = [...points].reverse()
+  const labelFor = (value: number) =>
+    value === points[points.length - 1] && maxLabel
+      ? maxLabel
+      : value === points[0] && minLabel
+        ? minLabel
+        : `Poin ${value}`
+
   return (
-    <div
-      className="flex min-h-dvh flex-col"
-      style={{
-        backgroundImage: `url(${assets.images.backgrounds.auth})`,
-        backgroundSize: '100% 100%',
-        backgroundPosition: 'top',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {
-        <>
-          <div className="px-8 pt-10">
-            <p className="text-2xl leading-relaxed font-normal text-white">
-              {renderPromptBlocks(question.prompt)}
-            </p>
-          </div>
-
-          {/* Horizontal scale, endpoints labelled — an even number of points and
-              no middle dot, so there is no "neutral" to hide behind. */}
-          <div className="mt-auto flex flex-col gap-3 px-8 pb-12">
-            <div className="flex items-stretch gap-2">
-              {points.map((value) => {
-                const isSelected = selectedValue === value
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={!canAnswer}
-                    onClick={() => onAnswer(value)}
-                    aria-label={`${value}`}
-                    aria-pressed={isSelected}
-                    className="flex flex-1 flex-col items-center gap-2 rounded-xl py-4 shadow-lg transition-all duration-200 ease-out active:scale-[0.97] disabled:cursor-not-allowed"
-                    style={{
-                      background: isSelected ? '#FDDB00' : '#1F1F1F',
-                      border: `1px solid ${isSelected ? '#FDDB00' : '#99A3AE'}`,
-                      opacity: !canAnswer && !isSelected ? 0.5 : 1,
-                    }}
-                  >
-                    <span
-                      className="text-2xl font-bold"
-                      style={{ color: isSelected ? '#1F1F1F' : '#fff' }}
-                    >
-                      {scaleOptionId(value)}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {(minLabel || maxLabel) && (
-              <div className="flex justify-between text-sm text-white/70">
-                <span className="max-w-[45%]">{minLabel}</span>
-                <span className="max-w-[45%] text-right">{maxLabel}</span>
-              </div>
-            )}
-          </div>
-        </>
+    <PlayerScreenFrame
+      footer={
+        <ActionButton
+          disabled={picked === null || !canAnswer}
+          onClick={() => picked !== null && onAnswer(picked)}
+        >
+          Kumpulkan
+        </ActionButton>
       }
-    </div>
+    >
+      <h2 className="text-xl leading-[1.3] font-medium tracking-[-0.04em] text-[#ccc]">
+        {renderPromptBlocks(question.prompt)}
+      </h2>
+      <div className="flex flex-col gap-3">
+        {ordered.map((value, i) => (
+          <LetterOption
+            key={value}
+            letter={String.fromCharCode(65 + i)}
+            label={labelFor(value)}
+            selected={picked === value}
+            disabled={!canAnswer}
+            onClick={() => setPicked(value)}
+          />
+        ))}
+      </div>
+    </PlayerScreenFrame>
   )
 }

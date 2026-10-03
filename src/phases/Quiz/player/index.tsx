@@ -8,7 +8,13 @@ import { submitAnswer } from '@/lib/sync/submitAnswer'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
 
-import { type QuizContent, questionOptions, resolveTimers, usePlayerScore } from '../lib'
+import {
+  type QuizContent,
+  questionOptions,
+  resolveTimers,
+  usePlayerScore,
+  useQuestionScores,
+} from '../lib'
 import { isScaleQuestion, scaleOptionId, scalePoints } from '../scale'
 import { AnsweringStage } from './components/AnsweringStage'
 import { RevealStage } from './components/RevealStage'
@@ -32,7 +38,11 @@ export function PlayerQuiz({
   const { quizStep } = useQuizStep(sessionId)
   const timer = useTimer(sessionId, phase)
   const q = content.questions[quizStep.step]
-  const myScore = usePlayerScore(sessionId, playerId, phase)
+  const myScore = usePlayerScore(sessionId, playerId, phase, teamId)
+  const isTeamScored =
+    phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const scoreKey = isTeamScored && teamId ? teamId : playerId
+  const questionScores = useQuestionScores(sessionId, `${phaseId}_q${quizStep.step}`)
   // string for choice questions (option id), number for scale questions (the
   // point value). Both round-trip through RTDB verbatim, so the reconnect
   // recovery below must not assume a string.
@@ -136,7 +146,9 @@ export function PlayerQuiz({
     <RevealStage
       submitted={typeof submitted === 'string' ? submitted : null}
       isCorrect={submitted === quizStep.correctId}
-      myScore={myScore}
+      graded={!!quizStep.correctId}
+      gained={questionScores[scoreKey]}
+      total={myScore}
     />
   )
 }

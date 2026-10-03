@@ -83,7 +83,7 @@ export function JoinGate() {
             onClick={rejoin}
             className="rounded border border-black px-4 py-2 text-black disabled:opacity-50"
           >
-            {`Rejoin as ${existing.name ?? 'yourself'}`}
+            {`Gabung kembali sebagai ${existing.name ?? 'dirimu'}`}
           </button>
         )}
       </div>

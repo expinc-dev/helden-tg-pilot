@@ -1,5 +1,7 @@
 import { assets } from '@/assets'
 
+import { FitText } from './FitText'
+
 const mmss = (sec: number) =>
   `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`
 
@@ -26,6 +28,8 @@ export function CentralQuestionWall({
   compact?: boolean
   children?: React.ReactNode
 }) {
+  // Sizes follow the Figma 1920×1080 frames in vw so the wall scales to any
+  // projector: timer 64, question 90 (54 when options share the wall), counter 32.
   return (
     <div
       className="fixed inset-0 flex flex-col"
@@ -35,38 +39,53 @@ export function CentralQuestionWall({
         backgroundPosition: 'center',
       }}
     >
-      <div className="flex h-[12.5%] shrink-0 items-center justify-center bg-black/50">
-        {timer?.active &&
-          (timer.expired ? (
-            <span className="text-5xl font-bold text-[#E21B3C]">Time’s up</span>
-          ) : (
-            <span className="text-helden-yellow text-6xl font-bold tabular-nums">
-              {mmss(timer.remainingSec)}
-            </span>
-          ))}
-      </div>
-
-      {compact ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-10 px-[3.5%] py-[3%]">
-          <h1 className="px-[6%] text-center text-5xl leading-snug font-medium text-white">
-            {prompt}
-          </h1>
-          <div className="flex min-h-0 flex-1 flex-col justify-center">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col bg-black/[0.24]">
+        <div className="flex h-[12.5%] shrink-0 items-center justify-center bg-[rgba(8,8,8,0.64)]">
+          {timer?.active &&
+            (timer.expired ? (
+              <span className="text-[2.5vw] font-bold text-[#E21B3C]">Time’s up</span>
+            ) : (
+              <span className="text-[3.333vw] font-bold tracking-[-0.04em] text-[#fddb00] tabular-nums">
+                {mmss(timer.remainingSec)}
+              </span>
+            ))}
         </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 items-center justify-center px-[10%]">
-          <h1 className="text-center text-7xl leading-tight font-medium text-white">{prompt}</h1>
-        </div>
-      )}
 
-      <div className="flex h-[7.5%] shrink-0 items-center justify-center bg-black/60">
-        {answered !== undefined && (
-          <p className="text-3xl text-white">
-            <span className="text-helden-yellow font-medium">{answered}</span> dari{' '}
-            <span className="text-helden-yellow font-medium">{total ?? 0}</span> pemain telah
-            menjawab
-          </p>
+        {compact ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-[3vw] pt-[3vw] pb-[2vw]">
+            {/* Long authored prompts shrink inside a capped box instead of
+                pushing the options off the wall. */}
+            <FitText
+              baseVw={2.8125}
+              className="max-h-[38%] shrink-0 px-[1.667vw] text-center leading-[1.3] font-semibold text-white"
+            >
+              {prompt}
+            </FitText>
+            <div className="flex min-h-0 flex-1 flex-col justify-center px-[3.333vw]">
+              {children}
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center justify-center py-[2vw]">
+            <FitText
+              baseVw={4.6875}
+              minRatio={0.3}
+              className="max-h-full max-w-[73.8vw] text-center leading-[1.3] font-semibold text-white"
+            >
+              {prompt}
+            </FitText>
+          </div>
         )}
+
+        <div className="flex h-[8%] shrink-0 items-center justify-center bg-black/40">
+          {answered !== undefined && (
+            <p className="text-[1.667vw] leading-[1.2] text-white">
+              <span className="text-helden-yellow font-bold">{answered}</span> dari{' '}
+              <span className="text-helden-yellow font-bold">{total ?? 0}</span> pemain telah
+              menjawab
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

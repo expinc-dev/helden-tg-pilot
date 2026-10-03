@@ -17,9 +17,15 @@ export function StatTile({
   onCopy?: () => void
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/5 bg-[#0A0A0A] p-3 sm:p-4">
-      <span className="text-helden-yellow text-base font-medium">{label}</span>
-      <span className="flex items-center gap-2 text-lg font-bold text-white sm:text-2xl">
+    <div
+      className={`flex flex-col items-center justify-end gap-2 rounded border border-[#353535] py-4 ${
+        onCopy ? 'shrink-0 px-8' : 'min-w-0 flex-1 px-4'
+      }`}
+    >
+      <span className="text-helden-yellow text-base tracking-[-0.04em] [text-shadow:0_0_12px_rgba(253,164,0,0.2)]">
+        {label}
+      </span>
+      <span className="flex items-center gap-2 text-[32px] leading-[1.2] font-bold text-white">
         {value}
         {onCopy && (
           <button
@@ -28,7 +34,7 @@ export function StatTile({
             className="text-helden-yellow hover:text-helden-yellow/80"
             aria-label={`Salin ${label}`}
           >
-            <Icon icon="mdi:content-copy" className="size-4" />
+            <Icon icon="mdi:content-copy" className="size-6" />
           </button>
         )}
       </span>
@@ -57,7 +63,7 @@ export function TeamList({
     return <p className="px-1 text-xs text-white/50">Belum ada tim.</p>
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col divide-y divide-[#404040] rounded border border-[#404040] bg-[#0e0e0e]">
       {sections.map(([teamId, rows]) => (
         <TeamRow
           key={teamId}
@@ -72,18 +78,18 @@ export function TeamList({
 function TeamRow({ name, rows }: { name: string; rows: [string, PlayerPresence][] }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-xl bg-[#1C1C1E]">
+    <div>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left text-sm text-white/90 sm:text-base"
+        className="flex w-full cursor-pointer items-center justify-between p-4 text-left text-base tracking-[-0.04em] text-[#a2a2a2]"
       >
-        <span className="flex items-center gap-2">
-          <Icon icon="mdi:account-group" className="size-4 text-white/60" />
+        <span className="flex items-center gap-4">
+          <Icon icon="material-symbols:group-outline-rounded" className="size-4" />
           {name}
         </span>
-        <span className="flex items-center gap-2 text-white/60">
+        <span className="flex items-center gap-2">
           <span>{rows.length} Pemain</span>
           <Icon
             icon="mdi:chevron-right"
@@ -92,14 +98,14 @@ function TeamRow({ name, rows }: { name: string; rows: [string, PlayerPresence][
         </span>
       </button>
       {open && (
-        <ul className="flex flex-col gap-1 border-t border-white/5 px-2 py-2">
+        <ul className="flex flex-col gap-1 border-t border-[#404040] bg-black/40 px-4 py-2">
           {rows.map(([id, p]) => (
             <li
               key={id}
-              className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-white/90"
+              className="flex items-center justify-between py-2 text-base tracking-[-0.04em] text-[#a2a2a2]"
             >
-              <span className="flex items-center gap-2">
-                <Icon icon="mdi:account-circle-outline" className="size-4 text-white/60" />
+              <span className="flex items-center gap-4">
+                <Icon icon="material-symbols:account-circle-outline" className="size-4" />
                 {p.name}
               </span>
               <StatusDot connected={p.connected} />
@@ -113,11 +119,11 @@ function TeamRow({ name, rows }: { name: string; rows: [string, PlayerPresence][
 
 export function PlayerRows({ players }: { players: [string, PlayerPresence][] }) {
   return (
-    <ul className="space-y-1">
+    <ul className="flex flex-col divide-y divide-[#404040] rounded border border-[#404040] bg-[#0e0e0e]">
       {players.map(([id, p]) => (
         <li
           key={id}
-          className="flex items-center justify-between rounded-md bg-[#1C1C1E] px-3 py-2 text-sm text-white/90"
+          className="flex items-center justify-between p-4 text-base tracking-[-0.04em] text-[#a2a2a2]"
         >
           <span>{p.name}</span>
           <StatusDot connected={p.connected} />

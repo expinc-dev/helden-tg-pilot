@@ -13,8 +13,8 @@ export function EndScreen({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex flex-col gap-6 p-8">
       <div>
-        <h2 className="text-2xl font-semibold">Session ended</h2>
-        <p className="text-sm text-gray-500">Final scores</p>
+        <h2 className="text-2xl font-semibold">Sesi berakhir</h2>
+        <p className="text-sm text-gray-500">Skor akhir</p>
       </div>
 
       <Scoreboard
@@ -22,7 +22,7 @@ export function EndScreen({ sessionId }: { sessionId: string }) {
         scores={scores}
         teamScores={teamScores}
         variant="light"
-        emptyText="No scored phases in this session."
+        emptyText="Belum ada fase berpoin di sesi ini."
       />
     </div>
   )

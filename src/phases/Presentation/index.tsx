@@ -83,23 +83,16 @@ export function PresentationRenderer({
   }
 
   const controls = role === 'host' && (
-    <div
-      className="relative z-50 flex shrink-0 items-center justify-between gap-4 border-t bg-[#121212] px-4 py-3"
-      style={{ borderColor: '#353535' }}
-    >
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setJumpOpen(!jumpOpen)}
-          className="rounded-[8px] border px-4 py-2 text-sm text-white"
-          style={{ borderColor: '#353535', background: '#1B1B1B' }}
-        >
-          Jump
-        </button>
-        <span className="text-xs text-white/60">
-          {bounded + 1} / {content.slides.length}
-        </span>
-      </div>
+    <div className="relative z-50 flex shrink-0 items-center justify-between gap-4 bg-black/40 p-4">
+      {/* Figma "Slides 1/5"; tapping it opens the jump-to-slide popover. */}
+      <button
+        type="button"
+        onClick={() => setJumpOpen(!jumpOpen)}
+        className="text-lg font-light tracking-[-0.04em] text-[#fddb00]"
+      >
+        Slides {bounded + 1}
+        <span className="font-bold">/{content.slides.length}</span>
+      </button>
       {jumpOpen && (
         <div
           className="absolute bottom-16 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
@@ -120,13 +113,12 @@ export function PresentationRenderer({
           ))}
         </div>
       )}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           disabled={!canControl || bounded === 0}
           onClick={() => setStep(bounded - 1)}
-          className="rounded-[8px] border px-4 py-2 text-sm text-white disabled:opacity-40"
-          style={{ borderColor: '#353535', background: '#1B1B1B' }}
+          className="h-10 w-[132px] rounded-lg bg-[#1b1b1b] text-lg font-medium tracking-[-0.04em] text-white disabled:opacity-40"
         >
           Previous
         </button>
@@ -135,7 +127,7 @@ export function PresentationRenderer({
         <GradientButton
           disabled={!canControl || isLastSlide}
           onClick={() => setStep(bounded + 1)}
-          className="px-6 py-2 text-sm"
+          className="h-10 px-8 text-lg font-medium! tracking-[-0.04em]"
         >
           Next
         </GradientButton>

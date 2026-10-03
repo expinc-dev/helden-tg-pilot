@@ -1,4 +1,8 @@
+import { HostPanelHeader } from '@/pages/host/_shared/HostScreenFrame'
+import { ProgressRow, SubmittedStrip, TeamLabel } from '@/pages/host/_shared/ProgressRow'
 import type { Phase } from '@helden-inc/tg-schema'
+
+import { useGameType } from '@/lib/sync/useGameType'
 
 import type { AnalyzeGridConfig } from './score'
 import { useAnalyzeRoster, useAnalyzeSubmitted } from './status'
@@ -18,47 +22,37 @@ export function HostAnalyzeGrid({
   const roster = useAnalyzeRoster(sessionId, phase)
   const submitted = useAnalyzeSubmitted(sessionId, roster, phase.id)
   const done = roster.filter((r) => submitted[r.writerId]).length
+  const gameType = useGameType()
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
-      <div className="text-center">
-        <h2 className="text-xl font-bold text-white">{phase.title}</h2>
-        <p className="mt-1 text-xs text-white/40">
-          Tandai sel yang tetap kosong &middot; {done}/{roster.length} sudah mengirim
-        </p>
-      </div>
+    <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-16 overflow-y-auto px-8 pt-10 pb-8">
+      <HostPanelHeader
+        badge={gameType}
+        title="Progres Tim"
+        subtitle="Pantau seluruh progress pemain secara real-time"
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <div className="flex flex-col gap-4">
+        <SubmittedStrip done={done} total={roster.length} tone="dark" />
         {roster.length === 0 ? (
-          <p className="px-1 text-xs text-white/50">Belum ada pemain aktif.</p>
+          <p className="px-1 text-sm text-white/50">Belum ada pemain aktif.</p>
         ) : (
           roster.map((r) => (
-            <div
-              key={r.key}
-              className="flex w-full items-center justify-between rounded-lg border px-4 py-3"
-              style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.64)' }}
-            >
-              <span className="text-sm text-white/90">{r.label}</span>
-              <span
-                className={`text-xs font-semibold ${
-                  submitted[r.writerId] ? 'text-[#22C55E]' : 'text-white/40'
-                }`}
-              >
-                {submitted[r.writerId] ? 'Terkirim \u2713' : 'Menunggu\u2026'}
-              </span>
-            </div>
+            <ProgressRow key={r.key} pct={submitted[r.writerId] ? 100 : 0}>
+              <TeamLabel name={r.label} />
+            </ProgressRow>
           ))
         )}
-      </div>
 
-      <details className="rounded-lg border px-4 py-3" style={{ borderColor: '#353535' }}>
-        <summary className="cursor-pointer text-xs text-white/60">
-          Kunci jawaban (untuk host)
-        </summary>
-        <p className="mt-2 text-sm text-[#FFB800]">
-          {config.emptyCells.map((c) => `${c.row}\u2013${c.col}`).join(' \u00b7 ')}
-        </p>
-      </details>
+        <details className="rounded-lg border border-[#353535] px-4 py-3">
+          <summary className="cursor-pointer text-xs text-white/60">
+            Kunci jawaban (untuk host)
+          </summary>
+          <p className="mt-2 text-sm text-[#FFB800]">
+            {config.emptyCells.map((c) => `${c.row}–${c.col}`).join(' · ')}
+          </p>
+        </details>
+      </div>
     </div>
   )
 }

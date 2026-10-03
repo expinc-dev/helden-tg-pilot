@@ -1,4 +1,5 @@
 import { TeamFocusLeader } from '../../TeamFocusLeader'
+import { HostSubmittedPane } from '../HostSubmittedPane'
 import type { MinigameRendererProps } from '../types'
 import { CommitmentCentral } from './central'
 import { CommitmentPlayer } from './player'
@@ -24,9 +25,17 @@ export function CommitmentRenderer(props: MinigameRendererProps<CommitmentConfig
   if (role === 'central') {
     return <CommitmentCentral sessionId={sessionId} phase={phase} config={config} />
   }
-  if (role === 'host') return null
+  if (role === 'host')
+    return (
+      <HostSubmittedPane
+        sessionId={sessionId}
+        phase={phase}
+        title="Komitmen"
+        subtitle="Beri waktu hening untuk menulis. Isi komitmen bersifat privat dan tidak ditampilkan."
+      />
+    )
 
-  if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
+  if (teamRole === 'member') return <TeamFocusLeader sessionId={sessionId} playerId={playerId} />
 
   if (!playerId) {
     return (

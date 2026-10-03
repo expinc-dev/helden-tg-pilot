@@ -41,7 +41,7 @@ export function PhaseStartList({
 
   return (
     <div
-      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-[6%] py-3"
+      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-[47px] pt-[48px] pb-[45px]"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -51,18 +51,20 @@ export function PhaseStartList({
     >
       <Header />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto rounded-2xl border border-white/10 bg-[#12121299] px-8 py-4">
-        <div className="flex flex-col items-center gap-6">
+      <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-16 overflow-y-auto rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-8 pt-10 pb-8">
+        <div className="flex flex-col items-center gap-12">
           <HostBadge pageName={gameType} />
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-white">Pilih Phase</h1>
-            <p className="mx-auto mt-2 max-w-xl text-xl font-extralight text-white/70">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <h1 className="text-[32px] leading-normal font-bold tracking-[-0.04em] text-[#d9d9d9]">
+              Pilih Phase
+            </h1>
+            <p className="text-2xl leading-[23px] font-light tracking-[-0.04em] text-[#ccc]">
               Pilih phase dan mulai permainan
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-5 pb-4">
+        <div className="flex flex-col gap-6">
           {phases.map((phase, i) => (
             <PhaseCard
               key={phase.id}
@@ -78,7 +80,7 @@ export function PhaseStartList({
       <button
         type="button"
         onClick={onBack}
-        className="mb-3 w-full shrink-0 rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+        className="h-12 w-full shrink-0 rounded-lg border border-[#353535] text-base font-medium tracking-[-0.04em] text-white/70 hover:text-white"
       >
         Kembali ke Lobby
       </button>
@@ -103,30 +105,40 @@ function PhaseCard({
   const thumbnail = assets.images.presentation.classroomExample
 
   return (
-    <div className="flex gap-[30px] rounded-[10px] border border-white/10 bg-[#121212] p-3.5">
-      <img
-        src={thumbnail}
-        alt=""
-        className="aspect-video w-[45%] shrink-0 rounded-lg object-cover"
-      />
-      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-sm text-white">Phase {index + 1}</span>
-          <h3 className="text-helden-yellow text-lg leading-tight font-semibold">{phase.title}</h3>
+    <div className="flex shrink-0 items-stretch overflow-clip rounded-lg border border-[#353535] shadow-[0_0_12px_rgba(253,164,0,0.2)]">
+      <div className="flex min-w-0 flex-1 p-4">
+        <div className="relative min-h-[150px] w-full flex-1">
+          <img
+            src={thumbnail}
+            alt=""
+            className="absolute inset-0 size-full rounded-lg object-cover"
+          />
         </div>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-6 py-6 pr-6 pl-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-base tracking-[-0.04em] text-white [text-shadow:0_0_12px_rgba(253,164,0,0.2)]">
+              Phase {index + 1}
+            </span>
+            <h3 className="text-helden-yellow text-lg leading-[23px] font-medium tracking-[-0.04em]">
+              {phase.title}
+            </h3>
+          </div>
 
-        <div className="flex items-center">
-          <Chip icon={meta.icon} text={meta.label} />
-          {phase.durationMin !== undefined && (
-            <Chip icon="mdi:clock-outline" text={`${phase.durationMin} min`} divided />
-          )}
+          <div className="flex items-start gap-2">
+            <Chip icon={meta.icon} text={meta.label} />
+            {phase.durationMin !== undefined && (
+              <Chip icon="mdi:clock-outline" text={`${phase.durationMin} min`} divided />
+            )}
+          </div>
         </div>
 
         {startable ? (
           <button
             type="button"
             onClick={onStart}
-            className="bg-helden-yellow-gradient flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium text-black"
+            className="bg-helden-yellow-gradient flex h-10 w-full shrink-0 items-center justify-center rounded-lg px-8 text-base font-medium tracking-[-0.04em] text-black"
           >
             Mulai Permainan
           </button>
@@ -134,7 +146,7 @@ function PhaseCard({
           <button
             type="button"
             disabled
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1C1C1E] text-sm font-medium text-white/40"
+            className="flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1b1b1b] px-8 text-base font-medium tracking-[-0.04em] text-white/25"
           >
             <Icon icon="mdi:lock" className="size-4" />
             Locked
@@ -148,11 +160,11 @@ function PhaseCard({
 function Chip({ icon, text, divided }: { icon: string; text: string; divided?: boolean }) {
   return (
     <span
-      className={`flex items-center gap-1.5 text-[13px] text-white ${
-        divided ? 'ml-3 border-l border-white/15 pl-3' : ''
+      className={`flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1 text-sm tracking-[-0.04em] text-white ${
+        divided ? 'border-l border-[#353535]' : ''
       }`}
     >
-      <Icon icon={icon} className="size-4 text-white/80" />
+      <Icon icon={icon} className="size-4 shrink-0" />
       {text}
     </span>
   )

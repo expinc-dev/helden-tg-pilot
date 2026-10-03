@@ -1,3 +1,4 @@
+import { CentralTeamProgress } from '@/components/CentralTeamProgress'
 import type { Phase } from '@helden-inc/tg-schema'
 
 import { useAnalyzeRoster, useAnalyzeSubmitted } from './status'
@@ -17,15 +18,14 @@ export function CentralAnalyzeGrid({
 }) {
   const roster = useAnalyzeRoster(sessionId, phase)
   const submitted = useAnalyzeSubmitted(sessionId, roster, phase.id)
-  const done = roster.filter((r) => submitted[r.writerId]).length
 
   return (
-    <div className="flex flex-col items-center gap-3 p-6 text-center text-white">
-      <h2 className="text-lg font-semibold">{phase.title}</h2>
-      <p className="text-sm text-white/60">Tandai sel yang tetap kosong di perangkatmu.</p>
-      <p className="text-xs text-gray-400">
-        {done}/{roster.length} sudah mengirim
-      </p>
-    </div>
+    <CentralTeamProgress
+      rows={roster.map((r) => ({
+        id: r.key,
+        label: r.label,
+        pct: submitted[r.writerId] ? 100 : 0,
+      }))}
+    />
   )
 }

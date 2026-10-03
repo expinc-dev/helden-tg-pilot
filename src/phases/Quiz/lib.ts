@@ -72,13 +72,16 @@ export function useTotalPlayers(sessionId: string | undefined): number {
   return count
 }
 
+// Running total for this device: the player's own, or — in team modes — its
+// team's (aggregates/teamScores/{teamId}).
 export function usePlayerScore(
   sessionId: string | undefined,
   playerId: string,
-  phase: Phase
+  phase: Phase,
+  teamId?: string
 ): number {
   const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
-  const path = isTeam ? `teamScores` : `scores/${playerId}`
+  const path = isTeam ? `teamScores/${teamId ?? '_none'}` : `scores/${playerId}`
   const [score, setScore] = useState(0)
   useEffect(() => {
     if (!sessionId) return

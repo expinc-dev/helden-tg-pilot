@@ -47,6 +47,12 @@ async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
     return
   }
   if (!phase || !t || t.authority !== 'server' || t.seconds <= 0) {
+    // A graded quiz arms its own per-question timer from the host view
+    // (useQuizStep.startTimer), and that view mounts as soon as the pointer
+    // flips — before this runs. Removing the node here would wipe the timer
+    // it just wrote. A leftover node from the previous phase is harmless:
+    // useTimer ignores a timer whose phaseId != the active phase.
+    if (phase?.content.type === 'quiz') return
     await remove(node)
     return
   }

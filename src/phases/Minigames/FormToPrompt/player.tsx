@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
@@ -106,33 +107,35 @@ export function FormToPromptPlayer({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#1F1F1F] p-4 text-white sm:p-6">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <div className="flex flex-col items-center gap-1 pb-5 text-center">
-          <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-        </div>
-
-        {submitted && selected ? (
+    <>
+      {submitted && selected ? (
+        <PlayerScreenFrame panelClassName="gap-5 p-4">
           <SubmittedPane pathLabel={selected.label} hasEmptyRequired={missing.length > 0} />
-        ) : selected ? (
-          <FormStep
-            path={selected}
-            seeds={seeds}
-            values={values}
-            missing={missing}
-            prompt={prompt}
-            copiedOnce={copiedOnce}
-            busy={busy}
-            onBack={() => setSelectedId(null)}
-            onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
-            onCopy={copyPrompt}
-            onSubmit={() => void submit()}
-          />
-        ) : (
-          <ChooserStep config={config} seeds={seeds} onPick={openPath} />
-        )}
-      </div>
-    </div>
+        </PlayerScreenFrame>
+      ) : (
+        <PlayerScreenFrame
+          panelClassName="gap-5 p-4"
+          onBack={selected ? () => setSelectedId(null) : undefined}
+        >
+          {selected ? (
+            <FormStep
+              path={selected}
+              seeds={seeds}
+              values={values}
+              missing={missing}
+              prompt={prompt}
+              copiedOnce={copiedOnce}
+              busy={busy}
+              onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+              onCopy={copyPrompt}
+              onSubmit={() => void submit()}
+            />
+          ) : (
+            <ChooserStep config={config} seeds={seeds} onPick={openPath} />
+          )}
+        </PlayerScreenFrame>
+      )}
+    </>
   )
 }
 
@@ -183,7 +186,7 @@ function ChooserStep({
             key={path.id}
             type="button"
             onClick={() => onPick(path)}
-            className="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-4 text-left transition hover:border-[#FFB800]"
+            className="flex items-start gap-3 rounded-xl border border-[#353535] p-4 text-left transition hover:border-[#FDDB00]"
           >
             <span className="mt-0.5 text-sm font-bold text-[#FFB800]">{i + 1}</span>
             <span className="flex flex-col gap-0.5">
@@ -212,7 +215,6 @@ function FormStep({
   prompt,
   copiedOnce,
   busy,
-  onBack,
   onChange,
   onCopy,
   onSubmit,
@@ -224,7 +226,6 @@ function FormStep({
   prompt: string
   copiedOnce: boolean
   busy: boolean
-  onBack: () => void
   onChange: (key: string, value: string) => void
   onCopy: () => void
   onSubmit: () => void
@@ -233,17 +234,10 @@ function FormStep({
 
   return (
     <div className="flex flex-col gap-5 pb-6">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1 self-start text-xs text-white/40 hover:text-white/70"
-      >
-        <Icon icon="mdi:chevron-left" className="size-4" />
-        Ganti jalur
-      </button>
-
       <div className="flex flex-col gap-0.5">
-        <h2 className="text-lg font-bold text-[#FFB800]">{path.label}</h2>
+        <h2 className="text-xl leading-[1.2] font-semibold tracking-[-0.04em] text-white">
+          {path.label}
+        </h2>
         {path.description && <p className="text-xs leading-5 text-white/50">{path.description}</p>}
       </div>
 
@@ -261,7 +255,7 @@ function FormStep({
                 value={values[field.key] ?? ''}
                 placeholder={seed ? undefined : field.placeholderExample}
                 onChange={(e) => onChange(field.key, e.target.value)}
-                className="resize-none rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white transition placeholder:text-white/25 placeholder:italic focus:border-[#FFB800] focus:outline-none"
+                className="resize-none rounded-lg border border-[#353535] bg-[#1C1C1E] px-3 py-2.5 text-sm text-white transition placeholder:text-white/30 placeholder:italic focus:border-[#FDDB00] focus:outline-none"
               />
               {seed && (
                 <span className="text-xs text-[#FFB800]/70">
@@ -278,7 +272,7 @@ function FormStep({
         {/* Read-only, monospace, scrollable: the participant must be able to see
             the whole thing before sending it, and the full prompt is far taller
             than a phone screen. */}
-        <pre className="max-h-56 overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-3 text-[11px] leading-5 whitespace-pre-wrap text-white/70">
+        <pre className="max-h-56 overflow-y-auto rounded-lg border border-[#353535] bg-black/40 p-3 text-[11px] leading-5 whitespace-pre-wrap text-white/70">
           {prompt}
         </pre>
       </div>
@@ -296,7 +290,7 @@ function FormStep({
         <button
           type="button"
           onClick={onCopy}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#FFB800] py-3.5 text-center text-sm font-semibold text-black transition hover:opacity-90"
+          className="bg-helden-yellow-gradient flex w-full items-center justify-center gap-2 rounded-lg py-3.5 text-center text-sm font-semibold text-black transition hover:opacity-90"
         >
           <Icon icon="mdi:content-copy" className="size-4" />
           {copiedOnce ? 'Salin lagi' : 'Salin prompt'}
@@ -305,7 +299,7 @@ function FormStep({
           href="https://gemini.google.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/5 py-3.5 text-center text-sm font-semibold text-white transition hover:border-[#FFB800]"
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#353535] py-3.5 text-center text-sm font-semibold text-white transition hover:border-[#FDDB00]"
         >
           <Icon icon="mdi:open-in-new" className="size-4" />
           Buka Gemini

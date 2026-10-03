@@ -1,3 +1,5 @@
+import { CentralGalleryFrame } from '@/components/CentralGalleryFrame'
+
 import { useScoreMaps } from '@/lib/sync/useScoreboard'
 
 import type { Role } from '../PhaseRouter'
@@ -40,6 +42,18 @@ export function EndRenderer({
   sessionId: string
 }) {
   const view = resolveEndContent(content, role, title)
+
+  // Central: the shared gallery frame (gold title, light subtitle) with the
+  // final scores below it, scaled up to be readable from the back of the room.
+  if (role === 'central') {
+    return (
+      <CentralGalleryFrame title={view.title || undefined} subtitle={view.text || undefined}>
+        <div className="mx-auto w-full max-w-2xl overflow-y-auto text-center" style={{ zoom: 1.6 }}>
+          <ScoresPane sessionId={sessionId} />
+        </div>
+      </CentralGalleryFrame>
+    )
+  }
 
   return (
     <div className="bg-helden-base flex min-h-dvh flex-col items-center justify-center gap-10 p-8 text-white">

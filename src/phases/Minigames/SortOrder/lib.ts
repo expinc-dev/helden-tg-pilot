@@ -27,7 +27,9 @@ export function useSortOrderRoster(
 ): SortOrderParticipant[] {
   const teams = useTeams(sessionId)
   const { players } = usePresence(sessionId)
-  if (isTeamMode(phase)) {
+  // Single Player sessions have no teams even when the phase is authored for
+  // team mode — fall back to the players so the host/central spread is not empty.
+  if (isTeamMode(phase) && teams.length > 0) {
     return teams.map((t) => ({ key: t.id, writerId: t.ownerPlayerId, label: t.teamName ?? t.id }))
   }
   return Object.entries(players).map(([id, p]) => ({ key: id, writerId: id, label: p.name }))

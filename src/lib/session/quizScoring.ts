@@ -37,6 +37,10 @@ export async function scoreQuizQuestion(opts: {
   const phaseStartMs =
     questionStartMs ?? (pointerSnap.val()?.changedAt as number | undefined) ?? Date.now()
 
+  // An opinion question carries no answer key (correctId ''): answering it is the
+  // only signal, so an answer counts as a positive verdict (never "wrong") and
+  // only participation scoring awards points.
+  const graded = correctId !== ''
   const isTeamMode =
     phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
 
@@ -51,8 +55,8 @@ export async function scoreQuizQuestion(opts: {
     if (!ans) continue
     const submittedAt = typeof ans.submittedAt === 'number' ? ans.submittedAt : Date.now()
     const elapsedMs = Math.max(0, submittedAt - phaseStartMs)
-    const correct = ans.value === correctId
-    playerCorrect[playerId] = correct
+    const correct = graded && ans.value === correctId
+    playerCorrect[playerId] = graded ? correct : true
 
     if (isTeamMode && p.teamId) {
       if (!teamAnswers[p.teamId]) teamAnswers[p.teamId] = []
@@ -102,10 +106,10 @@ export async function scoreQuizQuestion(opts: {
           }
         }
         if (best.optionId) {
-          teamCorrect = best.optionId === correctId
+          teamCorrect = graded ? best.optionId === correctId : true
           const elapsedMs = Math.max(0, best.earliestAt - phaseStartMs)
           teamScore = scoreAnswer(phase.scoring, {
-            correct: teamCorrect,
+            correct: graded && teamCorrect,
             answered: true,
             elapsedMs,
             phaseDurationMs,
@@ -156,4 +160,36 @@ export async function scoreQuizQuestion(opts: {
     patch[`questionOutcome/${qId}/${key}`] = r.outcome
   }
   await update(eref(base), patch)
+}
+
+// Safety net for the phase boundary: a host who leaves a quiz with "Tahap
+// Selanjutnya" without pressing "Perlihatkan Jawaban" on the last question would
+// otherwise leave that question unscored. Scores every question that has answers
+// but no questionScores node yet (scoreQuizQuestion stays idempotent, so this is
+// also safe after a normal reveal).
+export async function scoreUnscoredQuestions(opts: {
+  sessionId: string
+  phase: Phase
+  questions: { correctId?: string }[]
+  timerSeconds: number
+}) {
+  const { sessionId, phase, questions, timerSeconds } = opts
+  const [playersSnap, scoredSnap] = await Promise.all([
+    get(eref(`sessions/${sessionId}/players`)),
+    get(eref(`sessions/${sessionId}/aggregates/questionScores`)),
+  ])
+  const players = (playersSnap.val() ?? {}) as Record<string, { answers?: Record<string, unknown> }>
+  const scored = (scoredSnap.val() ?? {}) as Record<string, unknown>
+  for (let i = 0; i < questions.length; i++) {
+    const qId = `${phase.id}_q${i}`
+    if (scored[qId]) continue
+    if (!Object.values(players).some((p) => p?.answers?.[qId])) continue
+    await scoreQuizQuestion({
+      sessionId,
+      phase,
+      questionIndex: i,
+      correctId: questions[i].correctId ?? '',
+      timerSeconds,
+    })
+  }
 }

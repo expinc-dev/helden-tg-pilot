@@ -126,11 +126,46 @@ function HeroImage({
   heading?: string
   fullBleed?: boolean
 }) {
+  // Projected slide (presentation): photo fills the card, and the title +
+  // caption sit in a translucent bar along the bottom (Figma host slide).
+  if (fullBleed) {
+    const caption = block.caption && block.caption !== block.title ? block.caption : undefined
+    return (
+      <div className="relative flex min-h-0 flex-1 flex-col justify-end">
+        <img
+          src={block.url}
+          alt={block.caption ?? block.title ?? ''}
+          className="absolute inset-0 size-full object-cover"
+        />
+        {heading && (
+          <div
+            className="absolute top-4 right-4 rounded border px-3 py-1.5"
+            style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.6)' }}
+          >
+            <p className="text-sm font-semibold text-[#FFB800]">{heading}</p>
+          </div>
+        )}
+        {(block.title || caption) && (
+          <div className="relative flex flex-col gap-2 bg-[rgba(8,8,8,0.64)] p-6 leading-normal">
+            {block.title && (
+              <p className="text-lg font-bold tracking-[-0.04em] text-[#fddb00]">
+                {renderInline(block.title)}
+              </p>
+            )}
+            {caption && (
+              <div className="text-sm font-medium tracking-[-0.04em] text-white">
+                {renderRichText(caption)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <>
-      <div
-        className={fullBleed ? 'relative min-h-0 flex-1' : 'relative h-[42vh] min-h-72 shrink-0'}
-      >
+      <div className="relative h-[42vh] min-h-72 shrink-0">
         <img src={block.url} alt={block.caption ?? ''} className="size-full object-cover" />
         {/* Solid dark base for a good stretch at the bottom (not just a thin
         fade) so the caption stays legible regardless of how bright the photo

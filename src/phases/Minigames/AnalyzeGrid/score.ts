@@ -13,6 +13,16 @@ export const analyzeGridConfigSchema = z.object({
   colLabels: z.array(z.string()).min(1),
   emptyCells: z.array(z.object({ row: z.string(), col: z.string() })).min(1),
   successMessage: z.string(),
+  // Optional presentation fields (storyboard): a heading over the grid and an
+  // opening screen (photo + numbered steps) shown before it.
+  title: z.string().optional(),
+  intro: z
+    .object({
+      imageUrl: z.string().optional(),
+      title: z.string().optional(),
+      steps: z.array(z.string()).default([]),
+    })
+    .optional(),
   analysisQuestions: z.array(z.record(z.string(), z.unknown())).min(1),
 })
 export type AnalyzeGridConfig = z.infer<typeof analyzeGridConfigSchema>

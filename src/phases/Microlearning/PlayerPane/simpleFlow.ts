@@ -1,20 +1,22 @@
-import type { MicroStep, MicrolearningContent } from '@helden-inc/tg-schema'
+import type { MicroStep, MicrolearningContent, Question } from '@helden-inc/tg-schema'
 
-// Pure helpers for the "one question per screen" player flow (sequential
-// microlearning whose steps are just [text?] + one simple question). Free of
-// Firebase/React so it stays unit-checkable under plain `npx tsx`.
+// Pure helpers for the "one screen per step" player flow (sequential
+// microlearning whose steps are only text / headings / buttons and simple
+// questions). Free of Firebase/React so it stays unit-checkable under plain
+// `npx tsx`.
 
 const SIMPLE_Q_TYPES = new Set(['single_choice', 'multi_choice', 'open_text', 'short_answer'])
+const SIMPLE_BLOCK_KINDS = new Set(['text', 'heading', 'image', 'button', 'question'])
 
-// ≤1 text block + exactly 1 question block of a simple qType. Anything else
-// (images, buttons, path/order/scan questions…) keeps the original block flow.
+// Every block is text/heading/image/button or a question of a simple qType (any
+// number of each, including zero questions). Video, html, timers and
+// path/order/scan/scale… questions keep the original block-by-block flow.
 export function isSimpleStep(step: MicroStep): boolean {
-  const questions = step.blocks.filter((b) => b.kind === 'question')
-  const texts = step.blocks.filter((b) => b.kind === 'text')
-  if (questions.length !== 1 || texts.length > 1) return false
-  if (questions.length + texts.length !== step.blocks.length) return false
-  const q = questions[0]
-  return q.kind === 'question' && SIMPLE_Q_TYPES.has(q.question.qType)
+  if (step.blocks.length === 0) return false
+  return step.blocks.every((b) => {
+    if (!SIMPLE_BLOCK_KINDS.has(b.kind)) return false
+    return b.kind !== 'question' || SIMPLE_Q_TYPES.has(b.question.qType)
+  })
 }
 
 export function isSequentialSimple(content: MicrolearningContent): boolean {
@@ -23,8 +25,23 @@ export function isSequentialSimple(content: MicrolearningContent): boolean {
   )
 }
 
+// Index of the step's first question block (-1 when it has none).
 export function questionBlockIndex(step: MicroStep): number {
   return step.blocks.findIndex((b) => b.kind === 'question')
+}
+
+// Markdown → comparable plain text (for "does this intro just repeat the
+// question?" checks).
+export function plainText(markdown: string): string {
+  return markdown
+    .replace(/[*_#`>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+export function plainPrompt(question: Question): string {
+  return plainText(question.prompt.map((b) => (b.kind === 'text' ? b.markdown : '')).join(' '))
 }
 
 // "Contoh: …" line authored in the step's intro text, reused as the textarea

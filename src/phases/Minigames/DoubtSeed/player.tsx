@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import {
   DndContext,
   type DragEndEvent,
@@ -14,6 +15,9 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import type { Phase } from '@helden-inc/tg-schema'
+import { Icon } from '@iconify/react'
+
+import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
 import { setDoubtSeedShared, submitDoubtSeedAnswer } from '@/lib/session/doubtSeed'
 
@@ -144,30 +148,52 @@ export function DoubtSeedPlayer({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#1F1F1F] p-4 sm:p-6">
-      <div className="mx-auto w-full max-w-md flex-1">
-        <div className="flex flex-col items-center gap-1 pb-5 text-center">
-          <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-        </div>
-        {instructions && <p className="pb-4 text-center text-sm text-white/50">{instructions}</p>}
-
+    <>
+      <PlayerScreenFrame
+        panelClassName="gap-6 p-4"
+        footer={
+          <ActionButton
+            disabled={filledCount !== dropZones || busy}
+            onClick={() => setConfirmSubmit(true)}
+          >
+            {busy ? 'Mengirim…' : filledCount === dropZones ? 'Selanjutnya' : 'Isi semua slot dulu'}
+          </ActionButton>
+        }
+      >
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className="mb-6 flex flex-col gap-2.5">
-            {slots.map((slot, i) => (
-              <SlotDropzone
-                key={i}
-                index={i}
-                slot={slot}
-                onRemove={() => setSlots((prev) => prev.map((s, j) => (j === i ? null : s)))}
-              />
-            ))}
+          {/* Figma "Penyusunan Kartu": title + hint, dashed card slots, then a
+              second bordered "Daftar Kartu" panel with the draggable pool. */}
+          <div className="flex flex-col gap-4 rounded-lg border border-[#353535] p-4">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <h2 className="text-xl leading-[1.2] font-semibold tracking-[-0.04em] text-white">
+                Penyusunan Kartu
+              </h2>
+              {instructions && (
+                <p className="text-sm leading-[1.3] tracking-[-0.04em] text-[#ccc]">
+                  {instructions}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {slots.map((slot, i) => (
+                <SlotDropzone
+                  key={i}
+                  index={i}
+                  slot={slot}
+                  onRemove={() => setSlots((prev) => prev.map((s, j) => (j === i ? null : s)))}
+                />
+              ))}
+            </div>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-2">
-            {pool.map((card) => {
-              if (slots.some((s) => s?.id === card.id)) return null
-              return <PoolCard key={card.id} card={card} disabled={filledCount >= dropZones} />
-            })}
+          <div className="flex flex-col gap-4 rounded-lg border border-[#353535] p-4">
+            <p className="text-base tracking-[-0.04em] text-white">Daftar Kartu</p>
+            <div className="grid grid-cols-4 gap-2">
+              {pool.map((card) => {
+                if (slots.some((s) => s?.id === card.id)) return null
+                return <PoolCard key={card.id} card={card} disabled={filledCount >= dropZones} />
+              })}
+            </div>
           </div>
 
           <DragOverlay>
@@ -178,30 +204,21 @@ export function DoubtSeedPlayer({
             ) : null}
           </DragOverlay>
         </DndContext>
-
-        <button
-          type="button"
-          disabled={filledCount !== dropZones || busy}
-          onClick={() => setConfirmSubmit(true)}
-          className="w-full rounded-lg bg-[#FFB800] py-3.5 text-center text-sm font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-[#2A2A2A] disabled:text-white/30"
-        >
-          {busy ? 'Mengirim…' : filledCount === dropZones ? 'Selanjutnya' : 'Isi semua slot dulu'}
-        </button>
-        {confirmSubmit && (
-          <ConfirmDialog
-            title="Apakah kamu yakin?"
-            message="Jawaban yang sudah dikirim tidak bisa diubah lagi."
-            confirmLabel="Ya, kirim"
-            cancelLabel="Periksa lagi"
-            onCancel={() => setConfirmSubmit(false)}
-            onConfirm={() => {
-              setConfirmSubmit(false)
-              void submit()
-            }}
-          />
-        )}
-      </div>
-    </div>
+      </PlayerScreenFrame>
+      {confirmSubmit && (
+        <ConfirmDialog
+          title="Apakah kamu yakin?"
+          message="Jawaban yang sudah dikirim tidak bisa diubah lagi."
+          confirmLabel="Ya, kirim"
+          cancelLabel="Periksa lagi"
+          onCancel={() => setConfirmSubmit(false)}
+          onConfirm={() => {
+            setConfirmSubmit(false)
+            void submit()
+          }}
+        />
+      )}
+    </>
   )
 }
 
@@ -218,25 +235,25 @@ function SlotDropzone({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-h-12 items-center rounded-lg border p-2 text-sm ${
+      className={`flex aspect-[3/4] items-center justify-center rounded-lg border p-1 text-center text-xs ${
         slot
-          ? 'border-[#FFB800] bg-[rgba(253,219,0,0.12)] text-white'
+          ? 'border-[#FDDB00] bg-[rgba(253,219,0,0.08)] text-white'
           : isOver
-            ? 'border-[#FFB800] bg-[rgba(253,219,0,0.18)]'
-            : 'border-dashed border-white/25 bg-white/5 text-white/30'
+            ? 'border-solid border-[#FDDB00] bg-[rgba(253,219,0,0.12)]'
+            : 'border-dashed border-[#6b6b6b] bg-black/20 text-white/40'
       }`}
     >
       {slot ? (
         <button
           type="button"
           onClick={onRemove}
-          className="flex w-full items-center justify-between font-semibold text-[#FFB800]"
+          aria-label="Lepas kartu"
+          className="size-full font-semibold text-[#FDDB00]"
         >
           {slot.text || slot.id}
-          <span className="text-xs text-white/40">tap ↺</span>
         </button>
       ) : (
-        <span className="w-full text-center">Slot {index + 1}</span>
+        <Icon icon="mdi:plus" className="size-5" />
       )}
     </div>
   )
@@ -253,8 +270,8 @@ function PoolCard({ card, disabled }: { card: Card; disabled: boolean }) {
       type="button"
       {...attributes}
       {...listeners}
-      className={`touch-none rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/80 transition select-none ${
-        isDragging ? 'opacity-40' : 'hover:border-[#FFB800]'
+      className={`flex aspect-[3/4] touch-none items-center justify-center rounded-lg border border-[#353535] bg-[#141414] p-1 text-center text-xs leading-tight text-white transition select-none ${
+        isDragging ? 'opacity-40' : 'hover:border-[#FDDB00]'
       } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
     >
       {card.text || card.id}
