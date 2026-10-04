@@ -15,12 +15,12 @@ import { PhaseStartList } from '@/pages/host/_shared/PhaseStartList'
 import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
-import { toast } from 'sonner'
 
 import { useCodeInputAllSolved } from '@/phases/CodeInput/lib'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { VideoHostScreen } from '@/phases/Video'
 
+import { copyToClipboard } from '@/lib/clipboard'
 import { demoBundle } from '@/lib/demoBundle'
 import {
   endLevel,
@@ -268,6 +268,9 @@ export function HostView() {
 
   // Live: modular → picker (when at idle) or phase render + End level.
   //       sequence → original Next phase button.
+  // Session over: the closing screen replaces the live shell entirely.
+  if (meta.status === 'ended') return <EndScreen sessionId={sessionId} role="host" />
+
   if (meta.status === 'live' && onPicker) {
     const pendingPhase = pendingPhaseId ? demoBundle.phases[pendingPhaseId] : null
     if (pendingPhase) {
@@ -326,8 +329,6 @@ export function HostView() {
       <div className="absolute top-[10px] right-[10px] z-10">
         <Header />
       </div>
-
-      {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
 
       {/* Quiz renders its own card + action button (Figma: card, 40px gap,
           64px button), so it sits directly in the shell. Every other phase
@@ -497,8 +498,10 @@ function LobbyView({
 
   const copyJoinLink = (role: 'central' | 'player') => {
     const url = `${window.location.origin}/join/${role}?code=${joinCode}`
-    void navigator.clipboard?.writeText(url)
-    toast.success(role === 'central' ? 'Link Central disalin' : 'Link Player disalin')
+    // copyToClipboard falls back to execCommand on insecure LAN HTTP, where
+    // navigator.clipboard is undefined and the copy used to be silently skipped
+    // (the toast still said "disalin" while the old clipboard text stayed).
+    void copyToClipboard(url, role === 'central' ? 'Link Central disalin' : 'Link Player disalin')
     setCopyOpen(false)
   }
 

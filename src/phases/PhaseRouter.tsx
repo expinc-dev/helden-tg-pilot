@@ -203,7 +203,16 @@ function PhaseContentSwitch({
       )
     }
     case 'end':
-      return <EndRenderer content={content} title={phase.title} role={role} sessionId={sessionId} />
+      return (
+        <EndRenderer
+          content={content}
+          title={phase.title}
+          role={role}
+          sessionId={sessionId}
+          playerId={playerId}
+          teamId={teamId}
+        />
+      )
     default:
       return (
         <div className="p-8 text-sm text-gray-500">

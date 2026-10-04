@@ -47,6 +47,7 @@ export function TeamSelfieRenderer(props: MinigameRendererProps<TeamSelfieConfig
       sessionId={sessionId}
       playerId={playerId}
       teamId={teamId}
+      teamRole={teamRole}
     />
   )
 }

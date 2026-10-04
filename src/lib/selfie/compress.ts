@@ -23,6 +23,9 @@ export interface CompressOptions {
   mirror?: boolean
 }
 
+/** Stay under database.rules.json's `image` cap (< 400,000 characters). */
+const MAX_DATA_URL_CHARS = 380_000
+
 export const DEFAULT_COMPRESS: CompressOptions = { maxPx: 800, quality: 0.6 }
 
 /**
@@ -77,7 +80,14 @@ export function compressToJpegDataUrl(
   }
   ctx.drawImage(source, 0, 0, width, height)
 
-  const url = canvas.toDataURL('image/jpeg', opts.quality)
+  let quality = opts.quality
+  let url = canvas.toDataURL('image/jpeg', quality)
+  // The RTDB rules reject an image string of 400,000+ characters: step the
+  // quality down until the write fits instead of failing it at upload time.
+  while (url.length > MAX_DATA_URL_CHARS && quality > 0.3) {
+    quality = Math.max(0.3, quality - 0.1)
+    url = canvas.toDataURL('image/jpeg', quality)
+  }
   // toDataURL silently falls back to "data:," for an empty canvas.
-  return url.startsWith('data:image/') ? url : null
+  return url.startsWith('data:image/') && url.length <= MAX_DATA_URL_CHARS ? url : null
 }

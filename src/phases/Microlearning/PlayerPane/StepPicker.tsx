@@ -84,7 +84,6 @@ export function StepPickerGrid({
 // }
 
 const GOLD_GRADIENT = 'linear-gradient(120deg, #FDDB00 14.62%, #FDA400 68.41%)'
-const CARD_GRADIENT = 'linear-gradient(252deg, #565656 -38.22%, #000 41.21%)'
 
 // Tag and trophy are positioned directly on top of the track's own two ends
 // (not laid out as separate flex siblings with a gap) so the whole thing
@@ -93,8 +92,8 @@ const CARD_GRADIENT = 'linear-gradient(252deg, #565656 -38.22%, #000 41.21%)'
 function LevelProgressBar({ pct }: { pct: number }) {
   return (
     <div
-      className="rounded-lg border p-3"
-      style={{ borderColor: '#353535', background: CARD_GRADIENT, backdropFilter: 'blur(21px)' }}
+      className="bg-helden-card-gradient rounded-lg border p-3"
+      style={{ borderColor: '#353535', backdropFilter: 'blur(21px)' }}
     >
       <div className="relative h-8">
         <div

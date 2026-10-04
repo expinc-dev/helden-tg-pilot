@@ -1,9 +1,10 @@
 import { useState } from 'react'
 
 import { SelfieCapture } from '@/components/camera/SelfieCapture'
-import { serverTimestamp, set } from 'firebase/database'
+import { get, serverTimestamp, set } from 'firebase/database'
 
-import { eref } from '@/lib/firebase'
+import { auth, eref } from '@/lib/firebase'
+import { ensureOwnership } from '@/lib/session/presence'
 
 import { type TeamSelfieConfig, selfieKeyId } from './score'
 import { useSelfie } from './useSelfies'
@@ -28,12 +29,14 @@ export function TeamSelfiePlayer({
   sessionId,
   playerId,
   teamId,
+  teamRole,
 }: {
   phase: Phase
   config: TeamSelfieConfig
   sessionId: string
   playerId: string
   teamId?: string
+  teamRole?: 'solo' | 'leader' | 'member'
 }) {
   const keyId = selfieKeyId(teamId, playerId)
   const existing = useSelfie(sessionId, keyId)
@@ -45,15 +48,42 @@ export function TeamSelfiePlayer({
   const canRetake = config.retakeAllowed
   const showCamera = !hasPhoto || editing
 
+  // In a team session the photo belongs to the TEAM key. `teamId` loads async
+  // (useMyTeamId starts undefined), and until it does selfieKeyId would fall
+  // back to the player id and the photo would land under the wrong key.
+  const teamPending = teamRole === 'leader' && !teamId
+
   const save = async (dataUrl: string) => {
+    if (teamPending) return
     setBusy(true)
     setError(null)
-    try {
-      await set(eref(`sessions/${sessionId}/selfies/${keyId}`), {
+    const writePhoto = () =>
+      set(eref(`sessions/${sessionId}/selfies/${keyId}`), {
         image: dataUrl,
         createdAt: serverTimestamp(),
         updatedBy: playerId,
       })
+    try {
+      try {
+        await writePhoto()
+      } catch (first) {
+        if (!isPermissionError(first)) throw first
+        // The rules check playerOwners/{owner} === auth.uid. If that entry is
+        // missing or stale for this device, re-claim it and retry once.
+        await ensureOwnership(sessionId, 'player', playerId).catch(() => undefined)
+        await writePhoto()
+      }
+    } catch (e) {
+      // Denied write / offline: surface it (with the failing path) instead of
+      // leaving the player on a frozen "Menyimpan…".
+      console.error('selfie write failed', e)
+      setError(await describeSaveError(e, sessionId, playerId, keyId))
+      setBusy(false)
+      return
+    }
+    // The photo is on the wall at this point. The score marker below is
+    // best-effort: a failure there must not leave the player stuck on the camera.
+    try {
       // Scoring reads players/{id}/answers/{phaseId}, NOT selfies/ — so a
       // marker has to land there or the flushed score is always 0 even though
       // the photo is on the wall. Small on purpose: the image is already in
@@ -64,18 +94,11 @@ export function TeamSelfiePlayer({
         value: { hasPhoto: true, keyId },
         submittedAt: serverTimestamp(),
       })
-      setEditing(false)
     } catch (e) {
-      // Denied write / offline: surface it instead of leaving the player on a
-      // frozen "Menyimpan…" (the failure mode of the earlier minigames).
-      setError(
-        e instanceof Error && e.message.includes('permission')
-          ? 'Tidak punya izin menyimpan foto untuk tim ini.'
-          : 'Gagal mengunggah foto. Coba lagi.'
-      )
-    } finally {
-      setBusy(false)
+      console.error('selfie score marker failed', e)
     }
+    setEditing(false)
+    setBusy(false)
   }
 
   if (!keyId) {
@@ -95,6 +118,8 @@ export function TeamSelfiePlayer({
         compress={{ maxPx: config.maxImagePx, quality: config.jpegQuality }}
         onSave={save}
         onClose={() => (hasPhoto ? setEditing(false) : undefined)}
+        error={error}
+        canSave={!teamPending}
       />
     )
   }
@@ -132,4 +157,32 @@ export function TeamSelfiePlayer({
       </div>
     </div>
   )
+}
+
+const isPermissionError = (e: unknown) =>
+  e instanceof Error && /permission|PERMISSION_DENIED/i.test(e.message)
+
+// RTDB client errors read "permission_denied at /events/.../<path>: Client doesn't
+// have permission…". Pull the denied path out, and check whether this device is
+// the registered owner, so a failure on a real phone is self-explanatory.
+async function describeSaveError(
+  e: unknown,
+  sessionId: string,
+  playerId: string,
+  keyId: string
+): Promise<string> {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (!isPermissionError(e)) {
+    return `Gagal mengunggah foto. Periksa koneksi lalu coba lagi. (${msg.slice(0, 120)})`
+  }
+  const path = /at (\/[^:\s]+)/.exec(msg)?.[1] ?? `selfies/${keyId}`
+  let owner = 'tidak diketahui'
+  try {
+    const snap = await get(eref(`sessions/${sessionId}/playerOwners/${playerId}`))
+    const uid = auth.currentUser?.uid
+    owner = !snap.exists() ? 'belum terdaftar' : snap.val() === uid ? 'cocok' : 'tidak cocok'
+  } catch {
+    // diagnostic only
+  }
+  return `Penyimpanan foto ditolak oleh aturan database. Jalur: ${path} · kepemilikan perangkat: ${owner}. Jika perangkat ini pemimpin tim, minta admin men-deploy rules database terbaru (blok "selfies").`
 }

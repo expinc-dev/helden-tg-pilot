@@ -48,7 +48,9 @@ export function KahootOptions({
       {options.map((opt, i) => {
         const color = OPTION_COLORS[i % OPTION_COLORS.length]
         const body = BODY[i % BODY.length]
-        const isCorrect = revealed && correctId === opt.id
+        // No answer key (opinion question): every option stays lit — nothing is
+        // marked wrong or faded.
+        const isCorrect = revealed && (!correctId || correctId === opt.id)
         const isFaded = revealed && !isCorrect
         return (
           <div

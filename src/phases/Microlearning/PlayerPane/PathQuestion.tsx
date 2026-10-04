@@ -22,8 +22,6 @@ type Case = PathQuestion['cases'][number]
 // caller is responsible for merging, not RTDB.
 type CaseAnswers = Record<string, string>
 
-const CARD_GRADIENT = 'linear-gradient(252deg, #565656 -38.22%, #000 41.21%)'
-
 // One case's box in the picker grid. Deliberately identical markup/styling
 // for every case regardless of `hidden` — the parent only ever passes cases
 // that are CURRENTLY meant to be visible (non-hidden, or hidden-and-unlocked —
@@ -48,10 +46,9 @@ function CaseCard({
       type="button"
       disabled={disabled}
       onClick={onSelect}
-      className="relative flex aspect-square flex-col justify-between overflow-hidden rounded-lg p-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
+      className="bg-helden-card-gradient relative flex aspect-square flex-col justify-between overflow-hidden rounded-lg p-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
       style={{
         border: done ? '0.5px solid #FDDB00' : '0.5px solid rgba(255, 255, 255, 0.15)',
-        background: CARD_GRADIENT,
         boxShadow: done ? '0 0 12px 0 rgba(253, 164, 0, 0.20)' : undefined,
       }}
     >

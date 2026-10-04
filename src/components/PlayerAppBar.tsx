@@ -6,10 +6,16 @@ import { FullscreenButton } from './FullscreenToggle'
 // fill with a #303030 bottom hairline; 14px-high wordmark on the left (or a
 // custom `left` node such as a back chevron) and a 24px fullscreen button on
 // the right.
-export function PlayerAppBar({ left }: { left?: React.ReactNode }) {
+export function PlayerAppBar({
+  left,
+  className = '',
+}: {
+  left?: React.ReactNode
+  className?: string
+}) {
   return (
     <header
-      className="flex h-14 shrink-0 items-center justify-between border-b pr-4 pl-6"
+      className={`flex h-14 shrink-0 items-center justify-between border-b pr-4 pl-6 ${className}`}
       style={{ borderColor: '#303030', background: 'rgba(8, 8, 8, 0.20)' }}
     >
       {left ?? (

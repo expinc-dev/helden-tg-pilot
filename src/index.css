@@ -18,6 +18,19 @@
   background-image: linear-gradient(120deg, #fddb00 14.62%, #fda400 68.41%);
 }
 
+/* Figma pill / card gradient: #565656 fading into black. The start stop is
+   NEGATIVE (-38.22%, i.e. off the element) — that is what makes it a soft sheen.
+   The Figma MCP prints it without the minus ("38.22%"), which collapses the
+   fade into a hard edge and a flat black fill. Use background-image so
+   bg-clip / bg-color utilities keep working. */
+@utility bg-helden-pill-gradient {
+  background-image: linear-gradient(206deg, #565656 -38.22%, #000 41.21%);
+}
+
+@utility bg-helden-card-gradient {
+  background-image: linear-gradient(252deg, #565656 -38.22%, #000 41.21%);
+}
+
 /* Card / tile surface: light grey fading into black at 70.3% opacity. */
 @utility bg-helden-surface-gradient {
   background: linear-gradient(180deg, #565656 0%, rgb(0 0 0 / 0.703) 100%);

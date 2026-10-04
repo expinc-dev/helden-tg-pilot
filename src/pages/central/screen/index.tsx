@@ -69,7 +69,8 @@ export function CentralView() {
     )
   }
 
-  if (meta?.status === 'ended' && sessionId) return <EndScreen sessionId={sessionId} />
+  if (meta?.status === 'ended' && sessionId)
+    return <EndScreen sessionId={sessionId} role="central" />
 
   // Full-bleed phases escape the standard live wrapper's padding: idle's
   // lobby-style layout, team_selfie's wall-filling photo mosaic (HLN-018), and

@@ -130,12 +130,17 @@ function HeroImage({
   // caption sit in a translucent bar along the bottom (Figma host slide).
   if (fullBleed) {
     const caption = block.caption && block.caption !== block.title ? block.caption : undefined
+    // A slide that is only a picture (authored copy baked into the image, no
+    // title/caption overlay) must show the WHOLE image — cropping it to the
+    // frame cuts the text off on the portrait host and on non-16:9 projectors.
+    // A photo slide with an overlay bar keeps the edge-to-edge crop.
+    const imageOnly = !block.title && !caption && !heading
     return (
       <div className="relative flex min-h-0 flex-1 flex-col justify-end">
         <img
           src={block.url}
           alt={block.caption ?? block.title ?? ''}
-          className="absolute inset-0 size-full object-cover"
+          className={`absolute inset-0 size-full ${imageOnly ? 'object-contain' : 'object-cover'}`}
         />
         {heading && (
           <div

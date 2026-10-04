@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import type { Phase } from '@helden-inc/tg-schema'
 import { onValue } from 'firebase/database'
@@ -50,18 +50,22 @@ export function PlayerQuiz({
   const [submitting, setSubmitting] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedValue, setSelectedValue] = useState<number | null>(null)
-  const lastStepRef = useRef(-1)
   const timers = resolveTimers(content)
 
-  useEffect(() => {
-    if (quizStep.step !== lastStepRef.current) {
-      lastStepRef.current = quizStep.step
-      setSubmitted(null)
-      setSubmitting(false)
-      setSelectedId(null)
-      setSelectedValue(null)
-    }
-  }, [quizStep.step])
+  // The answer state belongs to ONE question. It is keyed by phase + step, not by
+  // step alone: two consecutive quiz phases (Level 3A → 3B) both sit on step 0,
+  // so a step-only reset never fired and the previous quiz's "Jawaban Tersimpan"
+  // carried over. Reset during render (not in an effect) so the stale answer is
+  // never painted for a frame.
+  const questionKey = `${phaseId}_q${quizStep.step}`
+  const [stateKey, setStateKey] = useState(questionKey)
+  if (stateKey !== questionKey) {
+    setStateKey(questionKey)
+    setSubmitted(null)
+    setSubmitting(false)
+    setSelectedId(null)
+    setSelectedValue(null)
+  }
 
   useEffect(() => {
     const qId = `${phaseId}_q${quizStep.step}`
@@ -116,6 +120,9 @@ export function PlayerQuiz({
   if (isScaleQuestion(q)) {
     return (
       <ScaleStage
+        // Remount per question: ScaleStage keeps the picked point in its own state,
+        // which otherwise survives into the next statement (1A questions 1 → 4).
+        key={questionKey}
         question={q}
         points={scalePoints(q)}
         submitted={submitted}

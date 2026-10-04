@@ -137,7 +137,7 @@ function TeamVersions({
         {page.map((entry) => (
           <article
             key={entry.key}
-            className={`flex min-h-0 flex-col gap-4 rounded-2xl border-2 border-[#353535] bg-[#121212] ${compact ? 'p-4' : 'p-[1.25vw]'}`}
+            className={`bg-helden-card-gradient flex min-h-0 flex-col gap-4 rounded-2xl border-2 border-[#353535] ${compact ? 'p-4' : 'p-[1.25vw]'}`}
           >
             <p
               className={`font-semibold tracking-[-0.04em] text-[#fddb00] ${compact ? 'text-base' : 'text-[1.25vw]'}`}

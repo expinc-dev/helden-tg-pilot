@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { assets } from '@/assets'
 import { GradientButton } from '@/components/GradientButton'
 import { MessageModal } from '@/components/MessageModal'
-import { Header } from '@/pages/host/_shared/Header'
+import { PlayerAppBar } from '@/components/PlayerAppBar'
 
 import { createTeam, joinTeam } from '@/lib/session/teams'
 import { useTeams } from '@/lib/sync/useTeams'
@@ -55,7 +55,8 @@ export function TeamLobby({
         backgroundPosition: 'center',
       }}
     >
-      <Header isShowLogo={true} />
+      {/* The one player top bar (same logo size on every player screen). */}
+      <PlayerAppBar className="-mx-6 -mt-6" />
 
       <div className="mt-auto flex w-full flex-col gap-4">
         <h1 className="text-center text-lg font-semibold text-white">Pilih Tim</h1>

@@ -30,7 +30,9 @@ export function AnswerOptionsList({
       {options.map((opt, i) => {
         const count = dist[opt.id] ?? 0
         const pct = Math.round((count / total) * 100)
-        const isCorrect = revealed && correctId === opt.id
+        // An opinion question has no answer key: every option is a valid answer,
+        // so none is marked wrong.
+        const isCorrect = revealed && (!correctId || correctId === opt.id)
         if (tiles) {
           return (
             <TileRow

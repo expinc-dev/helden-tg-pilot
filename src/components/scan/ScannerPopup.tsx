@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Icon } from '@iconify/react'
 
+import { fileToCanvas, hasLiveCamera } from '@/lib/camera'
+
 // Full-screen live camera view — first getUserMedia usage in this app.
 // Player taps the shutter to capture a frame; detection (QR decode / pattern
 // hash) happens in the caller, this component only knows about pixels.
@@ -17,9 +19,14 @@ export function ScannerPopup({
   onClose: () => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  // Insecure context (LAN HTTP): no live preview — the shutter opens the
+  // device's own camera app instead (see lib/camera.ts).
+  const live = hasLiveCamera()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!live) return
     let cancelled = false
     let stream: MediaStream | null = null
 
@@ -39,9 +46,41 @@ export function ScannerPopup({
       cancelled = true
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [])
+  }, [live])
+
+  // Photo from the camera app: same centred-square crop as the live frame.
+  const onFile = async (file: File | undefined) => {
+    if (!file) return
+    const src = await fileToCanvas(file)
+    if (!src) {
+      setError('Foto tidak bisa dibaca. Coba ambil ulang.')
+      return
+    }
+    const size = Math.min(src.width, src.height)
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(
+      src,
+      (src.width - size) / 2,
+      (src.height - size) / 2,
+      size,
+      size,
+      0,
+      0,
+      size,
+      size
+    )
+    onCapture(ctx.getImageData(0, 0, size, size))
+  }
 
   const capture = () => {
+    if (!live) {
+      fileRef.current?.click()
+      return
+    }
     const video = videoRef.current
     if (!video || !video.videoWidth) return
     // Crop to the centered square shown by the guide box below, not the
@@ -87,6 +126,10 @@ export function ScannerPopup({
           <div className="flex h-full items-center justify-center px-8 text-center text-sm text-red-400">
             {error}
           </div>
+        ) : !live ? (
+          <div className="flex h-full items-center justify-center px-8 text-center text-sm text-white/70">
+            Ketuk tombol kamera di bawah untuk memotret kode, lalu hasilnya dipindai.
+          </div>
         ) : (
           <>
             <video ref={videoRef} autoPlay playsInline muted className="size-full object-cover" />
@@ -96,6 +139,18 @@ export function ScannerPopup({
           </>
         )}
       </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          void onFile(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
 
       <div className="flex justify-center py-8">
         <button
