@@ -46,7 +46,7 @@ export function AnsweringStage({
             remainingSec={timer.remainingSec}
             totalSec={timers.answering}
             expired={timer.expired}
-            size={90}
+            size={88}
           />
         </div>
       )}

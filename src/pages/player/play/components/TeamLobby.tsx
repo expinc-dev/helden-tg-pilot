@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { assets } from '@/assets'
 import { GradientButton } from '@/components/GradientButton'
 import { MessageModal } from '@/components/MessageModal'
-import { Header } from '@/pages/host/_shared/Header'
+import { PlayerAppBar } from '@/components/PlayerAppBar'
 
 import { createTeam, joinTeam } from '@/lib/session/teams'
 import { useTeams } from '@/lib/sync/useTeams'
@@ -27,7 +27,7 @@ export function TeamLobby({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(notice ?? null)
 
-  const backToLanding = () => nav('/')
+  const backToLanding = () => nav('/join/player')
   const dismissErr = () => setErr(null)
 
   const create = async () => {
@@ -55,10 +55,11 @@ export function TeamLobby({
         backgroundPosition: 'center',
       }}
     >
-      <Header isShowLogo={true} />
+      {/* The one player top bar (same logo size on every player screen). */}
+      <PlayerAppBar className="-mx-6 -mt-6" />
 
       <div className="mt-auto flex w-full flex-col gap-4">
-        <h1 className="text-center text-lg font-semibold text-white">Pick a team</h1>
+        <h1 className="text-center text-lg font-semibold text-white">Pilih Tim</h1>
 
         <div
           className="flex w-full flex-col gap-4 rounded-[16px] border p-4"
@@ -66,25 +67,25 @@ export function TeamLobby({
         >
           <div className="flex w-full flex-col gap-2">
             <label htmlFor="team-name" className="text-sm text-white/70">
-              New team name
+              Nama tim baru
             </label>
             <input
               id="team-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="New team name"
+              placeholder="Nama tim baru"
               className="w-full rounded-[8px] border px-4 py-3 text-white placeholder:text-white/30"
               style={{ borderColor: '#353535', background: '#1B1B1B' }}
             />
           </div>
 
           <GradientButton onClick={create} disabled={busy || !name.trim()} className="w-full py-3">
-            Create team
+            Buat Tim
           </GradientButton>
 
           {teams.length > 0 && (
             <div className="flex flex-col gap-2 border-t pt-4" style={{ borderColor: '#353535' }}>
-              <p className="text-sm text-white/50">or join an existing team</p>
+              <p className="text-sm text-white/50">atau gabung ke tim yang sudah ada</p>
               {teams.map((t) => (
                 <button
                   key={t.id}
@@ -94,7 +95,7 @@ export function TeamLobby({
                   className="flex items-center justify-between rounded-[8px] border px-4 py-3 text-left text-white disabled:opacity-50"
                   style={{ borderColor: '#353535', background: '#1B1B1B' }}
                 >
-                  <span>{t.teamName ?? 'Team'}</span>
+                  <span>{t.teamName ?? 'Tim'}</span>
                   <span className="text-white/40">{t.memberCount}</span>
                 </button>
               ))}

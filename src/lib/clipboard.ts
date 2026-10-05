@@ -17,7 +17,10 @@ import { toast } from 'sonner'
 // Reports its own success/failure through a toast and resolves either way: no
 // caller has a useful recovery for a denied clipboard write, and both call
 // sites are buttons whose only job is this one copy.
-export async function copyToClipboard(text: string): Promise<void> {
+export async function copyToClipboard(
+  text: string,
+  successMessage = 'Disalin ke clipboard'
+): Promise<void> {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text)
@@ -32,7 +35,7 @@ export async function copyToClipboard(text: string): Promise<void> {
       document.body.removeChild(ta)
       if (!ok) throw new Error('execCommand copy returned false')
     }
-    toast.success('Disalin ke clipboard')
+    toast.success(successMessage)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     toast.error(`Gagal menyalin: ${msg}`)

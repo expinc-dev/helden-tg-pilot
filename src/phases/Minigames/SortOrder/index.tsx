@@ -23,7 +23,7 @@ export function SortOrderRenderer(props: MinigameRendererProps<SortOrderConfig>)
   // Router already gates team_leader_only + member (via TeamFocusLeader before
   // reaching here). Sort_order additionally treats team_collaborative + member
   // the same way — only the leader plays in EITHER team mode.
-  if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
+  if (teamRole === 'member') return <TeamFocusLeader sessionId={sessionId} playerId={playerId} />
   if (!playerId) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-black/80 p-6 text-center text-white/60">

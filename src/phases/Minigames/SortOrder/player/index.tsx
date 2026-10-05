@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { assets } from '@/assets'
+import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import { ScannerPopup } from '@/components/scan/ScannerPopup'
 import {
   DndContext,
@@ -70,8 +71,7 @@ function SortableRow({
     transition,
     opacity: isDragging ? 0.6 : 1,
     borderRadius: 8,
-    borderColor: '#99A3AE',
-    background: '#1F1F1F',
+    borderColor: '#353535',
   }
   return (
     <li
@@ -79,11 +79,11 @@ function SortableRow({
       style={style}
       {...attributes}
       {...listeners}
-      className={`flex touch-none items-center gap-3 border px-5 py-4 text-sm text-white select-none ${
+      className={`flex touch-none items-center gap-4 border p-4 text-sm text-white select-none ${
         disabled ? 'cursor-not-allowed opacity-60' : 'cursor-grab active:cursor-grabbing'
       }`}
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#FDDB00] text-xs font-bold text-black">
+      <span className="bg-helden-yellow-gradient flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-black">
         {position}
       </span>
       <span className="flex-1">{label}</span>
@@ -108,14 +108,14 @@ function ResultRow({
   const tint = correct ? 'rgba(81, 206, 146, 0.16)' : 'rgba(255, 0, 0, 0.16)'
   return (
     <li
-      className="flex items-center gap-3 border-2 px-5 py-4 text-sm text-white"
+      className="flex items-center gap-4 border-2 p-4 text-sm text-white"
       style={{
         borderRadius: 8,
         borderColor: color,
         background: `linear-gradient(0deg, ${tint} 0%, ${tint} 100%), #1F1F1F`,
       }}
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#FDDB00] text-xs font-bold text-black">
+      <span className="bg-helden-yellow-gradient flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-black">
         {position}
       </span>
       <span className="flex-1">{label}</span>
@@ -145,29 +145,21 @@ function SortOrderShell({
   timer: TimerState
   totalSec: number
 }) {
+  // Figma Reorder: app bar, bordered panel with the ring on top, action
+  // button below the panel.
   return (
-    <div
-      className="flex min-h-dvh flex-col bg-cover bg-top p-4 sm:p-6"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
-    >
-      <div
-        className="flex min-h-0 flex-1 flex-col overflow-hidden"
-        style={{ borderColor: '#353535' }}
-      >
-        {timer.active && (
-          <div className="flex justify-center pt-4">
-            <TimerRing
-              remainingSec={timer.remainingSec}
-              totalSec={totalSec}
-              expired={timer.expired}
-              size={88}
-            />
-          </div>
-        )}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
-        {footer && <div className="p-4 pt-0 sm:p-6 sm:pt-0">{footer}</div>}
-      </div>
-    </div>
+    <PlayerScreenFrame panelClassName="gap-8 px-5 pt-10 pb-5" footer={footer}>
+      {timer.active && (
+        <TimerRing
+          remainingSec={timer.remainingSec}
+          totalSec={totalSec}
+          expired={timer.expired}
+          size={88}
+          className="mx-auto"
+        />
+      )}
+      {children}
+    </PlayerScreenFrame>
   )
 }
 
@@ -386,26 +378,15 @@ export function SortOrderPlayerActive({
   // Figma waiting screen — it's the one moment this template deliberately
   // doesn't show the countdown.
   if (submittedIds && !ready) {
+    // Last round: the shared "Jawaban Tersimpan!" screen. Earlier rounds keep
+    // the QR-scan controls under it so the next card can be scanned.
+    if (round >= totalRounds) return <AnswerSavedScreen />
     return (
-      <div
-        className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-cover bg-top p-6 text-center"
-        style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
-      >
-        <div className="flex gap-2">
-          {[0, 150, 300].map((delay) => (
-            <span
-              key={delay}
-              className="size-3 animate-bounce rounded-full bg-[#FDDB00]"
-              style={{ animationDelay: `${delay}ms` }}
-            />
-          ))}
-        </div>
-        <p className="text-xl font-bold text-[#FFB800]">Jawaban tersimpan!</p>
-        <p className="text-sm text-white/50">Menunggu pemain lain menjawab...</p>
-
-        {round < totalRounds && (
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <p className="text-xs text-white/40">
+      <div className="relative">
+        <AnswerSavedScreen />
+        <div className="absolute inset-x-0 bottom-0 flex justify-center px-8 pb-10">
+          <div className="flex w-full max-w-sm flex-col items-center gap-2">
+            <p className="text-xs text-white/60">
               Cari kartu QR fisik untuk membuka ronde berikutnya.
             </p>
             <ActionButton
@@ -421,7 +402,7 @@ export function SortOrderPlayerActive({
               <p className="text-xs text-[#E21B3C]">Kode belum cocok, coba pindai lagi.</p>
             )}
           </div>
-        )}
+        </div>
 
         {scanOpen && (
           <ScannerPopup
@@ -438,10 +419,9 @@ export function SortOrderPlayerActive({
   if (submittedIds) {
     return (
       <SortOrderShell timer={timer} totalSec={totalSec}>
-        <div className="flex flex-col items-center gap-1 pb-5 text-center">
-          <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-          <p className="text-sm text-white/50">Urutan yang benar</p>
-        </div>
+        <p className="text-xl leading-[1.3] font-medium tracking-[-0.04em] text-[#ccc]">
+          Urutan yang benar
+        </p>
         <ol className="flex flex-col gap-2.5">
           {submittedIds.map((id, i) => (
             <ResultRow
@@ -462,16 +442,13 @@ export function SortOrderPlayerActive({
       totalSec={totalSec}
       footer={
         <ActionButton disabled={busy || timer.expired} onClick={submit}>
-          {busy || timer.expired ? 'Mengirim…' : 'Selanjutnya'}
+          {busy || timer.expired ? 'Mengirim…' : 'Kumpulkan'}
         </ActionButton>
       }
     >
-      <div className="flex flex-col items-center gap-1 pb-5 text-center">
-        <div className="h-1 w-8 rounded-full bg-[#FFB800]" />
-        <p className="text-sm text-white/50">
-          Seret setiap langkah ke urutan yang benar, lalu lanjutkan.
-        </p>
-      </div>
+      <p className="text-xl leading-[1.3] font-medium tracking-[-0.04em] text-[#ccc]">
+        Seret setiap langkah ke urutan yang benar, lalu kumpulkan.
+      </p>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -479,7 +456,7 @@ export function SortOrderPlayerActive({
         modifiers={[restrictToVerticalAxis]}
       >
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
-          <ol className="flex flex-col gap-2.5">
+          <ol className="flex flex-col gap-3.5">
             {order.map((id, i) => (
               <SortableRow
                 key={id}

@@ -1,3 +1,4 @@
+import { CentralGalleryFrame } from '@/components/CentralGalleryFrame'
 import type { Phase } from '@helden-inc/tg-schema'
 
 import { BENTO_CAPACITY, type Layout, layoutForCount, pageForTick, paginate } from './grid'
@@ -30,26 +31,15 @@ export function TeamSelfieCentral({
   const layout = layoutForCount(page.length)
 
   return (
-    <div className="bg-helden-base fixed inset-0 flex items-center justify-center p-11">
-      <div className="relative flex size-full max-h-[929px] max-w-[1832px] flex-col gap-14 rounded-2xl bg-[#080808] p-8">
-        <header className="text-center">
-          <h1 className="bg-helden-yellow-gradient bg-clip-text text-[54px] leading-[74px] font-bold tracking-[-2.16px] text-transparent">
-            {config.finalLine}
-          </h1>
-          {config.caption && (
-            <p className="text-helden-sub mt-4 text-2xl leading-6 font-normal">{config.caption}</p>
-          )}
-        </header>
-
-        <div className="min-h-0 flex-1">
-          {page.length === 0 ? (
-            <EmptyGallery />
-          ) : (
-            <Mosaic layout={layout} images={page.map((s) => s.image!)} />
-          )}
-        </div>
+    <CentralGalleryFrame title={config.finalLine} subtitle={config.caption || undefined}>
+      <div className="min-h-0 flex-1">
+        {page.length === 0 ? (
+          <EmptyGallery />
+        ) : (
+          <Mosaic layout={layout} images={page.map((s) => s.image!)} />
+        )}
       </div>
-    </div>
+    </CentralGalleryFrame>
   )
 }
 
@@ -68,7 +58,7 @@ function Mosaic({ layout, images }: { layout: Layout; images: string[] }) {
       {layout.tiles.map((tile, i) => (
         <div
           key={i}
-          className="bg-helden-photo-gradient relative overflow-hidden rounded-2xl"
+          className="bg-helden-photo-gradient relative overflow-hidden rounded-2xl border-2 border-[#353535]"
           style={{
             gridColumn: `${tile.col + 1} / span ${tile.colSpan}`,
             gridRow: `${tile.row + 1} / span ${tile.rowSpan}`,
@@ -87,7 +77,7 @@ function Mosaic({ layout, images }: { layout: Layout; images: string[] }) {
 function EmptyGallery() {
   return (
     <div className="bg-helden-photo-gradient/40 flex size-full flex-col items-center justify-center gap-4 rounded-2xl text-center">
-      <p className="text-helden-body text-2xl font-light">Waiting for the first team photo…</p>
+      <p className="text-helden-body text-2xl font-light">Menunggu foto tim pertama…</p>
     </div>
   )
 }

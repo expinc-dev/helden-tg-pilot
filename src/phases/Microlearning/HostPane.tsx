@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
-import { assets } from '@/assets'
-import { HostBadge } from '@/pages/host/_shared/HostBadge'
 import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
+import { HostScreenFrame } from '@/pages/host/_shared/HostScreenFrame'
+import { PlayerLabel, ProgressRing, ProgressRow, TeamLabel } from '@/pages/host/_shared/ProgressRow'
 import type { MicrolearningContent } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
@@ -38,13 +38,12 @@ type TeamRowData = {
 
 export function MonitorPane({
   content,
-  title,
   sessionId,
   phaseId,
   onAdvance,
 }: {
   content: MicrolearningContent
-  title: string
+  title?: string
   sessionId: string
   phaseId: string
   onAdvance?: () => void
@@ -85,92 +84,34 @@ export function MonitorPane({
   const showTeams = gameType === 'Multiplayer Game' && teamRows.length > 0
 
   return (
-    <div
-      className="flex h-dvh w-full flex-col overflow-hidden bg-cover bg-top p-4 sm:p-6 lg:h-full"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
+    <HostScreenFrame
+      badge={gameType}
+      title="Progres Tim"
+      subtitle="Pantau seluruh progress pemain secara real-time"
+      bodyClassName="gap-4"
+      footer={
+        onAdvance && (
+          <HostNextPhaseButton
+            onConfirm={onAdvance}
+            className="h-16 w-full shrink-0 text-lg font-medium! tracking-[-0.04em]"
+          />
+        )
+      }
     >
-      <div
-        className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border p-4 sm:p-6"
-        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
-      >
-        <div className="shrink-0">
-          <HostBadge pageName={gameType} />
-        </div>
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
-          <p className="mt-1 text-xs text-white/40">
-            Pantau seluruh progress pemain secara real-time
-          </p>
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto">
-          {showTeams
-            ? teamRows.map((t) => (
-                <TeamProgressRow key={t.id} team={t} onOpen={() => setOpenTeamId(t.id)} />
-              ))
-            : entries.map(([id, p]) => (
-                <PlayerProgressRow
-                  key={id}
-                  name={p.name}
-                  pct={progressPct(readSelfStep(p.selfStep, phaseId), total)}
-                  connected={p.connected}
-                />
-              ))}
-        </div>
-
-        {onAdvance && (
-          <div className="shrink-0">
-            <HostNextPhaseButton onConfirm={onAdvance} className="w-full py-3.5 text-sm" />
-          </div>
-        )}
-      </div>
-
+      {showTeams
+        ? teamRows.map((t) => (
+            <TeamProgressRow key={t.id} team={t} onOpen={() => setOpenTeamId(t.id)} />
+          ))
+        : entries.map(([id, p]) => (
+            <PlayerProgressRow
+              key={id}
+              name={p.name}
+              pct={progressPct(readSelfStep(p.selfStep, phaseId), total)}
+              connected={p.connected}
+            />
+          ))}
       {openTeam && <TeamDetailModal team={openTeam} onClose={() => setOpenTeamId(null)} />}
-    </div>
-  )
-}
-
-// Absolute status, not a proportional arc: green once fully done, red once
-// clearly falling behind, gold in between — a host scanning the list should
-// be able to spot a stuck player by color alone.
-function badgeColor(pct: number): string {
-  if (pct >= 100) return '#22C55E'
-  if (pct >= 50) return '#FFB800'
-  return '#EF4444'
-}
-
-function ProgressBadge({ pct }: { pct: number }) {
-  const color = badgeColor(pct)
-  return (
-    <span
-      className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold"
-      style={{ borderColor: color, color }}
-    >
-      {pct}%
-    </span>
-  )
-}
-
-// Row card style per design spec: rounded-lg (8px), #353535 border, black 64%.
-function RowCard({
-  children,
-  onClick,
-  connected = true,
-}: {
-  children: React.ReactNode
-  onClick?: () => void
-  connected?: boolean
-}) {
-  const Tag = onClick ? 'button' : 'div'
-  return (
-    <Tag
-      type={onClick ? 'button' : undefined}
-      onClick={onClick}
-      className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left ${connected ? '' : 'opacity-40'}`}
-      style={{ borderColor: '#353535', background: 'rgba(0, 0, 0, 0.64)' }}
-    >
-      {children}
-    </Tag>
+    </HostScreenFrame>
   )
 }
 
@@ -184,13 +125,9 @@ function PlayerProgressRow({
   connected: boolean
 }) {
   return (
-    <RowCard connected={connected}>
-      <span className="flex items-center gap-2 text-sm text-white/90">
-        <Icon icon="mdi:account-circle-outline" className="size-5 text-white/50" />
-        {name}
-      </span>
-      <ProgressBadge pct={pct} />
-    </RowCard>
+    <ProgressRow pct={pct} dim={!connected}>
+      <PlayerLabel name={name} />
+    </ProgressRow>
   )
 }
 
@@ -198,14 +135,9 @@ function PlayerProgressRow({
 // inline — the member list format differs (member step, not connection dot).
 function TeamProgressRow({ team, onOpen }: { team: TeamRowData; onOpen: () => void }) {
   return (
-    <RowCard onClick={onOpen}>
-      <span className="flex items-center gap-2 text-sm text-white/90">
-        <Icon icon="mdi:account-group" className="size-5 text-white/50" />
-        Tim {team.name}
-        <span className="text-white/40">({team.memberCount} Pemain)</span>
-      </span>
-      <ProgressBadge pct={team.pct} />
-    </RowCard>
+    <ProgressRow pct={team.pct} onClick={onOpen}>
+      <TeamLabel name={team.name} count={team.memberCount} />
+    </ProgressRow>
   )
 }
 
@@ -228,7 +160,7 @@ function TeamDetailModal({ team, onClose }: { team: TeamRowData; onClose: () => 
             Tim {team.name}
             <span className="text-white/40">({team.memberCount} Pemain)</span>
           </span>
-          <ProgressBadge pct={team.pct} />
+          <ProgressRing pct={team.pct} />
         </div>
         <div className="flex flex-col gap-1.5 px-3 pb-3">
           {team.members.map((m) => (

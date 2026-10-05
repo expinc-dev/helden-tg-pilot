@@ -262,7 +262,7 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
           improvMarker is set, so the host cannot lose the cue. */}
       {improv && (
         <div className="shrink-0 rounded-lg bg-[#FFB800] px-3 py-2 text-center text-sm font-black tracking-wide text-black uppercase">
-          Host Improvisation
+          Improvisasi Host
         </div>
       )}
 
@@ -314,7 +314,7 @@ export function HostScriptPanel({ phase }: { phase: Phase | null }) {
             <span className="text-helden-yellow text-xs font-semibold tracking-wider uppercase">
               Naskah Host
             </span>
-            <span className="text-sm text-white/50">No script authored for this phase</span>
+            <span className="text-sm text-white/50">Belum ada naskah untuk fase ini</span>
           </div>
         )}
       </div>

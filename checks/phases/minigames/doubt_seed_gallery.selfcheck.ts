@@ -3,10 +3,11 @@
 // React/Firebase.
 //   npx tsx checks/phases/minigames/doubt_seed_gallery.selfcheck.ts
 import {
+  GALLERY_PAGE_CAPACITY,
   GALLERY_SPOTLIGHT_CAP,
-  GENERIC_VERSION_TEXT,
   cardTextIndex,
   galleryEntries,
+  galleryGrid,
   galleryLabel,
   pinnedGallery,
   submittedGalleryEntries,
@@ -52,10 +53,16 @@ ok(Object.keys(index).length === 5, 'every configured card must be indexed exact
 ok(galleryLabel(0) === 'Tim A', 'first entry must be Tim A')
 ok(galleryLabel(1) === 'Tim B', 'second entry must be Tim B')
 ok(galleryLabel(25) === 'Tim Z', 'label must keep counting past 26 entries')
-ok(
-  GENERIC_VERSION_TEXT === GENERIC_VERSION_TEXT.trim() && !GENERIC_VERSION_TEXT.includes('Tim '),
-  'the generic version must be plain text carrying no team label'
-)
+
+// ── wall grid ─────────────────────────────────────────────────────────────
+// Always enough cells for the page, never an empty row; capped at one page.
+for (let n = 1; n <= GALLERY_PAGE_CAPACITY + 2; n++) {
+  const g = galleryGrid(n)
+  const shown = Math.min(n, GALLERY_PAGE_CAPACITY)
+  ok(g.cols * g.rows >= shown, `grid for ${n} must hold ${shown} tiles`)
+  ok((g.rows - 1) * g.cols < shown, `grid for ${n} must not leave an empty row`)
+}
+ok(galleryGrid(1).cols === 1 && galleryGrid(4).rows === 2, 'grid shape: 1 → one tile, 4 → 2×2')
 
 // ── roster ────────────────────────────────────────────────────────────────
 // Team mode: the leader's answers node is the submission, and ordering is by

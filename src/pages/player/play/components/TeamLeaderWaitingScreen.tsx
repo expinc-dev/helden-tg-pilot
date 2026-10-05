@@ -1,8 +1,8 @@
 import QRCode from 'react-qr-code'
 
 import { assets } from '@/assets'
-import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
+import { PlayerAppBar } from '@/components/PlayerAppBar'
 
 import { teamInviteUrl } from '@/lib/session/teams'
 import { useTeamMembersPresence } from '@/lib/sync/useTeamMembersPresence'
@@ -37,7 +37,7 @@ export function TeamLeaderWaitingScreen({
         backgroundPosition: 'center',
       }}
     >
-      <FullscreenToggle position="absolute" />
+      <PlayerAppBar className="-mx-6 -mt-6" />
 
       <div
         className="flex items-center justify-between gap-4 rounded-[16px] border p-4"

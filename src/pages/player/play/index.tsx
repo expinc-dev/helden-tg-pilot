@@ -119,7 +119,10 @@ export function PlayerView() {
     )
   }
 
-  if (meta?.status === 'ended' && sessionId) return <EndScreen sessionId={sessionId} />
+  if (meta?.status === 'ended' && sessionId)
+    return (
+      <EndScreen sessionId={sessionId} role="player" playerId={identity?.id} teamId={myTeamId} />
+    )
 
   // Minigame + codeinput/codepiece templates own their full screen
   // (background + card + their own timer, e.g. SortOrder/CodeInput) — same

@@ -5,8 +5,8 @@
 // checks/phases/minigames/doubt_seed_gallery.selfcheck.ts can exercise them.
 //
 // The gallery is the L2 "7. Galeri" storyboard beat: one GENERIC AI description
-// is shown next to the teams' own card arrangements, so the room sees the
-// contrast without any name or score attached. Host curation lives here too:
+// is no longer drawn here (the preceding reading phase already showed it); the
+// wall shows only the teams' own card arrangements, with no name or score. Host curation lives here too:
 // the host pins 2–3 entry keys to the central screen (toggleSpotlight /
 // pinnedGallery), and with nothing pinned the central rotates through pages
 // instead (see board.tsx).
@@ -31,15 +31,20 @@ export type GalleryCardEntry = { key: string; label: string; cards: string[] }
  */
 export const GALLERY_SPOTLIGHT_CAP = 3
 
-/**
- * The comparison text the storyboard fixes verbatim (Story.md "Langkah 1 —
- * Baca versi AI"). Shared by the central panel and the self-check so the two
- * cannot drift.
- */
-export const GENERIC_VERSION_TEXT =
-  'Usaha kami menyediakan produk berkualitas dengan harga terjangkau. Dibuat dengan bahan pilihan dan pelayanan ramah. Kepuasan pelanggan prioritas kami. Pesan sekarang dan rasakan bedanya!'
+/** How many team versions share one rotating page (a 3×2 wall). */
+export const GALLERY_PAGE_CAPACITY = 6
 
-export const GENERIC_VERSION_CAPTION = 'Bisa jadi toko siapa saja.'
+/**
+ * Grid for `count` team versions on the central wall: 1 → one wide tile,
+ * 2 → side by side, 3 → three columns, 4 → 2×2, 5–6 → 3×2. Always enough cells
+ * for `count`, never an empty row, so the wall reads as designed at any size.
+ */
+export function galleryGrid(count: number): { cols: number; rows: number } {
+  const n = Math.max(1, Math.min(GALLERY_PAGE_CAPACITY, count))
+  if (n <= 3) return { cols: n, rows: 1 }
+  if (n === 4) return { cols: 2, rows: 2 }
+  return { cols: 3, rows: 2 }
+}
 
 /**
  * Resolve a submitted card id back to its text. Seeds are handed to the player
@@ -80,7 +85,8 @@ export function galleryEntries(
 ): GalleryEntry[] {
   const isTeamMode =
     phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
-  if (isTeamMode) {
+  // No teams (Single Player session) → fall back to the players.
+  if (isTeamMode && teams.length > 0) {
     return [...teams]
       .sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0))
       .map((t) => ({ key: t.id, writerId: t.ownerPlayerId }))

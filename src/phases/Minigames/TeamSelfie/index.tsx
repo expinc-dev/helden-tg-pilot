@@ -3,6 +3,7 @@ import { useMyTeamId } from '@/lib/sync/useTeams'
 import { TeamFocusLeader } from '../../TeamFocusLeader'
 import type { MinigameRendererProps } from '../types'
 import { TeamSelfieCentral } from './central'
+import { TeamSelfieHost } from './host'
 import { TeamSelfiePlayer } from './player'
 import type { TeamSelfieConfig } from './score'
 
@@ -25,11 +26,11 @@ export function TeamSelfieRenderer(props: MinigameRendererProps<TeamSelfieConfig
   if (role === 'central') {
     return <TeamSelfieCentral sessionId={sessionId} phase={phase} config={config} />
   }
-  // The host shell shows the phase title, timer and advance controls; the
-  // gallery belongs on the central screen, so host renders nothing extra.
-  if (role === 'host') return null
+  // The host shell supplies the advance button; the panel itself previews the
+  // wall (Figma host selfie screen).
+  if (role === 'host') return <TeamSelfieHost sessionId={sessionId} />
 
-  if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
+  if (teamRole === 'member') return <TeamFocusLeader sessionId={sessionId} playerId={playerId} />
 
   if (!playerId) {
     return (
@@ -46,6 +47,7 @@ export function TeamSelfieRenderer(props: MinigameRendererProps<TeamSelfieConfig
       sessionId={sessionId}
       playerId={playerId}
       teamId={teamId}
+      teamRole={teamRole}
     />
   )
 }

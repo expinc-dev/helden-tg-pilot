@@ -1,4 +1,5 @@
 import { TeamFocusLeader } from '../../TeamFocusLeader'
+import { HostSubmittedPane } from '../HostSubmittedPane'
 import type { MinigameRendererProps } from '../types'
 import { FormToPromptCentral } from './central'
 import { FormToPromptPlayer } from './player'
@@ -25,9 +26,17 @@ export function FormToPromptRenderer(props: MinigameRendererProps<FormToPromptCo
   if (role === 'central') {
     return <FormToPromptCentral sessionId={sessionId} phase={phase} config={config} />
   }
-  if (role === 'host') return null
+  if (role === 'host')
+    return (
+      <HostSubmittedPane
+        sessionId={sessionId}
+        phase={phase}
+        title="Progres Pemain"
+        subtitle="Hanya jumlah yang sudah mengirim — isi kerja tiap peserta tidak ditampilkan."
+      />
+    )
 
-  if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
+  if (teamRole === 'member') return <TeamFocusLeader sessionId={sessionId} playerId={playerId} />
 
   if (!playerId) {
     return (

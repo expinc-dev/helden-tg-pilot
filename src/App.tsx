@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { TabletFrame } from './components/TabletFrame'
 import { Toaster } from './components/ui/sonner'
@@ -41,7 +41,7 @@ export function App() {
     <OrientationProvider>
       <Toaster />
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Navigate to="/host/new" replace />} />
         <Route
           path="/host/new"
           element={
@@ -87,24 +87,5 @@ export function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </OrientationProvider>
-  )
-}
-
-function Landing() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Helden TG Pilot</h1>
-      <div className="flex gap-4 text-sm">
-        <Link className="underline" to="/host/new">
-          Host: new session
-        </Link>
-        <Link className="underline" to="/join/central">
-          Join as central
-        </Link>
-        <Link className="underline" to="/join/player">
-          Join as player
-        </Link>
-      </div>
-    </div>
   )
 }

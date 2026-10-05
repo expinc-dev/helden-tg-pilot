@@ -33,6 +33,7 @@ export function questionOutcomes(opts: {
     const value = ans?.value
     if (value === undefined || value === null) return 'unanswered'
     const key = correctIdOf(q)
-    return key !== undefined && value === key ? 'correct' : 'wrong'
+    // No answer key (opinion question): answering is the positive outcome.
+    return key === undefined || value === key ? 'correct' : 'wrong'
   })
 }

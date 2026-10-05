@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 
-import { assets } from '@/assets'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { GradientButton } from '@/components/GradientButton'
+import { PlayerScreenFrame } from '@/components/PlayerScreenFrame'
 import { Icon } from '@iconify/react'
 import { onValue } from 'firebase/database'
+
+import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
 import { eref } from '@/lib/firebase'
 import { submitAnswer } from '@/lib/sync/submitAnswer'
@@ -67,6 +68,15 @@ export function PlayerReflection({
     )
   }, [sessionId, playerId, phaseId])
 
+  // The icons are fixed, but their names come from the authored end labels
+  // (the question may be about importance, not enjoyment).
+  const scaleLabel = (v: number) =>
+    v === 1
+      ? (content.scale.labels?.[0] ?? String(v))
+      : v === 5
+        ? (content.scale.labels?.[1] ?? String(v))
+        : String(v)
+
   const canSubmit = !submitted && !submitting && text.trim().length > 0 && scale !== null
 
   const handleSubmit = async () => {
@@ -97,9 +107,9 @@ export function PlayerReflection({
       title={title}
       subtitle={content.prompt}
       footer={
-        <SubmitButton disabled={!canSubmit} onClick={() => setConfirmSubmit(true)}>
+        <ActionButton disabled={!canSubmit} onClick={() => setConfirmSubmit(true)}>
           Selanjutnya
-        </SubmitButton>
+        </ActionButton>
       }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -142,8 +152,8 @@ export function PlayerReflection({
                   key={mood.value}
                   type="button"
                   onClick={() => setScale(mood.value)}
-                  aria-label={mood.label}
-                  title={mood.label}
+                  aria-label={scaleLabel(mood.value)}
+                  title={scaleLabel(mood.value)}
                   className="flex items-center justify-center rounded-lg border p-3 transition"
                   style={{
                     borderColor: selected ? '#FFB800' : '#353535',
@@ -156,6 +166,12 @@ export function PlayerReflection({
               )
             })}
           </div>
+          {content.scale.labels && (
+            <div className="mt-2 flex justify-between gap-4 text-xs text-white/50">
+              <span>{content.scale.labels[0]}</span>
+              <span className="text-right">{content.scale.labels[1]}</span>
+            </div>
+          )}
         </div>
       </div>
       {confirmSubmit && (
@@ -175,9 +191,8 @@ export function PlayerReflection({
   )
 }
 
-// Same background-image + rounded/bordered card frame as Microlearning's step
-// cards and the host's monitor panes, so a reflection screen doesn't read as
-// a different app from the rest of the phases.
+// Shared player frame (app bar + bordered panel + action button below), same
+// as Microlearning and the quiz screens. The phase title is host-only.
 function ReflectionShell({
   children,
   footer,
@@ -185,27 +200,18 @@ function ReflectionShell({
 }: {
   children: React.ReactNode
   footer?: React.ReactNode
-  title?: string // phase title is host-only; accepted but not rendered
+  title?: string
   subtitle?: string
 }) {
   return (
-    <div
-      className="flex min-h-dvh flex-col gap-4 bg-cover bg-top p-4 sm:p-6"
-      style={{ backgroundImage: `url(${assets.images.backgrounds.auth})` }}
-    >
-      <div
-        className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border"
-        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
-      >
-        <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
-          <div className="mb-6 text-center">
-            {subtitle && <p className="mx-auto mt-2 max-w-md text-sm text-white/60">{subtitle}</p>}
-          </div>
-          {children}
-        </div>
-      </div>
-      {footer}
-    </div>
+    <PlayerScreenFrame panelClassName="gap-5 p-4" footer={footer}>
+      {subtitle && (
+        <p className="text-xl leading-[1.3] font-medium tracking-[-0.04em] text-[#ccc]">
+          {subtitle}
+        </p>
+      )}
+      {children}
+    </PlayerScreenFrame>
   )
 }
 
@@ -217,35 +223,5 @@ function CardHeading({ heading, subtext }: { heading: string; subtext?: string }
       <h2 className="text-base font-bold text-[#FFB800]">{heading}</h2>
       {subtext && <p className="text-xs text-white/50">{subtext}</p>}
     </div>
-  )
-}
-
-// Flat dark when disabled, gradient when ready — mirrors the app's
-// "Selanjutnya" button language (Microlearning's ActionButton) rather than a
-// translucent disabled gradient.
-function SubmitButton({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: React.ReactNode
-  onClick?: () => void
-  disabled?: boolean
-}) {
-  if (disabled) {
-    return (
-      <button
-        type="button"
-        disabled
-        className="w-full rounded-lg bg-[#2A2A2A] py-3.5 text-center text-sm font-semibold text-white/30"
-      >
-        {children}
-      </button>
-    )
-  }
-  return (
-    <GradientButton type="button" onClick={onClick} className="w-full py-3.5 text-sm">
-      {children}
-    </GradientButton>
   )
 }

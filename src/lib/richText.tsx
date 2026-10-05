@@ -92,7 +92,14 @@ export function renderRichText(
 // match the numbered-rule design; other consumers stay on renderRichText.
 export function renderNumberedList(
   markdown: string,
-  opts?: { paragraphClassName?: string; itemTextClassName?: string }
+  opts?: {
+    paragraphClassName?: string
+    itemTextClassName?: string
+    // Defaults keep the original 28px badge / 12px gap; the player intro screen
+    // passes the Figma 20px badge.
+    badgeClassName?: string
+    listClassName?: string
+  }
 ): ReactNode {
   const segments = parseBlocks(markdown)
   const itemTextClass = opts?.itemTextClassName ?? 'text-sm'
@@ -105,16 +112,20 @@ export function renderNumberedList(
       )
     }
     return (
-      <ol key={i} className="flex flex-col gap-3">
+      <ol key={i} className={opts?.listClassName ?? 'flex flex-col gap-3'}>
         {seg.items.map((item, j) => (
           <li key={j} className="flex items-start gap-3">
             <span
-              className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold text-black"
+              className={`flex shrink-0 items-center justify-center rounded-full font-bold text-black ${opts?.badgeClassName ?? 'mt-0.5 size-7 text-sm'}`}
               style={{ background: '#FCDC07' }}
             >
               {j + 1}
             </span>
-            <span className={`flex-1 text-white/85 ${itemTextClass}`}>{renderInline(item)}</span>
+            <span
+              className={`flex-1 ${opts?.itemTextClassName?.includes('text-[#') ? '' : 'text-white/85'} ${itemTextClass}`}
+            >
+              {renderInline(item)}
+            </span>
           </li>
         ))}
       </ol>

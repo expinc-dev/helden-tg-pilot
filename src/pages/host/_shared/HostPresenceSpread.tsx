@@ -19,6 +19,12 @@ export function HostPresenceSpread({
   // Reflection and CodePiece have no step concept (single screen, own
   // dedicated host pane already shows per-player state) — a step-based
   // spread would just show a meaningless "Langkah 1" for everyone.
+  // The private closing templates render their own neutral count instead.
+  if (
+    phase.content.type === 'minigame' &&
+    ['form_to_prompt', 'commitment', 'journey'].includes(phase.content.templateId)
+  )
+    return null
   if (
     phase.syncMode !== 'self_paced' ||
     phase.content.type === 'reflection' ||

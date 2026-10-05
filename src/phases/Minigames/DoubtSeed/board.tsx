@@ -5,9 +5,9 @@ import { useGallerySpotlight } from '@/lib/sync/useGallerySpotlight'
 import { pageForTick, paginate } from '../TeamSelfie/grid'
 import { useTick } from '../TeamSelfie/useTick'
 import {
-  GENERIC_VERSION_CAPTION,
-  GENERIC_VERSION_TEXT,
+  GALLERY_PAGE_CAPACITY,
   cardTextIndex,
+  galleryGrid,
   pinnedGallery,
   submittedGalleryEntries,
 } from './gallery'
@@ -15,10 +15,6 @@ import type { GalleryCardEntry } from './gallery'
 import type { DoubtSeedConfig } from './score'
 import { useGalleryAnswers, useGalleryRoster } from './useGallery'
 
-// How many team versions share one rotating page. Deliberately the same three
-// as the default curation cap: both exist so a version stays readable from the
-// back of the room, not for any layout reason.
-const PAGE_CAPACITY = 3
 const ROTATE_MS = 6000
 
 /**
@@ -55,6 +51,7 @@ export function GalleryBoard({
   onToggle?: (key: string) => void
 }) {
   const gallery = config.gallery
+  const compact = !!onToggle
   // A switched-off gallery must not cost a listener, let alone one per team
   // (the central screen is a shared projector on a shared connection). Passing
   // an undefined session id is the hooks' own "not subscribed" idiom — every
@@ -70,13 +67,12 @@ export function GalleryBoard({
   // Rotation only makes sense in the un-pinned fallback. A curated wall is a
   // chosen frame, so it stays still until the host changes it.
   const tick = useTick(pinned.length > 0 ? 0 : ROTATE_MS)
-  const pages = paginate(entries, PAGE_CAPACITY)
+  const pages = paginate(entries, GALLERY_PAGE_CAPACITY)
   const pageIndex = pageForTick(tick, pages.length)
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[1fr_1.6fr] gap-10">
-      <GenericPanel />
-      <div className="flex min-h-0 flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         {!gallery.enabled ? (
           <GalleryDisabled />
         ) : entries.length === 0 ? (
@@ -84,9 +80,14 @@ export function GalleryBoard({
         ) : pinned.length > 0 ? (
           // Pinned order is the host's, not submission order, and there is only
           // ever one page of them — so no pagination dots.
-          <TeamVersions page={pinned} pageIndex={0} pageCount={1} />
+          <TeamVersions page={pinned} pageIndex={0} pageCount={1} compact={compact} />
         ) : (
-          <TeamVersions page={pages[pageIndex]} pageIndex={pageIndex} pageCount={pages.length} />
+          <TeamVersions
+            page={pages[pageIndex]}
+            pageIndex={pageIndex}
+            pageCount={pages.length}
+            compact={compact}
+          />
         )}
         {onToggle && gallery.enabled && entries.length > 0 && (
           <CurationBar entries={entries} pinned={spotlight} cap={gallery.cap} onToggle={onToggle} />
@@ -96,53 +97,61 @@ export function GalleryBoard({
   )
 }
 
-// The control version: identical for every team, and deliberately unremarkable.
-// It stays on screen the whole time so the room can compare without waiting for
-// its page to come around.
-function GenericPanel() {
-  return (
-    <section className="bg-helden-surface-gradient flex flex-col gap-6 rounded-2xl p-8 opacity-60">
-      <p className="text-helden-sub text-lg font-semibold tracking-wide uppercase">Versi AI</p>
-      <p className="text-helden-body text-3xl leading-snug font-light">{GENERIC_VERSION_TEXT}</p>
-      <p className="text-helden-sub mt-auto text-xl font-normal italic">
-        {GENERIC_VERSION_CAPTION}
-      </p>
-    </section>
-  )
-}
-
 // One page of team versions — a team shows up the moment its leader submits, so
-// the wall fills in as the room finishes.
+// the wall fills in as the room finishes. Central: a bordered-tile grid sized by
+// how many versions there are (galleryGrid); host (compact): one column.
 function TeamVersions({
   page,
   pageIndex,
   pageCount,
+  compact,
 }: {
   page: GalleryCardEntry[]
   pageIndex: number
   pageCount: number
+  compact?: boolean
 }) {
+  const grid = galleryGrid(page.length)
+  const chipSize = compact
+    ? 'px-3 py-1.5 text-sm'
+    : page.length <= 3
+      ? 'px-[1vw] py-[0.6vw] text-[1.6vw]'
+      : 'px-[0.8vw] py-[0.45vw] text-[1.15vw]'
   return (
-    <div className="flex h-full flex-col gap-6">
-      <div className="flex min-h-0 flex-1 flex-col gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div
+        className={
+          compact
+            ? 'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto'
+            : 'grid min-h-0 flex-1 gap-[1.04vw]'
+        }
+        style={
+          compact
+            ? undefined
+            : {
+                gridTemplateColumns: `repeat(${grid.cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${grid.rows}, minmax(0, 1fr))`,
+              }
+        }
+      >
         {page.map((entry) => (
           <article
             key={entry.key}
-            className="bg-helden-photo-gradient flex min-h-0 flex-1 flex-col gap-4 rounded-2xl p-6"
+            className={`bg-helden-card-gradient flex min-h-0 flex-col gap-4 rounded-2xl border-2 border-[#353535] ${compact ? 'p-4' : 'p-[1.25vw]'}`}
           >
-            <p className="text-helden-sub text-lg font-semibold tracking-wide uppercase">
+            <p
+              className={`font-semibold tracking-[-0.04em] text-[#fddb00] ${compact ? 'text-base' : 'text-[1.25vw]'}`}
+            >
               {entry.label}
             </p>
-            {/* Scrolls rather than clips: a team whose cards outgrow its panel
+            {/* Scrolls rather than clips: a team whose cards outgrow its tile
                 would otherwise lose the tail silently, and the whole point of
-                this wall is that a participant can find their own words. The
-                parent article is already `min-h-0 flex-1`, so this box shrinks
-                and scrolls inside it instead of stretching the page. */}
+                this wall is that a participant can find their own words. */}
             <div className="flex min-h-0 flex-wrap content-start gap-3 overflow-y-auto">
               {entry.cards.map((text, i) => (
                 <span
                   key={i}
-                  className="text-helden-body bg-helden-base rounded-lg px-4 py-2 text-2xl leading-snug font-normal"
+                  className={`rounded-lg border border-[#353535] bg-[#1e1e1e] leading-snug font-normal tracking-[-0.04em] text-white ${chipSize}`}
                 >
                   {text}
                 </span>
@@ -159,8 +168,8 @@ function TeamVersions({
               key={i}
               className={
                 i === pageIndex
-                  ? 'bg-helden-sub size-2 rounded-full'
-                  : 'bg-helden-sub size-2 rounded-full opacity-30'
+                  ? 'size-2 rounded-full bg-[#fddb00]'
+                  : 'size-2 rounded-full bg-[#fddb00] opacity-30'
               }
             />
           ))}
@@ -172,8 +181,10 @@ function TeamVersions({
 
 function EmptyGallery() {
   return (
-    <div className="bg-helden-photo-gradient/40 flex size-full flex-col items-center justify-center gap-4 rounded-2xl text-center">
-      <p className="text-helden-body text-2xl font-light">Menunggu tim menyusun versi mereka…</p>
+    <div className="flex size-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-[#353535] text-center">
+      <p className="text-2xl font-light tracking-[-0.04em] text-[#ccc]">
+        Menunggu tim menyusun versi mereka…
+      </p>
     </div>
   )
 }

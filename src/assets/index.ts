@@ -10,6 +10,7 @@ import trophyIcon from './images/icons/trophy.png'
 import heldenLogoSm from './images/logos/heldenLogoSm.png'
 import classroomExample from './images/presentation/classroomExample.png'
 import classroomExampleFramed from './images/presentation/classroomExampleFramed.png'
+import instructionPhoto from './images/presentation/instruction.png'
 // Lotties — imported as URLs so DotLottieReact can fetch/parse them itself.
 import HeldenLogoLotties from './lotties/HeldenLogoLotties.json?url'
 import PleaseRotateLotties from './lotties/PleaseRotate.json?url'
@@ -41,6 +42,7 @@ export const assets = {
     presentation: {
       classroomExample,
       classroomExampleFramed,
+      instructionPhoto,
     },
   },
   lotties: {

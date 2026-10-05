@@ -92,7 +92,7 @@ export function CentralJoin() {
               onClick={rejoin}
               className="text-sm text-white/60 underline disabled:opacity-50"
             >
-              {`Rejoin as ${existing.name ?? 'yourself'}`}
+              {`Gabung kembali sebagai ${existing.name ?? 'dirimu'}`}
             </button>
           )}
         </div>

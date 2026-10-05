@@ -1,4 +1,5 @@
 import { TeamFocusLeader } from '../../TeamFocusLeader'
+import { HostSubmittedPane } from '../HostSubmittedPane'
 import type { MinigameRendererProps } from '../types'
 import { JourneyPlayer } from './player'
 import type { JourneyConfig } from './score'
@@ -28,9 +29,18 @@ export function JourneyRenderer(props: MinigameRendererProps<JourneyConfig>) {
   // of it, so this branch is deliberately empty rather than a degraded render —
   // see the file comment.
   if (role === 'central') return null
-  if (role === 'host') return null
+  if (role === 'host')
+    return (
+      <HostSubmittedPane
+        sessionId={sessionId}
+        phase={phase}
+        title="Ringkasan"
+        subtitle="Ringkasan pribadi tampil di HP tiap peserta. Biarkan hening sebentar."
+        showCount={false}
+      />
+    )
 
-  if (teamRole === 'member') return <TeamFocusLeader phaseId={phase.id} />
+  if (teamRole === 'member') return <TeamFocusLeader sessionId={sessionId} playerId={playerId} />
 
   if (!playerId) {
     return (

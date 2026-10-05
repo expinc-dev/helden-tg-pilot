@@ -142,11 +142,13 @@ export function LeaderboardRows({
                   />
                 ))}
               </div>
-              <div className="flex w-36 shrink-0 items-baseline justify-end gap-3">
+              <div className="flex w-56 shrink-0 items-baseline justify-end gap-4">
                 {questionId && (
-                  <span className="text-xl font-semibold text-[#4FD18B]">+{row.gained}</span>
+                  <span className="text-xl font-semibold text-[#4FD18B]">
+                    +{Math.round(row.gained)}
+                  </span>
                 )}
-                <span className="text-3xl font-bold text-[#FFB800]">{row.score}</span>
+                <span className="text-3xl font-bold text-[#FFB800]">{Math.round(row.score)}</span>
               </div>
             </div>
           )
@@ -171,10 +173,12 @@ export function LeaderboardRows({
             </div>
             {questionId && (
               <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#34D399]">
-                +{row.gained}
+                +{Math.round(row.gained)}
               </span>
             )}
-            <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">{row.score}</span>
+            <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">
+              {Math.round(row.score)}
+            </span>
           </div>
         )
       })}

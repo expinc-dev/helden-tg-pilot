@@ -14,10 +14,10 @@ export function MessageModal({
   onDismiss: () => void
 }) {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 p-8 backdrop-blur-md">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-8 backdrop-blur-md">
       <div
-        className="w-full max-w-sm overflow-hidden rounded-lg border"
-        style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
+        className="w-full max-w-sm overflow-hidden rounded-lg border shadow-2xl"
+        style={{ borderColor: '#353535', background: '#121212' }}
       >
         <div
           className="flex items-center justify-between gap-4 border-b px-5 py-4"

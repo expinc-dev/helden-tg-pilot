@@ -60,7 +60,8 @@ export function CentralQuiz({
   // point (circle = the number, endpoint labels on the first/last point).
   if (onDevice) {
     if (isScaleQuestion(q) && answeredCount > 0) {
-      const points = scalePoints(q)
+      // A = strongest agreement, matching the player's lettered rows.
+      const points = scalePoints(q).reverse()
       const counts = points.map((v) => distribution[scaleOptionId(v)] ?? 0)
       const top = Math.max(...counts)
       return (
@@ -70,12 +71,12 @@ export function CentralQuiz({
           total={totalPlayers}
           rows={points.map((v, i) => ({
             id: String(v),
-            letter: String(v),
+            letter: String.fromCharCode(65 + i),
             label:
-              i === 0 && q.labels
-                ? q.labels[0]
-                : i === points.length - 1 && q.labels
-                  ? q.labels[1]
+              v === Math.max(...points) && q.labels
+                ? q.labels[1]
+                : v === Math.min(...points) && q.labels
+                  ? q.labels[0]
                   : `Poin ${v}`,
             count: counts[i],
             highlight: top > 0 && counts[i] === top,

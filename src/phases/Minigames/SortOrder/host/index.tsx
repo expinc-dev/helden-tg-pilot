@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { SubmittedStrip } from '@/pages/host/_shared/ProgressRow'
 import type { Phase } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
@@ -19,8 +20,6 @@ import {
 } from '../lib'
 import { type SortOrderConfig, roundContentFor } from '../score'
 import { PlayerAnswersPanel } from './components/PlayerAnswersPanel'
-
-const strokeContainer = '1px solid var(--Stroke-Container, #353535)'
 
 // Host's live view: while the round is running, the same "question card +
 // item list + submission progress" shell as Quiz's host screen, so the host
@@ -125,7 +124,8 @@ export function HostSortOrder({
     : content.items
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 px-8 py-10">
+      {/* Host-only tools, kept small and out of the way of the Figma layout. */}
       <div className="flex items-center justify-between">
         {ready ? (
           <button
@@ -162,73 +162,53 @@ export function HostSortOrder({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center gap-4">
+      <div className="flex min-h-0 flex-1 flex-col items-center gap-16">
         {!ready && timer.active && (
           <TimerRing
             remainingSec={timer.remainingSec}
             totalSec={totalSec}
             expired={timer.expired}
-            size={90}
+            size={140}
           />
         )}
 
-        <div className="w-full rounded-xl p-5" style={{ background: '#181818' }}>
-          <p className="text-lg leading-relaxed font-semibold text-white">{phase.title}</p>
-        </div>
+        <div className="flex min-h-0 w-full flex-1 flex-col gap-10 px-8">
+          <p className="w-full text-2xl leading-[1.2] font-medium tracking-[-0.04em] text-[#ccc]">
+            {phase.title}
+          </p>
 
-        <div className="flex min-h-0 w-full flex-1 flex-col gap-2.5 overflow-y-auto">
-          {displayItems.map((item, i) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 px-4 py-3"
-              style={
-                ready
-                  ? {
-                      borderRadius: 8,
-                      border: strokeContainer,
-                      background: 'rgba(81, 206, 146, 0.16)',
-                    }
-                  : { borderRadius: 8, border: '1px solid #2a2a2a' }
-              }
-            >
+          <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto">
+            {displayItems.map((item, i) => (
               <div
-                className="flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
-                style={{
-                  borderColor: ready ? '#26890C' : '#4a4a4a',
-                  background: ready ? '#26890C' : 'transparent',
-                  color: ready ? '#fff' : '#9a9a9a',
-                }}
+                key={item.id}
+                className="flex min-h-[72px] flex-1 items-center gap-6 rounded-lg border px-8 py-4"
+                style={
+                  ready
+                    ? { borderColor: '#51ce92', background: 'rgba(81, 206, 146, 0.16)' }
+                    : { borderColor: '#353535' }
+                }
               >
-                {i + 1}
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-2xl leading-none font-bold text-black">
+                  {i + 1}
+                </span>
+                <span className="flex-1 text-lg leading-[1.2] font-semibold text-white">
+                  {item.label}
+                </span>
+                {ready ? (
+                  <Icon icon="material-symbols:check-rounded" className="size-5 text-[#51ce92]" />
+                ) : (
+                  <span className="flex w-3.5 shrink-0 flex-col gap-1" aria-hidden>
+                    <i className="h-[2px] rounded-full bg-[#fddb00]" />
+                    <i className="h-[2px] rounded-full bg-[#fddb00]" />
+                    <i className="h-[2px] rounded-full bg-[#fddb00]" />
+                  </span>
+                )}
               </div>
-              <span className="flex-1 text-sm text-white/80">{item.label}</span>
-              {ready && (
-                <Icon
-                  icon="mdi:check-circle"
-                  className="size-5 shrink-0"
-                  style={{ color: '#26890C' }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {!ready && (
-          <div className="mt-auto flex w-full items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
-                style={{
-                  width: `${roster.length > 0 ? (submittedCount / roster.length) * 100 : 0}%`,
-                }}
-              />
-            </div>
-            <span className="shrink-0 text-xs whitespace-nowrap text-white/60">
-              <span className="font-bold text-white">{submittedCount}</span> dari{' '}
-              <span className="font-bold text-white">{roster.length}</span> pemain telah menjawab
-            </span>
+            ))}
           </div>
-        )}
+
+          {!ready && <SubmittedStrip done={submittedCount} total={roster.length} verb="menjawab" />}
+        </div>
       </div>
 
       {ready && (
@@ -237,7 +217,7 @@ export function HostSortOrder({
           {roster.map((r) => (
             <div
               key={r.key}
-              className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm"
+              className="flex items-center justify-between rounded-lg border border-[#353535] bg-white/5 px-4 py-2.5 text-sm"
             >
               <span className="text-white/80">{r.label}</span>
               <span className="flex items-center gap-3 font-mono">

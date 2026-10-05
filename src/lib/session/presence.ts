@@ -28,6 +28,14 @@ async function claimOwnership(sessionId: string, role: Role, id: string): Promis
   await update(eref(ownersPath(sessionId, role)), { [id]: uid })
 }
 
+// Re-asserts that this device's auth.uid owns `id` (idempotent for the same uid).
+// A write that rules deny because the ownership entry is missing / stale can be
+// retried after this; if another uid really owns the id the claim itself is
+// rejected and the caller keeps the original error.
+export async function ensureOwnership(sessionId: string, role: Role, id: string): Promise<void> {
+  await claimOwnership(sessionId, role, id)
+}
+
 // A device only remembers ONE player identity per session (lib/identity.ts's
 // single localStorage slot) — join as a second named player on the same device
 // and the first one's id is no longer remembered locally. The session's actual

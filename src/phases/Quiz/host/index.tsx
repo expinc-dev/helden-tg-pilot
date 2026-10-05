@@ -21,7 +21,15 @@ import {
   useAnsweredCount,
   useTotalPlayers,
 } from '../lib'
+import { isScaleQuestion } from '../scale'
 import { AnswerOptionsList } from './components/AnswerOptionsList'
+import {
+  AnsweredStrip,
+  QuestionCounter,
+  QuestionText,
+  QuizHostShell,
+} from './components/HostQuizParts'
+import { ScaleDistribution } from './components/ScaleDistribution'
 
 export function HostQuiz({
   content,
@@ -165,160 +173,115 @@ export function HostQuiz({
   if (!q) return null
 
   const text = renderPromptBlocks(q.prompt)
-  const answeredPct = totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0
+
+  const total = content.questions.length
+  const nextButtonClass = 'h-16 w-full shrink-0 text-lg font-medium! tracking-[-0.04em]'
+  const leaveButton = onAdvance && (
+    <HostNextPhaseButton onConfirm={onAdvance} className={nextButtonClass} />
+  )
 
   // ── on_device (attitude quiz, HLN-012) ────────────────────────────────────
-  // The statement is on the player's own device; the host screen is just a
-  // step indicator with an answered-count progress bar. The live distribution
-  // is deliberately NOT rendered: it stays in RTDB as L3 discussion material,
-  // and showing it here would leak the room's positions back into the room.
+  // The statement is on the player's own device, but the host (Figma H8) also
+  // sees it with the live per-point vote counts, A = strongest agreement.
   if (onDevice) {
     return (
-      <div className="flex h-full min-h-0 flex-col gap-4">
-        <div className="flex items-center justify-between border-b border-white/20 px-10 py-3">
-          <div className="text-2xl">
-            <span className="text-helden-yellow font-bold">{quizStep.step + 1}</span>
-            <span className="font-thin text-white">/{content.questions.length}</span>
+      <QuizHostShell
+        footer={
+          isLastQuestion ? (
+            leaveButton
+          ) : (
+            <GradientButton onClick={handleNext} className={nextButtonClass}>
+              Pernyataan Berikutnya
+            </GradientButton>
+          )
+        }
+      >
+        <QuestionCounter step={quizStep.step + 1} total={total} />
+        <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-y-auto p-8">
+          <QuestionText large>{text}</QuestionText>
+          {isScaleQuestion(q) && (
+            <ScaleDistribution
+              sessionId={sessionId}
+              qId={`${phaseId}_q${quizStep.step}`}
+              question={q}
+            />
+          )}
+          <div className="mt-auto">
+            <AnsweredStrip answered={answeredCount} total={totalPlayers} />
           </div>
         </div>
-
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-4">
-          <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-4 overflow-y-auto">
-            <div className="flex w-full items-start px-10 py-5">
-              <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
-            </div>
-
-            <div className="flex w-full flex-col gap-3 px-10">
-              <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
-                    style={{ width: `${answeredPct}%` }}
-                  />
-                </div>
-                <span className="shrink-0 text-xs whitespace-nowrap text-white">
-                  <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
-                  <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
-                  menjawab
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex w-full flex-col gap-3 px-10 pb-10">
-            {isLastQuestion ? (
-              onAdvance && (
-                <HostNextPhaseButton onConfirm={onAdvance} className="w-full px-6 py-3 text-base" />
-              )
-            ) : (
-              <GradientButton
-                onClick={handleNext}
-                className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
-              >
-                Pernyataan Berikutnya →
-              </GradientButton>
-            )}
-          </div>
-        </div>
-      </div>
+      </QuizHostShell>
     )
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      <div className="flex items-center justify-between border-b border-white/20 px-10 py-3">
-        <div className="text-2xl">
-          <span className="text-helden-yellow font-bold">{quizStep.step + 1}</span>
-          <span className="font-thin text-white">/{content.questions.length}</span>
-        </div>
-      </div>
+    <QuizHostShell
+      footer={
+        quizStep.stage === 'answering' ? (
+          <GradientButton onClick={handleRevealClick} className={nextButtonClass}>
+            Perlihatkan Jawaban
+          </GradientButton>
+        ) : quizStep.stage === 'reveal' ? (
+          <GradientButton
+            disabled={leaderboardBusy}
+            onClick={() => void handleShowLeaderboard()}
+            className={`${nextButtonClass} flex items-center justify-center gap-2`}
+          >
+            <Icon icon="material-symbols:leaderboard-outline-rounded" className="size-6" />
+            Lihat Leaderboard
+          </GradientButton>
+        ) : isLastQuestion ? (
+          leaveButton
+        ) : (
+          <GradientButton onClick={handleNext} className={nextButtonClass}>
+            Soal Berikutnya
+          </GradientButton>
+        )
+      }
+    >
+      <QuestionCounter step={quizStep.step + 1} total={total} />
 
       {quizStep.stage === 'answering' && (
-        <div className="flex min-h-0 flex-1 flex-col items-center gap-4">
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-8 overflow-y-auto p-8">
           {timer.active && (
             <TimerRing
               remainingSec={timer.remainingSec}
               totalSec={timers.answering}
               expired={timer.expired}
-              size={120}
-              className="mt-10"
+              size={140}
             />
           )}
-
-          <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-4 overflow-y-auto">
-            <div className="flex w-full items-start px-10 py-5">
-              <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
-            </div>
-
-            <AnswerOptionsList
-              sessionId={sessionId}
-              phaseId={phaseId}
-              questionIndex={quizStep.step}
-              options={questionOptions(q)}
-              revealed={false}
-            />
-
-            <div className="flex w-full flex-col gap-3 px-10">
-              <div className="flex items-center gap-3 rounded-lg border border-white/15 bg-[rgba(253,219,0,0.08)] px-4 py-2.5">
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-[#FFB800] transition-all duration-500"
-                    style={{
-                      width: `${totalPlayers > 0 ? (answeredCount / totalPlayers) * 100 : 0}%`,
-                    }}
-                  />
-                </div>
-                <span className="shrink-0 text-xs whitespace-nowrap text-white">
-                  <span className="text-helden-yellow font-bold">{answeredCount}</span> dari{' '}
-                  <span className="text-helden-yellow font-bold">{totalPlayers}</span> pemain telah
-                  menjawab
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex w-full flex-col gap-3 px-10 pb-10">
-            <GradientButton onClick={handleRevealClick} className="w-full px-6 py-3 text-base">
-              Perlihatkan Jawaban
-            </GradientButton>
-          </div>
+          <QuestionText>{text}</QuestionText>
+          <AnswerOptionsList
+            sessionId={sessionId}
+            phaseId={phaseId}
+            questionIndex={quizStep.step}
+            options={questionOptions(q)}
+            revealed={false}
+          />
+          <AnsweredStrip answered={answeredCount} total={totalPlayers} />
         </div>
       )}
 
       {quizStep.stage === 'reveal' && (
-        <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-            <div className="px-12 py-10">
-              <p className="text-2xl leading-relaxed font-normal text-white">{text}</p>
-            </div>
-
-            <AnswerOptionsList
-              sessionId={sessionId}
-              phaseId={phaseId}
-              questionIndex={quizStep.step}
-              options={questionOptions(q)}
-              revealed
-              correctId={quizStep.correctId}
-            />
-          </div>
-
-          <div className="flex w-full flex-col gap-3 px-10 pb-10">
-            <GradientButton
-              disabled={leaderboardBusy}
-              onClick={() => void handleShowLeaderboard()}
-              className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
-            >
-              <Icon icon="material-symbols:leaderboard-outline-rounded" className="size-5" /> Lihat
-              Leaderboard
-            </GradientButton>
-          </div>
+        <div className="flex min-h-0 flex-1 flex-col items-center gap-8 overflow-y-auto p-8">
+          <QuestionText large={questionOptions(q).length > 2}>{text}</QuestionText>
+          <AnswerOptionsList
+            sessionId={sessionId}
+            phaseId={phaseId}
+            questionIndex={quizStep.step}
+            options={questionOptions(q)}
+            revealed
+            correctId={quizStep.correctId}
+          />
+          <AnsweredStrip answered={answeredCount} total={totalPlayers} />
         </div>
       )}
 
       {quizStep.stage === 'leaderboard' && (
-        <div className="flex min-h-0 flex-1 flex-col gap-4 px-10">
-          <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-8">
+          <h2 className="text-2xl font-bold tracking-[-0.04em] text-white">Leaderboard</h2>
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-[#353535] bg-black/20">
             <LeaderboardRows
               sessionId={sessionId}
               phase={phase}
@@ -326,21 +289,6 @@ export function HostQuiz({
               questionId={`${phaseId}_q${quizStep.step}`}
               revealedCount={quizStep.step + 1}
             />
-          </div>
-
-          <div className="flex w-full flex-col gap-3 pb-10">
-            {isLastQuestion ? (
-              onAdvance && (
-                <HostNextPhaseButton onConfirm={onAdvance} className="w-full px-6 py-3 text-base" />
-              )
-            ) : (
-              <GradientButton
-                onClick={handleNext}
-                className="flex items-center justify-center gap-1.5 px-6 py-3 text-base"
-              >
-                Soal Berikutnya →
-              </GradientButton>
-            )}
           </div>
         </div>
       )}
@@ -358,6 +306,6 @@ export function HostQuiz({
           }}
         />
       )}
-    </div>
+    </QuizHostShell>
   )
 }

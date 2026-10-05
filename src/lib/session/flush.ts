@@ -2,11 +2,13 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { get, serverTimestamp, update } from 'firebase/database'
 
 import { minigameRegistry } from '@/phases/Minigames/registry'
+import { resolveTimers } from '@/phases/Quiz/lib'
 
 import { eref } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
 
 import { type Contribution, aggregateForPhase } from './flushAggregate'
+import { scoreUnscoredQuestions } from './quizScoring'
 
 // Host-only. Called from control.ts::nextPhase BEFORE the phasePointer moves.
 // Reads sessions/{id}/{players,teams} for the outgoing phase, computes durable
@@ -121,6 +123,16 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
   // Quiz phases: scores were already written per-question to aggregates/ by
   // the host during the quiz. Persist them as durable results directly.
   if (phase.content.type === 'quiz' && phase.content.mode === 'central_prompt') {
+    try {
+      await scoreUnscoredQuestions({
+        sessionId,
+        phase,
+        questions: phase.content.questions as { correctId?: string }[],
+        timerSeconds: resolveTimers(phase.content).answering,
+      })
+    } catch (e) {
+      console.error('scoreUnscoredQuestions failed for', phase.id, e)
+    }
     await flushQuizFromAggregates(sessionId, phase)
     return
   }

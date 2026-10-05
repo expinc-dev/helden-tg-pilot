@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { GradientButton } from '@/components/GradientButton'
 import type { Phase } from '@helden-inc/tg-schema'
+import { Icon } from '@iconify/react'
 
 import { StepBody } from '@/phases/Microlearning/PlayerPane/StepBody'
 
@@ -48,6 +49,13 @@ export function PresentationRenderer({
   }, [bounded])
 
   useEffect(() => {
+    if (!jumpOpen) return
+    const h = (e: KeyboardEvent) => e.key === 'Escape' && setJumpOpen(false)
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [jumpOpen])
+
+  useEffect(() => {
     if (role !== 'host' || !canControl) return
     const h = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' && bounded < content.slides.length - 1) {
@@ -83,50 +91,60 @@ export function PresentationRenderer({
   }
 
   const controls = role === 'host' && (
-    <div
-      className="relative z-50 flex shrink-0 items-center justify-between gap-4 border-t bg-[#121212] px-4 py-3"
-      style={{ borderColor: '#353535' }}
-    >
-      <div className="flex items-center gap-3">
+    <div className="relative z-50 flex shrink-0 items-center justify-between gap-4 bg-black/40 p-4">
+      {/* Figma "Slides 1/5" counter + an explicit Jump button (the counter alone
+          did not read as clickable, so the jump-to-slide list was effectively lost). */}
+      <div className="flex items-center gap-4">
+        <p className="text-lg font-light tracking-[-0.04em] text-[#fddb00]">
+          Slides {bounded + 1}
+          <span className="font-bold">/{content.slides.length}</span>
+        </p>
         <button
           type="button"
+          disabled={!canControl}
+          aria-expanded={jumpOpen}
           onClick={() => setJumpOpen(!jumpOpen)}
-          className="rounded-[8px] border px-4 py-2 text-sm text-white"
-          style={{ borderColor: '#353535', background: '#1B1B1B' }}
+          className="flex h-10 items-center gap-2 rounded-lg bg-[#1b1b1b] px-4 text-lg font-medium tracking-[-0.04em] text-white disabled:opacity-40"
         >
+          <Icon icon="mdi:format-list-numbered" className="size-5 text-[#fddb00]" />
           Jump
         </button>
-        <span className="text-xs text-white/60">
-          {bounded + 1} / {content.slides.length}
-        </span>
       </div>
       {jumpOpen && (
-        <div
-          className="absolute bottom-16 left-4 flex gap-1 rounded border bg-[#1B1B1B] p-2"
-          style={{ borderColor: '#353535' }}
-        >
-          {content.slides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => {
-                setStep(i)
-                setJumpOpen(false)
-              }}
-              className={`size-7 rounded text-xs ${i === bounded ? 'bg-yellow-400 text-black' : 'bg-white/10 text-white'}`}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
+        <>
+          {/* Click-away layer: closes the list without choosing a slide. */}
+          <button
+            type="button"
+            aria-label="Tutup daftar slide"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setJumpOpen(false)}
+          />
+          <div
+            className="absolute bottom-[72px] left-4 z-50 flex max-w-[calc(100%-2rem)] flex-wrap gap-2 rounded-lg border bg-[#1B1B1B] p-3"
+            style={{ borderColor: '#353535' }}
+          >
+            {content.slides.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setStep(i)
+                  setJumpOpen(false)
+                }}
+                className={`size-9 rounded text-sm font-medium ${i === bounded ? 'bg-[#fddb00] text-black' : 'bg-white/10 text-white'}`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        </>
       )}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           disabled={!canControl || bounded === 0}
           onClick={() => setStep(bounded - 1)}
-          className="rounded-[8px] border px-4 py-2 text-sm text-white disabled:opacity-40"
-          style={{ borderColor: '#353535', background: '#1B1B1B' }}
+          className="h-10 w-[132px] rounded-lg bg-[#1b1b1b] text-lg font-medium tracking-[-0.04em] text-white disabled:opacity-40"
         >
           Previous
         </button>
@@ -135,7 +153,7 @@ export function PresentationRenderer({
         <GradientButton
           disabled={!canControl || isLastSlide}
           onClick={() => setStep(bounded + 1)}
-          className="px-6 py-2 text-sm"
+          className="h-10 px-8 text-lg font-medium! tracking-[-0.04em]"
         >
           Next
         </GradientButton>

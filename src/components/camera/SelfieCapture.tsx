@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { Icon } from '@iconify/react'
 
+import { fileToCanvas, hasLiveCamera } from '@/lib/camera'
 import { type CompressOptions, compressToJpegDataUrl } from '@/lib/selfie/compress'
 
 // Selfie capture (HLN-018) — the front-camera sibling of ScannerPopup.
@@ -24,13 +25,19 @@ export function SelfieCapture({
   compress,
   onSave,
   onClose,
+  error,
+  canSave = true,
 }: {
   title: string
   instructions: string
   actionLabel: string
   compress?: CompressOptions
-  onSave: (dataUrl: string) => void
+  onSave: (dataUrl: string) => void | Promise<void>
   onClose: () => void
+  // Save failure to show under the button (the caller owns the write).
+  error?: string | null
+  // False while the caller is not ready to accept a photo (e.g. team not loaded).
+  canSave?: boolean
 }) {
   const [facing, setFacing] = useState<Facing>('user')
   const [shot, setShot] = useState<string | null>(null)
@@ -84,11 +91,16 @@ export function SelfieCapture({
         <button
           type="button"
           onClick={save}
-          disabled={!shot || busy}
+          disabled={!shot || busy || !canSave}
           className="bg-helden-yellow-gradient h-16 w-full rounded-lg text-lg font-medium text-black disabled:opacity-40"
         >
           {busy ? 'Menyimpan…' : actionLabel}
         </button>
+        {error && (
+          <p role="alert" className="mt-3 text-center text-sm text-red-400">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -112,10 +124,15 @@ function CameraPane({
   onFlip: () => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  // Insecure context (LAN HTTP): no live preview — the shutter opens the
+  // device's own camera app instead (see lib/camera.ts).
+  const live = hasLiveCamera()
   const [error, setError] = useState(false)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    if (!live) return
     let cancelled = false
     let stream: MediaStream | null = null
 
@@ -138,16 +155,34 @@ function CameraPane({
       cancelled = true
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [facing])
+  }, [facing, live])
+
+  const onFile = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return
+      const canvas = await fileToCanvas(file)
+      if (!canvas) {
+        setError(true)
+        return
+      }
+      const url = compressToJpegDataUrl(canvas, { ...compress, mirror: false })
+      if (url) onCapture(url)
+    },
+    [compress, onCapture]
+  )
 
   const capture = useCallback(() => {
+    if (!live) {
+      fileRef.current?.click()
+      return
+    }
     const video = videoRef.current
     if (!video || !video.videoWidth) return
     // Mirror only the front camera — the preview is CSS-flipped, so an
     // un-mirrored capture would not match what the player just saw.
     const url = compressToJpegDataUrl(video, { ...compress, mirror: facing === 'user' })
     if (url) onCapture(url)
-  }, [compress, facing, onCapture])
+  }, [compress, facing, live, onCapture])
 
   return (
     <>
@@ -159,6 +194,10 @@ function CameraPane({
           </div>
         ) : shot ? (
           <img src={shot} alt="" className="size-full object-cover" />
+        ) : !live ? (
+          <div className="flex size-full items-center justify-center px-8 text-center text-sm text-white/70">
+            Ketuk tombol kuning untuk membuka kamera perangkat dan mengambil foto tim.
+          </div>
         ) : (
           <video
             ref={videoRef}
@@ -169,6 +208,18 @@ function CameraPane({
           />
         )}
       </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={(e) => {
+          void onFile(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
 
       {/* Bottom bar: thumbnail (retake) · shutter · flip. */}
       <div className="mt-6 flex items-center justify-between rounded-lg bg-[#080808]/80 px-8 py-5">
@@ -191,7 +242,7 @@ function CameraPane({
         <button
           type="button"
           onClick={capture}
-          disabled={error || !ready || !!shot}
+          disabled={error || (live && !ready) || !!shot}
           aria-label="Ambil foto"
           className="bg-helden-yellow-gradient flex size-16 items-center justify-center rounded-full disabled:opacity-40"
         >
@@ -201,7 +252,7 @@ function CameraPane({
         <button
           type="button"
           onClick={onFlip}
-          disabled={!!shot}
+          disabled={!!shot || !live}
           aria-label="Ganti kamera"
           className="flex size-[74px] shrink-0 items-center justify-center rounded-full bg-white/10 text-white/80 hover:text-white disabled:opacity-40"
         >

@@ -15,12 +15,12 @@ import { PhaseStartList } from '@/pages/host/_shared/PhaseStartList'
 import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
-import { toast } from 'sonner'
 
 import { useCodeInputAllSolved } from '@/phases/CodeInput/lib'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { VideoHostScreen } from '@/phases/Video'
 
+import { copyToClipboard } from '@/lib/clipboard'
 import { demoBundle } from '@/lib/demoBundle'
 import {
   endLevel,
@@ -113,7 +113,7 @@ export function HostView() {
   }, [sessionId, phase, codeInputAllSolved, pointer?.activePhaseId, isModular, runAdvance])
 
   if (!meta || !config || !sessionId) {
-    return <div className="p-8 text-sm text-gray-500">Loading session {sessionId}…</div>
+    return <div className="p-8 text-sm text-gray-500">Memuat sesi {sessionId}…</div>
   }
 
   const playerEntries = Object.entries(players) as [string, PlayerPresence][]
@@ -268,6 +268,9 @@ export function HostView() {
 
   // Live: modular → picker (when at idle) or phase render + End level.
   //       sequence → original Next phase button.
+  // Session over: the closing screen replaces the live shell entirely.
+  if (meta.status === 'ended') return <EndScreen sessionId={sessionId} role="host" />
+
   if (meta.status === 'live' && onPicker) {
     const pendingPhase = pendingPhaseId ? demoBundle.phases[pendingPhaseId] : null
     if (pendingPhase) {
@@ -315,7 +318,7 @@ export function HostView() {
       // the raw (often taller) browser viewport instead, pushing anything
       // pinned to the bottom (e.g. the quiz's per-stage action button) below
       // the visible area. lg:h-full matches that capped box exactly.
-      className="relative flex h-dvh w-full flex-col gap-3 overflow-hidden px-8 py-3 lg:h-full"
+      className="relative flex h-dvh w-full flex-col gap-10 overflow-hidden px-[47px] pt-[48px] pb-[45px] lg:h-full"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -323,12 +326,38 @@ export function HostView() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <Header />
+      <div className="absolute top-[10px] right-[10px] z-10">
+        <Header />
+      </div>
 
-      {meta.status === 'ended' && <EndScreen sessionId={sessionId} />}
+      {/* Quiz renders its own card + action button (Figma: card, 40px gap,
+          64px button), so it sits directly in the shell. Every other phase
+          gets the shared glass card here. */}
+      {meta.status === 'live' && phase && phase.content.type === 'quiz' && (
+        <PhaseRouter
+          key={phase.id}
+          phase={phase}
+          phaseStartMs={pointer?.changedAt}
+          role="host"
+          sessionId={sessionId}
+          allowTeams={config.allowTeams}
+          onAdvance={() =>
+            runAdvance(phase.id, () =>
+              isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)
+            )
+          }
+        />
+      )}
 
-      {meta.status === 'live' && phase && (
-        <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-white/20 bg-[#12121299]">
+      {meta.status === 'live' && phase && phase.content.type !== 'quiz' && (
+        <div
+          className={`relative flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden ${
+            // The presentation card carries its own 0.5px frame (Figma H10).
+            phase.content.type === 'presentation'
+              ? 'border-[0.5px] border-[#99a3ae]'
+              : 'rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)]'
+          }`}
+        >
           <PhaseRouter
             key={phase.id}
             phase={phase}
@@ -469,8 +498,10 @@ function LobbyView({
 
   const copyJoinLink = (role: 'central' | 'player') => {
     const url = `${window.location.origin}/join/${role}?code=${joinCode}`
-    void navigator.clipboard?.writeText(url)
-    toast.success(role === 'central' ? 'Link Central disalin' : 'Link Player disalin')
+    // copyToClipboard falls back to execCommand on insecure LAN HTTP, where
+    // navigator.clipboard is undefined and the copy used to be silently skipped
+    // (the toast still said "disalin" while the old clipboard text stayed).
+    void copyToClipboard(url, role === 'central' ? 'Link Central disalin' : 'Link Player disalin')
     setCopyOpen(false)
   }
 
@@ -483,7 +514,7 @@ function LobbyView({
   return (
     <div
       // 1. Ubah min-h-dvh jadi h-dvh dan hapus overflow-y-auto di sini agar halaman tidak ikut scroll
-      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-8 py-3"
+      className="flex h-dvh w-full flex-col gap-10 overflow-hidden px-[47px] pt-[48px] pb-[45px]"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -494,41 +525,47 @@ function LobbyView({
       <Header />
 
       {/* 2. Tambahkan flex-1 dan min-h-0 di bungkus utama panel ini */}
-      <div className="flex min-h-0 flex-1 flex-col gap-5 rounded-2xl border border-white/5 bg-[#12121299] p-4 sm:p-6">
-        <HostBadge pageName={gameType} />
+      <div className="flex min-h-0 flex-1 flex-col gap-16 rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-8 pt-10 pb-8">
+        <div className="flex flex-col items-center gap-12">
+          <HostBadge pageName={gameType} />
 
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-white sm:text-3xl">Panel Kontrol Host</h1>
-          <p className="mx-auto mt-2 max-w-xl text-2xl font-extralight text-white/70">
-            Mulai sesi setelah seluruh pemain bergabung
-          </p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 rounded-2xl border border-white/5 bg-[#121212] p-3 sm:p-4">
-          <StatTile label="Layar Utama" value={String(connectedCentrals)} />
-          <StatTile label={unitsLabel} value={String(totalUnits)} />
-          <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
-        </div>
-
-        {/* 3. Tambahkan min-h-0 dan overflow-y-auto di sini agar daftar tim bisa di-scroll secara independen */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-2xl border border-white/5 bg-[#121212] p-4 sm:p-6">
-          <div className="text-sm font-semibold text-white sm:text-base">
-            {allowTeams ? 'Tim Terhubung' : 'Pemain Terhubung'}
+          <div className="flex flex-col items-center gap-4 text-center">
+            <h1 className="text-[32px] leading-normal font-bold tracking-[-0.04em] text-[#d9d9d9]">
+              Panel Kontrol Host
+            </h1>
+            <p className="text-2xl leading-[23px] font-light tracking-[-0.04em] text-[#ccc]">
+              Mulai sesi setelah seluruh pemain bergabung
+            </p>
           </div>
-          {allowTeams ? (
-            <TeamList players={players} teams={teams} />
-          ) : players.length === 0 ? (
-            <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
-          ) : (
-            <PlayerRows players={players} />
-          )}
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex gap-4 rounded-lg border border-[#353535] bg-black/[0.08] p-6">
+            <StatTile label="Layar Utama" value={String(connectedCentrals)} />
+            <StatTile label={unitsLabel} value={String(totalUnits)} />
+            <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
+          </div>
+
+          {/* min-h-0 + overflow-y-auto: the roster scrolls on its own, the page does not. */}
+          <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-8 overflow-y-auto rounded-lg border border-[#353535] bg-black/[0.08] p-6">
+            <div className="text-base tracking-[-0.04em] text-white [text-shadow:0_0_12px_rgba(253,164,0,0.2)]">
+              {allowTeams ? 'Tim Terhubung' : 'Pemain Terhubung'}
+            </div>
+            {allowTeams ? (
+              <TeamList players={players} teams={teams} />
+            ) : players.length === 0 ? (
+              <p className="px-1 text-xs text-white/50">Belum ada pemain yang bergabung.</p>
+            ) : (
+              <PlayerRows players={players} />
+            )}
+          </div>
         </div>
       </div>
 
       <button
         type="button"
         onClick={onProceed}
-        className="bg-helden-yellow-gradient mt-auto w-full shrink-0 rounded-lg py-4 text-center text-lg font-medium text-black"
+        className="bg-helden-yellow-gradient h-16 w-full shrink-0 rounded-lg px-8 text-center text-lg font-medium tracking-[-0.04em] text-black"
       >
         Pilih Phase
       </button>
