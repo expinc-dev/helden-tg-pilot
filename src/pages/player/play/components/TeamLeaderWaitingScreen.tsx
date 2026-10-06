@@ -29,7 +29,7 @@ export function TeamLeaderWaitingScreen({
   const inviteUrl = teamInviteUrl(joinCode, teamId)
   return (
     <div
-      className="relative flex min-h-screen w-full flex-col gap-4 bg-neutral-950 bg-cover bg-center p-6"
+      className="relative flex min-h-dvh w-full flex-col gap-4 bg-neutral-950 bg-cover bg-center p-6"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.player})`,
         backgroundSize: '100% 100%',

@@ -41,7 +41,7 @@ export function PhaseStartList({
 
   return (
     <div
-      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-[47px] pt-[48px] pb-[45px]"
+      className="flex h-dvh w-full flex-col gap-3 overflow-hidden px-4 pt-6 pb-6 sm:px-[47px] sm:pt-[48px] sm:pb-[45px]"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -51,14 +51,14 @@ export function PhaseStartList({
     >
       <Header />
 
-      <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-16 overflow-y-auto rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-8 pt-10 pb-8">
+      <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-8 overflow-y-auto rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-4 pt-6 pb-6 sm:gap-16 sm:px-8 sm:pt-10 sm:pb-8">
         <div className="flex flex-col items-center gap-12">
           <HostBadge pageName={gameType} />
           <div className="flex flex-col items-center gap-4 text-center">
             <h1 className="text-[32px] leading-normal font-bold tracking-[-0.04em] text-[#d9d9d9]">
               Pilih Phase
             </h1>
-            <p className="text-2xl leading-[23px] font-light tracking-[-0.04em] text-[#ccc]">
+            <p className="text-lg leading-snug font-light tracking-[-0.04em] text-[#ccc] sm:text-2xl">
               Pilih phase dan mulai permainan
             </p>
           </div>
@@ -105,7 +105,7 @@ function PhaseCard({
   const thumbnail = assets.images.presentation.classroomExample
 
   return (
-    <div className="flex shrink-0 items-stretch overflow-clip rounded-lg border border-[#353535] shadow-[0_0_12px_rgba(253,164,0,0.2)]">
+    <div className="flex shrink-0 flex-col items-stretch overflow-clip rounded-lg border border-[#353535] shadow-[0_0_12px_rgba(253,164,0,0.2)] sm:flex-row">
       <div className="flex min-w-0 flex-1 p-4">
         <div className="relative min-h-[150px] w-full flex-1">
           <img
@@ -115,7 +115,7 @@ function PhaseCard({
           />
         </div>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-6 py-6 pr-6 pl-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-6 px-4 pt-0 pb-4 sm:py-6 sm:pr-6 sm:pl-4">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <span className="text-base tracking-[-0.04em] text-white [text-shadow:0_0_12px_rgba(253,164,0,0.2)]">

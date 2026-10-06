@@ -18,14 +18,16 @@ export function StatTile({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-end gap-2 rounded border border-[#353535] py-4 ${
-        onCopy ? 'shrink-0 px-8' : 'min-w-0 flex-1 px-4'
+      className={`flex flex-col items-center justify-end gap-2 rounded border border-[#353535] py-3 sm:py-4 ${
+        onCopy
+          ? 'min-w-0 flex-1 px-4 sm:flex-none sm:shrink-0 sm:px-8'
+          : 'min-w-0 flex-1 px-3 sm:px-4'
       }`}
     >
-      <span className="text-helden-yellow text-base tracking-[-0.04em] [text-shadow:0_0_12px_rgba(253,164,0,0.2)]">
+      <span className="text-helden-yellow text-center text-sm tracking-[-0.04em] [text-shadow:0_0_12px_rgba(253,164,0,0.2)]">
         {label}
       </span>
-      <span className="flex items-center gap-2 text-[32px] leading-[1.2] font-bold text-white">
+      <span className="flex items-center gap-2 text-2xl leading-[1.2] font-bold text-white sm:text-[32px]">
         {value}
         {onCopy && (
           <button

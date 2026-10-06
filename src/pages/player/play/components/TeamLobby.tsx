@@ -47,7 +47,7 @@ export function TeamLobby({
 
   return (
     <div
-      className="relative flex min-h-screen w-full flex-col bg-neutral-950 bg-cover bg-center p-6"
+      className="relative flex min-h-dvh w-full flex-col bg-neutral-950 bg-cover bg-center p-6"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.player})`,
         backgroundSize: '100% 100%',
@@ -84,7 +84,10 @@ export function TeamLobby({
           </GradientButton>
 
           {teams.length > 0 && (
-            <div className="flex flex-col gap-2 border-t pt-4" style={{ borderColor: '#353535' }}>
+            <div
+              className="flex max-h-[40dvh] flex-col gap-2 overflow-y-auto border-t pt-4"
+              style={{ borderColor: '#353535' }}
+            >
               <p className="text-sm text-white/50">atau gabung ke tim yang sudah ada</p>
               {teams.map((t) => (
                 <button
