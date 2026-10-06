@@ -27,7 +27,7 @@ export function HostScreenFrame({
 }) {
   return (
     <div
-      className="relative flex h-dvh w-full flex-col gap-10 overflow-hidden px-[47px] pt-[48px] pb-[45px] lg:h-full"
+      className="relative flex h-dvh w-full flex-col gap-4 overflow-hidden px-4 pt-6 pb-6 sm:gap-10 sm:px-[47px] sm:pt-[48px] sm:pb-[45px] lg:h-full"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -39,7 +39,7 @@ export function HostScreenFrame({
         <Header />
       </div>
 
-      <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-16 overflow-y-auto rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-8 pt-10 pb-8">
+      <div className="flex min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] flex-col gap-8 overflow-y-auto rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-4 pt-6 pb-6 sm:gap-16 sm:px-8 sm:pt-10 sm:pb-8">
         {(badge !== undefined || title) && (
           <HostPanelHeader badge={badge} title={title} subtitle={subtitle} />
         )}

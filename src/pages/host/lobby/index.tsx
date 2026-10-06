@@ -61,6 +61,18 @@ export function HostView() {
   // confirms the first phase.
   const [pickingPhase, setPickingPhase] = useState(false)
   const [confirmStart, setConfirmStart] = useState(false)
+  const [ending, setEnding] = useState(false)
+  const [endError, setEndError] = useState<string | null>(null)
+  const handleEndSession = useCallback(() => {
+    if (ending) return
+    setEnding(true)
+    setEndError(null)
+    endSession(sessionId)
+      .catch((e: unknown) => {
+        setEndError(e instanceof Error ? e.message : 'Gagal mengakhiri sesi.')
+      })
+      .finally(() => setEnding(false))
+  }, [ending, sessionId])
 
   // One advance per phase. Every advance path on this route — both auto-advance
   // effects below and every manual control rendered further down — funnels
@@ -300,7 +312,9 @@ export function HostView() {
           bundle={demoBundle}
           played={played}
           onPick={(phaseId) => setPendingPhaseId(phaseId)}
-          onEndSession={() => endSession(sessionId)}
+          onEndSession={handleEndSession}
+          ending={ending}
+          endError={endError}
         />
       </div>
     )
@@ -318,7 +332,7 @@ export function HostView() {
       // the raw (often taller) browser viewport instead, pushing anything
       // pinned to the bottom (e.g. the quiz's per-stage action button) below
       // the visible area. lg:h-full matches that capped box exactly.
-      className="relative flex h-dvh w-full flex-col gap-10 overflow-hidden px-[47px] pt-[48px] pb-[45px] lg:h-full"
+      className="relative flex h-dvh w-full flex-col gap-4 overflow-hidden px-4 pt-6 pb-6 sm:gap-10 sm:px-[47px] sm:pt-[48px] sm:pb-[45px] lg:h-full"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -514,7 +528,7 @@ function LobbyView({
   return (
     <div
       // 1. Ubah min-h-dvh jadi h-dvh dan hapus overflow-y-auto di sini agar halaman tidak ikut scroll
-      className="flex h-dvh w-full flex-col gap-10 overflow-hidden px-[47px] pt-[48px] pb-[45px]"
+      className="flex h-dvh w-full flex-col gap-4 overflow-hidden px-4 pt-6 pb-6 sm:gap-10 sm:px-[47px] sm:pt-[48px] sm:pb-[45px]"
       style={{
         backgroundImage: `url(${assets.images.backgrounds.auth})`,
         backgroundSize: '100% 100%',
@@ -525,7 +539,7 @@ function LobbyView({
       <Header />
 
       {/* 2. Tambahkan flex-1 dan min-h-0 di bungkus utama panel ini */}
-      <div className="flex min-h-0 flex-1 flex-col gap-16 rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-8 pt-10 pb-8">
+      <div className="flex min-h-0 flex-1 flex-col gap-8 rounded-2xl border border-[#353535] bg-[rgba(8,8,8,0.2)] px-4 pt-6 pb-6 sm:gap-16 sm:px-8 sm:pt-10 sm:pb-8">
         <div className="flex flex-col items-center gap-12">
           <HostBadge pageName={gameType} />
 
@@ -533,17 +547,19 @@ function LobbyView({
             <h1 className="text-[32px] leading-normal font-bold tracking-[-0.04em] text-[#d9d9d9]">
               Panel Kontrol Host
             </h1>
-            <p className="text-2xl leading-[23px] font-light tracking-[-0.04em] text-[#ccc]">
+            <p className="text-lg leading-snug font-light tracking-[-0.04em] text-[#ccc] sm:text-2xl">
               Mulai sesi setelah seluruh pemain bergabung
             </p>
           </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="flex gap-4 rounded-lg border border-[#353535] bg-black/[0.08] p-6">
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-[#353535] bg-black/[0.08] p-4 sm:flex sm:gap-4 sm:p-6">
             <StatTile label="Layar Utama" value={String(connectedCentrals)} />
             <StatTile label={unitsLabel} value={String(totalUnits)} />
-            <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
+            <div className="col-span-2 flex sm:contents">
+              <StatTile label="Kode Sesi" value={joinCode} onCopy={() => setCopyOpen(true)} />
+            </div>
           </div>
 
           {/* min-h-0 + overflow-y-auto: the roster scrolls on its own, the page does not. */}

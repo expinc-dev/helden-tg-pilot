@@ -83,7 +83,7 @@ export function PlayerView() {
 
   if (!identity) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="flex min-h-dvh items-center justify-center p-8">
         <p className="text-sm text-gray-500">Joining…</p>
       </div>
     )
@@ -91,7 +91,7 @@ export function PlayerView() {
 
   if (full) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="flex min-h-dvh items-center justify-center p-8">
         <p className="text-sm text-red-600">Session is full — can’t join as player.</p>
       </div>
     )
@@ -101,7 +101,7 @@ export function PlayerView() {
   // the picker never flashes and can't be used to join a different team.
   if (config?.allowTeams && !phase && joiningViaInvite && sessionId) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="flex min-h-dvh items-center justify-center p-8">
         <p className="text-sm text-gray-500">Joining team…</p>
       </div>
     )

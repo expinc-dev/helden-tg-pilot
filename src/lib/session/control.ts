@@ -454,8 +454,25 @@ export async function endSession(
       }
     }
   }
-  await Promise.all([
-    update(eref(`sessions/${sessionId}/meta`), { status: 'ended' }),
-    remove(eref(`sessions/${sessionId}/timer`)),
-  ])
+  // Status first: it is the write that actually ends the session. A denied
+  // write here (typically host uid != meta/hostUid after losing anonymous auth)
+  // must surface as a readable error instead of a bare rejection.
+  try {
+    await update(eref(`sessions/${sessionId}/meta`), { status: 'ended' })
+  } catch (e) {
+    const code = (e as { code?: string } | null)?.code ?? ''
+    console.error('endSession: failed to set meta/status=ended', code, e)
+    throw new Error(
+      /permission/i.test(code) || /permission/i.test(String((e as Error)?.message))
+        ? 'Tidak punya izin mengakhiri sesi (perangkat host berbeda dari yang membuat sesi).'
+        : 'Gagal mengakhiri sesi. Periksa koneksi lalu coba lagi.',
+      { cause: e }
+    )
+  }
+  // Timer cleanup is best-effort: the session is already ended.
+  try {
+    await remove(eref(`sessions/${sessionId}/timer`))
+  } catch (e) {
+    console.warn('endSession: timer cleanup failed', e)
+  }
 }

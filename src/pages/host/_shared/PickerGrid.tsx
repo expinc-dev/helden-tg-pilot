@@ -30,11 +30,15 @@ export function PickerGrid({
   played,
   onPick,
   onEndSession,
+  ending = false,
+  endError = null,
 }: {
   bundle: PublishedGame
   played: Record<string, true>
   onPick: (phaseId: string) => void
   onEndSession: () => void
+  ending?: boolean
+  endError?: string | null
 }) {
   const cards = buildCards(bundle, played, bundle.flowMode ?? 'sequential')
   const gameType = useGameType()
@@ -60,12 +64,18 @@ export function PickerGrid({
         </div>
       </div>
 
+      {endError && (
+        <p role="alert" className="mb-3 text-center text-sm text-red-400">
+          {endError}
+        </p>
+      )}
       <button
         type="button"
         onClick={onEndSession}
-        className="mb-5 w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+        disabled={ending}
+        className="mb-5 w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white disabled:opacity-50"
       >
-        Akhiri Sesi
+        {ending ? 'Mengakhiri…' : 'Akhiri Sesi'}
       </button>
     </div>
   )

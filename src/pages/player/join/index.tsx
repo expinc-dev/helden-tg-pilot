@@ -69,7 +69,7 @@ export function PlayerJoin() {
 
       <form
         onSubmit={joinByCode}
-        className="mt-auto flex w-full flex-col gap-8 border-t px-6 pt-6 pb-11 backdrop-blur-xl"
+        className="mt-auto flex w-full flex-col gap-6 border-t px-6 pt-6 pb-6 backdrop-blur-xl [@media(min-height:700px)]:gap-8 [@media(min-height:700px)]:pb-11"
         style={{ borderColor: '#353535', background: 'rgba(8, 8, 8, 0.20)' }}
       >
         <div className="flex w-full flex-col gap-4">
@@ -83,7 +83,6 @@ export function PlayerJoin() {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="00000"
               maxLength={6}
-              autoFocus
               className={`${FIELD_INPUT} uppercase placeholder:normal-case`}
               style={{ borderColor: '#353535' }}
             />

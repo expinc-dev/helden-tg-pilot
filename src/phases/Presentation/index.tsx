@@ -91,11 +91,11 @@ export function PresentationRenderer({
   }
 
   const controls = role === 'host' && (
-    <div className="relative z-50 flex shrink-0 items-center justify-between gap-4 bg-black/40 p-4">
+    <div className="relative z-50 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-black/40 p-3 sm:p-4">
       {/* Figma "Slides 1/5" counter + an explicit Jump button (the counter alone
           did not read as clickable, so the jump-to-slide list was effectively lost). */}
-      <div className="flex items-center gap-4">
-        <p className="text-lg font-light tracking-[-0.04em] text-[#fddb00]">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+        <p className="text-base font-light tracking-[-0.04em] text-[#fddb00] sm:text-lg">
           Slides {bounded + 1}
           <span className="font-bold">/{content.slides.length}</span>
         </p>
@@ -104,7 +104,7 @@ export function PresentationRenderer({
           disabled={!canControl}
           aria-expanded={jumpOpen}
           onClick={() => setJumpOpen(!jumpOpen)}
-          className="flex h-10 items-center gap-2 rounded-lg bg-[#1b1b1b] px-4 text-lg font-medium tracking-[-0.04em] text-white disabled:opacity-40"
+          className="flex h-10 items-center gap-2 rounded-lg bg-[#1b1b1b] px-4 text-base font-medium tracking-[-0.04em] text-white disabled:opacity-40 sm:text-lg"
         >
           <Icon icon="mdi:format-list-numbered" className="size-5 text-[#fddb00]" />
           Jump
@@ -120,7 +120,7 @@ export function PresentationRenderer({
             onClick={() => setJumpOpen(false)}
           />
           <div
-            className="absolute bottom-[72px] left-4 z-50 flex max-w-[calc(100%-2rem)] flex-wrap gap-2 rounded-lg border bg-[#1B1B1B] p-3"
+            className="absolute bottom-full left-3 z-50 mb-2 flex max-w-[calc(100%-2rem)] flex-wrap gap-2 rounded-lg border bg-[#1B1B1B] p-3 sm:left-4"
             style={{ borderColor: '#353535' }}
           >
             {content.slides.map((_, i) => (
@@ -139,12 +139,12 @@ export function PresentationRenderer({
           </div>
         </>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex w-full items-center gap-3 sm:w-auto">
         <button
           type="button"
           disabled={!canControl || bounded === 0}
           onClick={() => setStep(bounded - 1)}
-          className="h-10 w-[132px] rounded-lg bg-[#1b1b1b] text-lg font-medium tracking-[-0.04em] text-white disabled:opacity-40"
+          className="h-10 min-w-0 flex-1 rounded-lg bg-[#1b1b1b] text-base font-medium tracking-[-0.04em] text-white disabled:opacity-40 sm:w-[132px] sm:flex-none sm:text-lg"
         >
           Previous
         </button>
@@ -153,7 +153,7 @@ export function PresentationRenderer({
         <GradientButton
           disabled={!canControl || isLastSlide}
           onClick={() => setStep(bounded + 1)}
-          className="h-10 px-8 text-lg font-medium! tracking-[-0.04em]"
+          className="h-10 min-w-0 flex-1 px-4 text-base font-medium! tracking-[-0.04em] sm:flex-none sm:px-8 sm:text-lg"
         >
           Next
         </GradientButton>
