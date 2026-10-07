@@ -34,6 +34,11 @@ export function usePlayerStep(
   phaseId: string
 ) {
   const [step, setStep] = useState(0)
+  // The path `step` was last actually read from. `step` starts at 0 before RTDB
+  // answers, which looks identical to "the player is on step 0" — a caller that
+  // ACTS on the step (rather than just rendering it) needs to know the read landed,
+  // or a refreshing player at step 3 would briefly be treated as step 0.
+  const [loadedPath, setLoadedPath] = useState<string | undefined>(undefined)
 
   const path =
     syncMode === 'lockstep'
@@ -48,6 +53,7 @@ export function usePlayerStep(
     if (!path) return
     return onValue(eref(path), (s) => {
       setStep(typeof s.val() === 'number' ? s.val() : 0)
+      setLoadedPath(path)
     })
   }, [path])
 
@@ -64,7 +70,8 @@ export function usePlayerStep(
     },
     [sessionId, playerId, syncMode, phaseId]
   )
-  return [step, write] as const
+  // Third element is additive: existing `[step, write]` destructuring is unaffected.
+  return [step, write, !!path && loadedPath === path] as const
 }
 
 export type PlayerRow = { id: string; name: string; connected: boolean; selfStep: number }

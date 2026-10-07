@@ -10,6 +10,7 @@ import { IdleRenderer } from './Idle'
 import { MicrolearningRenderer } from './Microlearning'
 import { UnknownTemplate } from './Minigames/UnknownTemplate'
 import { minigameRegistry } from './Minigames/registry'
+import { NormalQuizRenderer } from './NormalQuiz'
 import { PresentationRenderer } from './Presentation'
 import { QuizRenderer } from './Quiz'
 import { ReflectionRenderer } from './Reflection'
@@ -160,6 +161,17 @@ function PhaseContentSwitch({
         <MicrolearningRenderer
           content={content}
           title={phase.title}
+          role={role}
+          sessionId={sessionId}
+          playerId={playerId}
+          phase={phase}
+          onAdvance={onAdvance}
+        />
+      )
+    case 'normalquiz':
+      return (
+        <NormalQuizRenderer
+          content={content}
           role={role}
           sessionId={sessionId}
           playerId={playerId}

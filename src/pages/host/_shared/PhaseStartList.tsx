@@ -11,6 +11,7 @@ import { HostBadge } from './HostBadge'
 const TYPE_META: Record<string, { label: string; icon: string }> = {
   video: { label: 'Video', icon: 'mdi:play-circle-outline' },
   quiz: { label: 'Quiz', icon: 'mdi:help-circle-outline' },
+  normalquiz: { label: 'Kuis Biasa', icon: 'mdi:clipboard-check-outline' },
   presentation: { label: 'Presentasi', icon: 'mdi:presentation' },
   microlearning: { label: 'Microlearning', icon: 'mdi:book-open-variant' },
   minigame: { label: 'Minigame', icon: 'mdi:gamepad-variant-outline' },

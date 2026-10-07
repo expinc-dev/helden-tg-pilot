@@ -249,7 +249,15 @@ export function HostView() {
   // MonitorPane already renders a richer per-team/per-player progress spread
   // than the generic HostPresenceSpread panel, plus its own "Akhiri Level"
   // button inside the card, so this bypasses both.
-  if (meta.status === 'live' && phase && phase.content.type === 'microlearning') {
+  // normalquiz is self-paced with the same shape (its own progress list + footer
+  // buttons, incl. "Tahap Selanjutnya"), so it takes this branch too — falling
+  // through to the generic one below would stack a second next-button and the
+  // generic spread under its card.
+  if (
+    meta.status === 'live' &&
+    phase &&
+    (phase.content.type === 'microlearning' || phase.content.type === 'normalquiz')
+  ) {
     return (
       // `relative` + the frame height: HostScriptPanel is absolute, so it needs
       // this wrapper to be its containing block — these branches bypass the

@@ -8,7 +8,7 @@ import { eref } from '@/lib/firebase'
 import { scorePhase } from '@/lib/scoring/score'
 
 import { type Contribution, aggregateForPhase } from './flushAggregate'
-import { scoreUnscoredQuestions } from './quizScoring'
+import { scoreAllNormalQuizQuestions, scoreUnscoredQuestions } from './quizScoring'
 
 // Host-only. Called from control.ts::nextPhase BEFORE the phasePointer moves.
 // Reads sessions/{id}/{players,teams} for the outgoing phase, computes durable
@@ -132,6 +132,27 @@ export async function flushPhaseResults(sessionId: string, phase: Phase): Promis
       })
     } catch (e) {
       console.error('scoreUnscoredQuestions failed for', phase.id, e)
+    }
+    await flushQuizFromAggregates(sessionId, phase)
+    return
+  }
+
+  // Normal quiz: same persistence as a Kahoot quiz (scores live in aggregates/),
+  // but there is no per-question reveal that scored along the way — the host's
+  // "Nilai" button grades it. Grade once more here so a host who leaves the phase
+  // without pressing it, or answers that landed after it, are still counted
+  // (scoreQuizQuestion is idempotent per question). Without this branch the type
+  // would fall through to the generic path below and write a 0-score PhaseResult
+  // plus every player's raw answers.
+  if (phase.content.type === 'normalquiz') {
+    try {
+      await scoreAllNormalQuizQuestions({
+        sessionId,
+        phase,
+        questions: phase.content.questions,
+      })
+    } catch (e) {
+      console.error('scoreAllNormalQuizQuestions failed for', phase.id, e)
     }
     await flushQuizFromAggregates(sessionId, phase)
     return
