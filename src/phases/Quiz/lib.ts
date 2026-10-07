@@ -33,6 +33,13 @@ export function resolveTimers(content: QuizContent) {
   }
 }
 
+// on_device (attitude) quizzes have no time limit unless the author set one: the
+// 20s default above is a graded-quiz pacing choice, and applying it here would
+// silently start locking players out of every already-published on_device quiz.
+export function onDeviceTimerSeconds(content: QuizContent): number | undefined {
+  return content.answeringTimerSeconds ?? content.perQuestionTimerSeconds
+}
+
 export function useAnsweredCount(sessionId: string | undefined, qId: string): number {
   const [count, setCount] = useState(0)
   useEffect(() => {
