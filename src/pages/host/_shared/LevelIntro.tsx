@@ -31,6 +31,16 @@ function levelStats(phase: Phase): Stat[] {
     ]
   }
 
+  // Self-paced: no per-question duration, just the question count and the
+  // optional phase-wide timer.
+  if (phase.content.type === 'normalquiz') {
+    const stats: Stat[] = [
+      { label: 'Jumlah Pertanyaan', value: String(phase.content.questions.length) },
+    ]
+    if (phase.timer?.seconds) stats.push({ label: 'Durasi', value: `${phase.timer.seconds} Detik` })
+    return stats
+  }
+
   const itemCount = minigameItemCount(phase)
   const stats: Stat[] = []
   if (itemCount !== undefined) stats.push({ label: 'Jumlah Pertanyaan', value: String(itemCount) })

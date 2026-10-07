@@ -1,4 +1,4 @@
-import type { Phase } from '@helden-inc/tg-schema'
+import type { Phase, Question } from '@helden-inc/tg-schema'
 import { get, update } from 'firebase/database'
 
 import { eref } from '@/lib/firebase'
@@ -190,6 +190,39 @@ export async function scoreUnscoredQuestions(opts: {
       questionIndex: i,
       correctId: questions[i].correctId ?? '',
       timerSeconds,
+    })
+  }
+}
+
+// Host-only. Grades EVERY question of a normal quiz in one pass — there is no
+// per-question reveal in a self-paced phase, so the host (who holds the full
+// bundle and therefore the correctIds) triggers this once players are done.
+//
+// Not scoreUnscoredQuestions: that skips any question that already has scores, so
+// an answer that landed after the first pass would never be counted. Re-running
+// scoreQuizQuestion is safe — it is idempotent per question (quizTotals.ts replaces
+// that question's contribution instead of adding it again), so this can be pressed
+// again, and also runs at the phase boundary (flush.ts) as the safety net.
+//
+// Scoring is correctness-only for a normal quiz (tg-cms publish.ts enforces it), so
+// the speed-bonus inputs scoreQuizQuestion also takes (timer window, question start)
+// are irrelevant: scoreAnswer ignores elapsedMs unless the mode has a speed part.
+export async function scoreAllNormalQuizQuestions(opts: {
+  sessionId: string
+  phase: Phase
+  questions: Question[]
+}) {
+  const { sessionId, phase, questions } = opts
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i]
+    await scoreQuizQuestion({
+      sessionId,
+      phase,
+      questionIndex: i,
+      // Only single_choice carries a key; tg-cms rejects other shapes at publish.
+      // '' means "ungraded" to scoreQuizQuestion (answering counts as correct).
+      correctId: q.qType === 'single_choice' ? (q.correctId ?? '') : '',
+      timerSeconds: phase.timer?.seconds ?? 0,
     })
   }
 }

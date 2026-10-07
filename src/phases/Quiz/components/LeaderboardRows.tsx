@@ -46,7 +46,9 @@ export function LeaderboardRows({
 }: {
   sessionId: string
   phase: Phase
-  content: QuizContent
+  // Only `questions` is read, so a normal quiz (NormalQuizContent) can reuse this
+  // board as-is — it has no `mode`, which the full QuizContent would require.
+  content: Pick<QuizContent, 'questions'>
   // When set, each row also shows the points earned on that question ("+N").
   questionId?: string
   // How many questions have been opened to the room (questions at or beyond
