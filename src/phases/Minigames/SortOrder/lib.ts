@@ -156,8 +156,8 @@ export function previewScore(
 // has totalRounds 1 and round always resolves to 1, so this reduces to
 // exactly `timerExpired`, unchanged from before this feature existed.
 export function isRevealReady(
-  roster: SortOrderParticipant[],
-  answers: Record<string, SortOrderAnswer | undefined>,
+  _roster: SortOrderParticipant[],
+  _answers: Record<string, SortOrderAnswer | undefined>,
   timerExpired: boolean,
   round: number,
   totalRounds: number

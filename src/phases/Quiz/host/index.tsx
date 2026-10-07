@@ -82,7 +82,9 @@ export function HostQuiz({
     await clearTimer()
     // correctId comes from the (full) bundle question — the host has it; the
     // player-safe bundle strips it, so players only learn it via this reveal write.
-    const correctId = content.questions[quizStep.step]?.correctId ?? ''
+    const revealQuestion = content.questions[quizStep.step]
+    const correctId =
+      revealQuestion?.qType === 'single_choice' ? (revealQuestion.correctId ?? '') : ''
     await write({ step: quizStep.step, stage: 'reveal', correctId })
 
     const scoreKey = `${phaseId}_q${quizStep.step}`

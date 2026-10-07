@@ -64,7 +64,7 @@ export function HostView() {
   const [ending, setEnding] = useState(false)
   const [endError, setEndError] = useState<string | null>(null)
   const handleEndSession = useCallback(() => {
-    if (ending) return
+    if (ending || !sessionId) return
     setEnding(true)
     setEndError(null)
     endSession(sessionId)

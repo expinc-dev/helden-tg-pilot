@@ -70,13 +70,13 @@ export function PresentationPlayerPane({
   const isTeamMode =
     phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
   const keyId = isTeamMode && teamId ? teamId : playerId
+  const qId = `${phaseId}_${slide.id}_${questionIndex}`
   const answered = answer !== null
   const canSubmit = !answered && !submitting && isDraftValid(questionBlock.question, draft)
 
   const handleSubmit = async () => {
     if (!canSubmit) return
     setSubmitting(true)
-    const qId = `${phaseId}_${slide.id}_${questionIndex}`
     const optionId = questionBlock.question.qType === 'single_choice' ? String(draft) : undefined
     await submitAnswer({ sessionId, playerId, keyId, qId, value: draft, optionId })
     setAnswer(draft)
@@ -93,6 +93,10 @@ export function PresentationPlayerPane({
           draft={draft}
           onDraftChange={setDraft}
           disabled={answered || submitting}
+          qId={qId}
+          sessionId={sessionId}
+          phase={phase}
+          playerId={playerId}
         />
       </div>
       {answered ? (

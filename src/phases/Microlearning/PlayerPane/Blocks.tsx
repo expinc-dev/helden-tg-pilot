@@ -131,7 +131,11 @@ export function BlockView({
     case 'button':
       return <ButtonBlock block={block} />
     default:
-      return <p className="text-xs text-white/40">Unsupported block: {block.kind}</p>
+      return (
+        <p className="text-xs text-white/40">
+          Unsupported block: {(block as { kind: string }).kind}
+        </p>
+      )
   }
 }
 

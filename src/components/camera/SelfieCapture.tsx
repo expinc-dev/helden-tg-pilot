@@ -3,7 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Icon } from '@iconify/react'
 
 import { fileToCanvas, hasLiveCamera } from '@/lib/camera'
-import { type CompressOptions, compressToJpegDataUrl } from '@/lib/selfie/compress'
+import {
+  type CompressOptions,
+  DEFAULT_COMPRESS,
+  compressToJpegDataUrl,
+} from '@/lib/selfie/compress'
 
 // Selfie capture (HLN-018) — the front-camera sibling of ScannerPopup.
 //
@@ -165,7 +169,7 @@ function CameraPane({
         setError(true)
         return
       }
-      const url = compressToJpegDataUrl(canvas, { ...compress, mirror: false })
+      const url = compressToJpegDataUrl(canvas, { ...DEFAULT_COMPRESS, ...compress, mirror: false })
       if (url) onCapture(url)
     },
     [compress, onCapture]
@@ -180,7 +184,11 @@ function CameraPane({
     if (!video || !video.videoWidth) return
     // Mirror only the front camera — the preview is CSS-flipped, so an
     // un-mirrored capture would not match what the player just saw.
-    const url = compressToJpegDataUrl(video, { ...compress, mirror: facing === 'user' })
+    const url = compressToJpegDataUrl(video, {
+      ...DEFAULT_COMPRESS,
+      ...compress,
+      mirror: facing === 'user',
+    })
     if (url) onCapture(url)
   }, [compress, facing, live, onCapture])
 
