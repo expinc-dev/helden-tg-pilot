@@ -130,13 +130,19 @@ function CameraPane({
   const videoRef = useRef<HTMLVideoElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   // Insecure context (LAN HTTP): no live preview — the shutter opens the
-  // device's own camera app instead (see lib/camera.ts).
-  const live = hasLiveCamera()
+  // device's own camera app instead (see lib/camera.ts). The same fallback
+  // applies when getUserMedia is rejected (permission denied, in-app webview,
+  // no camera): treating that as "no live camera" keeps the shutter usable
+  // instead of dead-ending the player on an error.
+  const liveSupported = hasLiveCamera()
+  const [streamFailed, setStreamFailed] = useState(false)
+  const live = liveSupported && !streamFailed
+  // File read/decode failure only — a rejected getUserMedia is `streamFailed`.
   const [error, setError] = useState(false)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (!live) return
+    if (!liveSupported) return
     let cancelled = false
     let stream: MediaStream | null = null
 
@@ -153,13 +159,13 @@ function CameraPane({
           setReady(true)
         }
       })
-      .catch(() => setError(true))
+      .catch(() => setStreamFailed(true))
 
     return () => {
       cancelled = true
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [facing, live])
+  }, [facing, liveSupported])
 
   const onFile = useCallback(
     async (file: File | undefined) => {
@@ -177,6 +183,7 @@ function CameraPane({
 
   const capture = useCallback(() => {
     if (!live) {
+      setError(false)
       fileRef.current?.click()
       return
     }
@@ -198,13 +205,15 @@ function CameraPane({
       <div className="bg-helden-photo-gradient relative mt-8 flex-1 overflow-hidden rounded-2xl">
         {error ? (
           <div className="flex size-full items-center justify-center px-8 text-center text-sm text-red-400">
-            Tidak bisa mengakses kamera. Cek izin kamera di browser.
+            Foto tidak bisa dibaca. Coba ambil foto lagi.
           </div>
         ) : shot ? (
           <img src={shot} alt="" className="size-full object-cover" />
         ) : !live ? (
           <div className="flex size-full items-center justify-center px-8 text-center text-sm text-white/70">
-            Ketuk tombol kuning untuk membuka kamera perangkat dan mengambil foto tim.
+            {streamFailed
+              ? 'Kamera tidak bisa diakses langsung. Ketuk tombol kuning untuk mengambil foto tim dengan kamera perangkat.'
+              : 'Ketuk tombol kuning untuk membuka kamera perangkat dan mengambil foto tim.'}
           </div>
         ) : (
           <video
@@ -250,7 +259,7 @@ function CameraPane({
         <button
           type="button"
           onClick={capture}
-          disabled={error || (live && !ready) || !!shot}
+          disabled={(live && !ready) || !!shot}
           aria-label="Ambil foto"
           className="bg-helden-yellow-gradient flex size-16 items-center justify-center rounded-full disabled:opacity-40"
         >

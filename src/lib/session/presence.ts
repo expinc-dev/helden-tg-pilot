@@ -1,6 +1,15 @@
-import { get, onDisconnect, runTransaction, serverTimestamp, set, update } from 'firebase/database'
+import {
+  get,
+  onDisconnect,
+  onValue,
+  ref,
+  runTransaction,
+  serverTimestamp,
+  set,
+  update,
+} from 'firebase/database'
 
-import { auth, eref } from '@/lib/firebase'
+import { auth, eref, rtdb } from '@/lib/firebase'
 
 import { type Member, reserveSlot } from './capacity'
 
@@ -121,5 +130,38 @@ export async function joinPresence(
     leave: () => {
       void update(node, { connected: false, lastSeen: serverTimestamp() })
     },
+  }
+}
+
+// joinPresence arms onDisconnect exactly once, at join. RTDB onDisconnect is
+// one-shot: when the socket drops (phone sleeps, tab backgrounded, wifi blip)
+// the server writes connected:false, and the SDK's silent reconnect does NOT
+// re-arm it or flip the flag back. The player keeps playing while counted as
+// offline, so answeredCount (cumulative) outgrows the connected-only
+// denominator ("4 dari 2 pemain"). Call this after a successful join: it
+// re-asserts connected:true and re-arms onDisconnect on every (re)connect, and
+// when a hidden tab becomes visible again. Returns a stop function; it never
+// writes connected:false itself (leave() / onDisconnect own that).
+export function keepPresenceAlive(sessionId: string, role: Role, id: string): () => void {
+  const collPath = `sessions/${sessionId}/${role === 'player' ? 'players' : 'centrals'}`
+  const node = eref(`${collPath}/${id}`)
+  const assert = () => {
+    // Best-effort: a denied/failed write here must never surface as an
+    // unhandled rejection — the next reconnect or visibility change retries.
+    onDisconnect(node)
+      .update({ connected: false, lastSeen: serverTimestamp() })
+      .catch(() => {})
+    update(node, { connected: true, lastSeen: serverTimestamp() }).catch(() => {})
+  }
+  const unsubscribe = onValue(ref(rtdb, '.info/connected'), (snap) => {
+    if (snap.val() === true) assert()
+  })
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') assert()
+  }
+  document.addEventListener('visibilitychange', onVisible)
+  return () => {
+    unsubscribe()
+    document.removeEventListener('visibilitychange', onVisible)
   }
 }
