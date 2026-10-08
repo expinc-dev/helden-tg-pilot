@@ -8,6 +8,7 @@ import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 
 import { renderPromptBlocks } from '@/lib/richText'
 
+import { TimerRing } from '../../TimerRing'
 import type { ScaleQuestion } from '../../scale'
 
 // HLN-012. A scale statement is private and ungraded: the player taps one point
@@ -20,15 +21,17 @@ import type { ScaleQuestion } from '../../scale'
 // `on_device` means — the player reads and answers without looking up at the
 // central screen. The host also shows it so the facilitator can read it aloud.
 //
-// Deliberately no TimerRing even when a phase carries a server timer: an
-// attitude statement is not a race, and control.ts disarms the timer node for
-// on_device entirely.
+// A TimerRing shows only when the author set an answering limit (the host then
+// arms the timer per statement). It is not a race by default: with no limit
+// there is no timer node and no ring.
 export function ScaleStage({
   question,
   points,
   submitted,
   canAnswer,
   onAnswer,
+  timer,
+  totalSec,
 }: {
   question: ScaleQuestion
   points: number[]
@@ -36,6 +39,9 @@ export function ScaleStage({
   selectedValue: number | null
   canAnswer: boolean
   onAnswer: (value: number) => void
+  timer?: { active: boolean; remainingSec: number; expired: boolean }
+  // The authored per-statement limit, used as the ring's full scale.
+  totalSec?: number
 }) {
   const [minLabel, maxLabel] = question.labels ?? []
   const [picked, setPicked] = useState<number | null>(null)
@@ -63,6 +69,16 @@ export function ScaleStage({
         </ActionButton>
       }
     >
+      {timer?.active && totalSec !== undefined && (
+        <div className="flex shrink-0 justify-center">
+          <TimerRing
+            remainingSec={timer.remainingSec}
+            totalSec={totalSec}
+            expired={timer.expired}
+            size={88}
+          />
+        </div>
+      )}
       <h2 className="text-xl leading-[1.3] font-medium tracking-[-0.04em] text-[#ccc]">
         {renderPromptBlocks(question.prompt)}
       </h2>

@@ -38,14 +38,13 @@ export function serverOffsetOnce(): Promise<number> {
 async function openPhaseTimer(sessionId: string, phase: Phase | undefined) {
   const node = eref(`sessions/${sessionId}/timer`)
   const t = phase?.timer
-  // on_device quizzes (HLN-012) never arm a timer, even if the phase carries a
-  // server timer config: an attitude statement has no "time's up". Disarming
-  // here (rather than only skipping startTimer in the host) is what also kills
-  // autoAdvanceOnExpire, which requires timer.active && timer.expired.
-  if (phase?.content.type === 'quiz' && phase.content.mode === 'on_device') {
-    await remove(node)
-    return
-  }
+  // on_device quizzes (HLN-012) never arm the PHASE-wide timer, even if the phase
+  // carries a server timer config: that is what also kills autoAdvanceOnExpire,
+  // which requires timer.active && timer.expired. Their optional per-statement
+  // limit (answeringTimerSeconds) is armed by the host view via startTimer, so —
+  // like a graded quiz — this must not remove the node: that view mounts before
+  // this runs and would lose the timer it just wrote.
+  if (phase?.content.type === 'quiz' && phase.content.mode === 'on_device') return
   if (!phase || !t || t.authority !== 'server' || t.seconds <= 0) {
     // A graded quiz arms its own per-question timer from the host view
     // (useQuizStep.startTimer), and that view mounts as soon as the pointer
