@@ -38,6 +38,21 @@ export function scalePoints(q: ScaleQuestion): number[] {
   return out
 }
 
+const LIKERT_4 = ['Sangat Tidak Setuju', 'Tidak Setuju', 'Setuju', 'Sangat Setuju']
+const norm = (s: string) => s.trim().toLowerCase()
+
+// Label per point (same order as `points`). Authoring only has two end labels, so
+// the 4-point agree/disagree statement (the default — ends "Tidak setuju" /
+// "Sangat setuju", or none) gets the Figma Likert wording. Anything else keeps the
+// authored end labels and shows the bare number for the points in between.
+export function scaleLabels(points: number[], authored?: [string, string]): string[] {
+  const [lo, hi] = authored ?? []
+  const stdEnds =
+    !authored || (norm(lo ?? '') === 'tidak setuju' && norm(hi ?? '') === 'sangat setuju')
+  if (points.length === LIKERT_4.length && stdEnds) return [...LIKERT_4]
+  return points.map((v, i) => (i === points.length - 1 && hi ? hi : i === 0 && lo ? lo : String(v)))
+}
+
 // Wire shape of a scale answer, as written to players/{id}/answers/{qId}.value
 // by the player: the numeric point itself (`scalePoints` domain), while the
 // aggregate bucket key is its string form — one distribution bucket per point,

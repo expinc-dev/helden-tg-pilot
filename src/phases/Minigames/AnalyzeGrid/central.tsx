@@ -1,13 +1,15 @@
-import { CentralTeamProgress } from '@/components/CentralTeamProgress'
+import { CentralInstructionWall } from '@/components/CentralInstructionWall'
+import { GridMock, SubmitMock } from '@/components/instructionMocks'
 import type { Phase } from '@helden-inc/tg-schema'
+
+import { useTimer } from '@/lib/sync/useTimer'
 
 import { useAnalyzeRoster, useAnalyzeSubmitted } from './status'
 
-// Central view for analyze_grid: title + instruction + bare submitted count.
-// Nameless on purpose — per-team rows stay on the host screen; the wall only
-// needs "how far along is the room" while the timer runs. (The player writes
-// a raw set(), not submitAnswer, so aggregates/answeredCount never moves for
-// this template — the answer-node read above is the source of truth.)
+// Central for analyze_grid (Figma instruction wall): how to play + timer + a bare
+// submitted count. Nameless on purpose — per-team rows stay on the host screen.
+// (The player writes a raw set(), not submitAnswer, so aggregates/answeredCount
+// never moves for this template — the answer-node read is the source of truth.)
 export function CentralAnalyzeGrid({
   sessionId,
   phase,
@@ -16,16 +18,31 @@ export function CentralAnalyzeGrid({
   phase: Phase
   config?: unknown
 }) {
+  const timer = useTimer(sessionId, phase)
   const roster = useAnalyzeRoster(sessionId, phase)
   const submitted = useAnalyzeSubmitted(sessionId, roster, phase.id)
+  const answered = roster.filter((r) => submitted[r.writerId]).length
+  // A team row's writer is the leader, not the row key.
+  const teamUnit = roster.some((r) => r.key !== r.writerId)
 
   return (
-    <CentralTeamProgress
-      rows={roster.map((r) => ({
-        id: r.key,
-        label: r.label,
-        pct: submitted[r.writerId] ? 100 : 0,
-      }))}
+    <CentralInstructionWall
+      timer={timer}
+      answered={answered}
+      total={roster.length}
+      unit={teamUnit ? 'tim' : 'pemain'}
+      steps={[
+        {
+          title: 'Analisis Datanya',
+          body: 'Baca data yang ditampilkan, lalu jawab setiap pertanyaan analisis untuk timmu.',
+          illustration: <GridMock />,
+        },
+        {
+          title: 'Kumpulkan jawabanmu',
+          body: 'Jika sudah selesai, klik “Kumpulkan” dan tunggu hingga seluruh pemain selesai.',
+          illustration: <SubmitMock />,
+        },
+      ]}
     />
   )
 }

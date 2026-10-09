@@ -14,6 +14,7 @@ export function CentralQuestionWall({
   timer,
   answered,
   total,
+  unit = 'pemain',
   compact = false,
   children,
 }: {
@@ -23,6 +24,8 @@ export function CentralQuestionWall({
   // Omit `answered` to hide the counter.
   answered?: number
   total?: number
+  // What is being counted ("pemain" / "tim").
+  unit?: string
   // compact: question sits at the top (smaller) and `children` fill the middle
   // (kahoot option cards). Default: question centred, large.
   compact?: boolean
@@ -81,7 +84,7 @@ export function CentralQuestionWall({
           {answered !== undefined && (
             <p className="text-[1.667vw] leading-[1.2] text-white">
               <span className="text-helden-yellow font-bold">{answered}</span> dari{' '}
-              <span className="text-helden-yellow font-bold">{total ?? 0}</span> pemain telah
+              <span className="text-helden-yellow font-bold">{total ?? 0}</span> {unit} telah
               menjawab
             </p>
           )}

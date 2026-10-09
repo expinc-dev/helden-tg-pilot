@@ -4,6 +4,12 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { onValue } from 'firebase/database'
 
 import { eref } from '@/lib/firebase'
+import { isTeamScored } from '@/lib/session/quizTotals'
+import { usePresence } from '@/lib/sync/useSession'
+import { useTeams } from '@/lib/sync/useTeams'
+
+import type { OutcomeMap } from './bundleGroup'
+import { quizCounts } from './counts'
 
 export type QuizContent = Extract<Phase['content'], { type: 'quiz' }>
 
@@ -51,6 +57,20 @@ export function useAnsweredCount(sessionId: string | undefined, qId: string): nu
   return count
 }
 
+// "n dari m ... telah menjawab" for one question: answered / total / unit, with
+// the denominator in the numerator's unit and never below it (see counts.ts).
+export function useAnswerProgress(sessionId: string | undefined, phase: Phase, qId: string) {
+  const answered = useAnsweredCount(sessionId, qId)
+  const teams = useTeams(sessionId).length
+  // Host/central only (broad read): who joined, and who has an answer node for
+  // this question — team_collaborative counts players, not the per-team tick.
+  const { players } = usePresence(sessionId)
+  const nodes = Object.values(players) as { name?: string; answers?: Record<string, unknown> }[]
+  const joined = nodes.filter((p) => typeof p?.name === 'string').length
+  const answeredPlayers = nodes.filter((p) => p?.answers?.[qId] != null).length
+  return quizCounts({ answered, answeredPlayers, joined, teams, teamMode: phase.teamMode })
+}
+
 export function useDistribution(
   sessionId: string | undefined,
   qId: string
@@ -70,10 +90,12 @@ export function useTotalPlayers(sessionId: string | undefined): number {
   useEffect(() => {
     if (!sessionId) return
     return onValue(eref(`sessions/${sessionId}/players`), (s) => {
-      // Connected only, matching usePresenceCounts (central waiting screen +
-      // host lobby) so every screen agrees on the player count.
-      const v = (s.val() ?? {}) as Record<string, { connected?: boolean }>
-      setCount(Object.values(v).filter((p) => p?.connected).length)
+      // Everyone who JOINED (has a name), not only who is online this second:
+      // a player whose phone slept or who went AFK is still in the room, and
+      // counting only `connected` made "3 dari 2" possible (answers outlive the
+      // connection that sent them).
+      const v = (s.val() ?? {}) as Record<string, { name?: string } | null>
+      setCount(Object.values(v).filter((p) => typeof p?.name === 'string').length)
     })
   }, [sessionId])
   return count
@@ -87,8 +109,9 @@ export function usePlayerScore(
   phase: Phase,
   teamId?: string
 ): number {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
-  const path = isTeam ? `teamScores/${teamId ?? '_none'}` : `scores/${playerId}`
+  // Team total only when this device is actually on a team; solo reads its own.
+  const isTeam = isTeamScored(phase.teamMode, teamId ? 1 : 0)
+  const path = isTeam ? `teamScores/${teamId}` : `scores/${playerId}`
   const [score, setScore] = useState(0)
   useEffect(() => {
     if (!sessionId) return
@@ -115,8 +138,29 @@ export function useQuestionScores(
   return scores
 }
 
+// Per-team (or per-player) right/wrong for every scored question, keyed by
+// questionId. Lets a board that spans several quiz phases (the Level 3 bundle)
+// read earlier phases' results. Subscribes only when `enabled`.
+export function useQuestionOutcomes(sessionId: string | undefined, enabled: boolean): OutcomeMap {
+  const [outcomes, setOutcomes] = useState<OutcomeMap>({})
+  useEffect(() => {
+    if (!sessionId || !enabled) return
+    return onValue(eref(`sessions/${sessionId}/aggregates/questionOutcome`), (s) => {
+      setOutcomes((s.val() as OutcomeMap) ?? {})
+    })
+  }, [sessionId, enabled])
+  return outcomes
+}
+
+// Whether this quiz is scored per team. Mirrors scoreQuizQuestion: a team-
+// authored phase in a session with no teams (Single Player) is per-player.
+export function useIsTeamScored(sessionId: string | undefined, phase: Phase): boolean {
+  const teams = useTeams(sessionId)
+  return isTeamScored(phase.teamMode, teams.length)
+}
+
 export function useScoresMap(sessionId: string | undefined, phase: Phase): Record<string, number> {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const isTeam = useIsTeamScored(sessionId, phase)
   const path = isTeam ? 'teamScores' : 'scores'
   const [scores, setScores] = useState<Record<string, number>>({})
   useEffect(() => {
@@ -135,7 +179,7 @@ export function useAnswerTally(
   sessionId: string | undefined,
   phase: Phase
 ): { correct: Record<string, number>; wrong: Record<string, number> } {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const isTeam = useIsTeamScored(sessionId, phase)
   const base = isTeam ? `teamCorrectCount/${phase.id}` : `correctCount/${phase.id}`
   const wrongBase = isTeam ? `teamWrongCount/${phase.id}` : `wrongCount/${phase.id}`
   const [correct, setCorrect] = useState<Record<string, number>>({})

@@ -10,7 +10,7 @@ import { TimerBar } from '@/phases/TimerBar'
 import { demoBundle } from '@/lib/demoBundle'
 import { loadIdentity, saveIdentity, saveLastSession } from '@/lib/identity'
 import { newId } from '@/lib/ids'
-import { joinPresence } from '@/lib/session/presence'
+import { joinPresence, keepPresenceAlive } from '@/lib/session/presence'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
 
@@ -43,6 +43,7 @@ export function CentralView() {
   useEffect(() => {
     if (!sessionId) return
     let leave = () => {}
+    let stopKeepAlive = () => {}
     let cancelled = false
     joinPresence(sessionId, 'central', identity.id, { isNew: identity.isNew }).then((r) => {
       if (r.ok) {
@@ -50,11 +51,15 @@ export function CentralView() {
         // written connected:true, and firing update({connected:false}) here would
         // race-overwrite it, stranding the host at 0/N. onDisconnect handles the
         // real tab-close case.
-        if (!cancelled) leave = r.leave
+        if (!cancelled) {
+          leave = r.leave
+          stopKeepAlive = keepPresenceAlive(sessionId, 'central', identity.id)
+        }
       } else if (!cancelled) setFull(true)
     })
     return () => {
       cancelled = true
+      stopKeepAlive()
       leave()
     }
   }, [sessionId, identity])

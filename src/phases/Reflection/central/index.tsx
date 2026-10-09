@@ -1,6 +1,6 @@
 import { CentralQuestionWall } from '@/components/CentralQuestionWall'
 
-import { usePresenceCounts } from '@/lib/sync/useSession'
+import { useTotalPlayers } from '@/phases/Quiz/lib'
 
 import type { ReflectionContent } from '../lib'
 import { useReflectionStats } from '../lib'
@@ -19,7 +19,14 @@ export function CentralReflection({
   phaseId: string
 }) {
   const { answered } = useReflectionStats(sessionId, phaseId)
-  const { players } = usePresenceCounts(sessionId)
+  // Everyone who joined (not only who is online now), never below the answers in.
+  const joined = useTotalPlayers(sessionId)
 
-  return <CentralQuestionWall prompt={content.prompt} answered={answered.length} total={players} />
+  return (
+    <CentralQuestionWall
+      prompt={content.prompt}
+      answered={answered.length}
+      total={Math.max(joined, answered.length)}
+    />
+  )
 }

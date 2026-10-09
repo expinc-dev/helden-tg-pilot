@@ -43,15 +43,18 @@ export function GalleryBoard({
   phase,
   config,
   onToggle,
+  compact: compactProp,
 }: {
   sessionId: string
   phase: Phase
   config: DoubtSeedConfig
   /** Present only on the host's screen: renders the per-version pin chips. */
   onToggle?: (key: string) => void
+  /** Single-column host layout (defaults to on whenever pin chips are shown). */
+  compact?: boolean
 }) {
   const gallery = config.gallery
-  const compact = !!onToggle
+  const compact = compactProp ?? !!onToggle
   // A switched-off gallery must not cost a listener, let alone one per team
   // (the central screen is a shared projector on a shared connection). Passing
   // an undefined session id is the hooks' own "not subscribed" idiom — every
