@@ -6,7 +6,7 @@ import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
 
 import { type QuizContent, questionOptions, useAnswerProgress, useDistribution } from '../lib'
-import { isScaleQuestion, scaleOptionId, scalePoints } from '../scale'
+import { isScaleQuestion, scaleLabels, scaleOptionId, scalePoints } from '../scale'
 import { KahootOptions } from './components/KahootOptions'
 import { LeaderboardScreen } from './components/LeaderboardScreen'
 import { ResultsBoard } from './components/ResultsBoard'
@@ -55,7 +55,9 @@ export function CentralQuiz({
   if (onDevice) {
     if (isScaleQuestion(q) && progress.answered > 0) {
       // A = strongest agreement, matching the player's lettered rows.
-      const points = scalePoints(q).reverse()
+      const asc = scalePoints(q)
+      const labels = scaleLabels(asc, q.labels)
+      const points = [...asc].reverse()
       const counts = points.map((v) => distribution[scaleOptionId(v)] ?? 0)
       const top = Math.max(...counts)
       return (
@@ -67,12 +69,7 @@ export function CentralQuiz({
           rows={points.map((v, i) => ({
             id: String(v),
             letter: String.fromCharCode(65 + i),
-            label:
-              v === Math.max(...points) && q.labels
-                ? q.labels[1]
-                : v === Math.min(...points) && q.labels
-                  ? q.labels[0]
-                  : `Poin ${v}`,
+            label: labels[asc.indexOf(v)],
             count: counts[i],
             highlight: top > 0 && counts[i] === top,
           }))}

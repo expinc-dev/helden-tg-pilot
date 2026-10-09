@@ -4,6 +4,7 @@ import type { Phase } from '@helden-inc/tg-schema'
 import { onValue } from 'firebase/database'
 
 import { eref } from '@/lib/firebase'
+import { isTeamScored } from '@/lib/session/quizTotals'
 import { usePresence } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
 
@@ -108,8 +109,9 @@ export function usePlayerScore(
   phase: Phase,
   teamId?: string
 ): number {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
-  const path = isTeam ? `teamScores/${teamId ?? '_none'}` : `scores/${playerId}`
+  // Team total only when this device is actually on a team; solo reads its own.
+  const isTeam = isTeamScored(phase.teamMode, teamId ? 1 : 0)
+  const path = isTeam ? `teamScores/${teamId}` : `scores/${playerId}`
   const [score, setScore] = useState(0)
   useEffect(() => {
     if (!sessionId) return
@@ -150,8 +152,15 @@ export function useQuestionOutcomes(sessionId: string | undefined, enabled: bool
   return outcomes
 }
 
+// Whether this quiz is scored per team. Mirrors scoreQuizQuestion: a team-
+// authored phase in a session with no teams (Single Player) is per-player.
+export function useIsTeamScored(sessionId: string | undefined, phase: Phase): boolean {
+  const teams = useTeams(sessionId)
+  return isTeamScored(phase.teamMode, teams.length)
+}
+
 export function useScoresMap(sessionId: string | undefined, phase: Phase): Record<string, number> {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const isTeam = useIsTeamScored(sessionId, phase)
   const path = isTeam ? 'teamScores' : 'scores'
   const [scores, setScores] = useState<Record<string, number>>({})
   useEffect(() => {
@@ -170,7 +179,7 @@ export function useAnswerTally(
   sessionId: string | undefined,
   phase: Phase
 ): { correct: Record<string, number>; wrong: Record<string, number> } {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const isTeam = useIsTeamScored(sessionId, phase)
   const base = isTeam ? `teamCorrectCount/${phase.id}` : `correctCount/${phase.id}`
   const wrongBase = isTeam ? `teamWrongCount/${phase.id}` : `wrongCount/${phase.id}`
   const [correct, setCorrect] = useState<Record<string, number>>({})

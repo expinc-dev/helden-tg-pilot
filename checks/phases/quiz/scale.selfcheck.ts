@@ -10,7 +10,12 @@
 // of the distribution as its string form — that is the contract L3 reads. A
 // regression here would silently drop every answer into a bucket keyed
 // differently from what the debrief expects.
-import { isScaleQuestion, scaleOptionId, scalePoints } from '../../../src/phases/Quiz/scale'
+import {
+  isScaleQuestion,
+  scaleLabels,
+  scaleOptionId,
+  scalePoints,
+} from '../../../src/phases/Quiz/scale'
 
 const ok = (cond: boolean, msg: string) => {
   if (!cond) throw new Error(`FAIL: ${msg}`)
@@ -79,6 +84,22 @@ const attitude = {
   ok(isScaleQuestion(attitude) === true, 'scale question narrows')
   ok(isScaleQuestion({ qType: 'single_choice' }) === false, 'choice question does not narrow')
   ok(isScaleQuestion({ qType: 'path_question' }) === false, 'path_question does not narrow')
+}
+
+// ── scaleLabels ─────────────────────────────────────────────────────────────
+{
+  const likert = ['Sangat Tidak Setuju', 'Tidak Setuju', 'Setuju', 'Sangat Setuju']
+  const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+  ok(
+    eq(scaleLabels([1, 2, 3, 4], ['Tidak setuju', 'Sangat setuju']), likert),
+    'default ends → Likert'
+  )
+  ok(eq(scaleLabels([1, 2, 3, 4], undefined), likert), 'no labels, 4 points → Likert')
+  ok(
+    eq(scaleLabels([1, 2, 3, 4], ['Rendah', 'Tinggi']), ['Rendah', '2', '3', 'Tinggi']),
+    'custom ends kept, middle = number'
+  )
+  ok(eq(scaleLabels([1, 2, 3, 4, 5], undefined), ['1', '2', '3', '4', '5']), '5 points → numbers')
 }
 
 console.log('scale.selfcheck: OK')

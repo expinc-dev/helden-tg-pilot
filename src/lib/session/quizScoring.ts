@@ -4,7 +4,7 @@ import { get, update } from 'firebase/database'
 import { eref } from '@/lib/firebase'
 import { scoreAnswer } from '@/lib/scoring/score'
 
-import { type Outcome, type QuestionResult, applyQuestionResults } from './quizTotals'
+import { type Outcome, type QuestionResult, applyQuestionResults, isTeamScored } from './quizTotals'
 
 // Host-only. Called on reveal and again when the leaderboard opens: reads all
 // player answers for the question, scores them against the correct answer and
@@ -26,10 +26,12 @@ export async function scoreQuizQuestion(opts: {
   const qId = `${phase.id}_q${questionIndex}`
   const phaseDurationMs = timerSeconds * 1000
 
-  const [playersSnap, pointerSnap] = await Promise.all([
+  const [playersSnap, pointerSnap, teamsSnap] = await Promise.all([
     get(eref(`sessions/${sessionId}/players`)),
     get(eref(`sessions/${sessionId}/phasePointer`)),
+    get(eref(`sessions/${sessionId}/teams`)),
   ])
+  const teams = (teamsSnap.val() ?? {}) as Record<string, { ownerPlayerId?: string }>
   const players = (playersSnap.val() ?? {}) as Record<
     string,
     { answers?: Record<string, { value: unknown; submittedAt?: number }>; teamId?: string }
@@ -41,8 +43,8 @@ export async function scoreQuizQuestion(opts: {
   // only signal, so an answer counts as a positive verdict (never "wrong") and
   // only participation scoring awards points.
   const graded = correctId !== ''
-  const isTeamMode =
-    phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  // Solo (no teams) falls back to per-player scoring even for a team-authored phase.
+  const isTeamMode = isTeamScored(phase.teamMode, Object.keys(teams).length)
 
   // Raw per-player verdicts: score, correctness, and (team modes) the votes.
   const playerScores: Record<string, number> = {}
@@ -79,9 +81,6 @@ export async function scoreQuizQuestion(opts: {
   if (isTeamMode) {
     // team_leader_only: leader's score = team score
     // team_collaborative: majority vote determines correctness, earliest majority timestamp for speed
-    const teamsSnap = await get(eref(`sessions/${sessionId}/teams`))
-    const teams = (teamsSnap.val() ?? {}) as Record<string, { ownerPlayerId?: string }>
-
     for (const [teamId, team] of Object.entries(teams)) {
       let teamScore = 0
       let teamCorrect: boolean | undefined

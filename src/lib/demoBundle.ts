@@ -21,8 +21,6 @@ export const demoBundle: PublishedGame = {
     '01a106cd-06b3-7270-bcb5-1b66193460fe',
     '01a106cd-06b3-7270-bcb5-1dd735ea21bd',
     '01a106cd-06b3-7270-bcb5-23a9e256ec07',
-    '01a106cd-06b3-7270-bcb5-2537cf5b2375',
-    '01a106cd-06b3-7270-bcb5-2abffc597315',
     '01a106cd-06b3-7270-bcb5-2dd5f2331f8e',
     '01a106cd-06b3-7270-bcb5-331dc6560ba1',
     '01a106cd-06b3-7270-bcb5-3441947dbbb3',
@@ -146,6 +144,7 @@ export const demoBundle: PublishedGame = {
           },
         ],
         revealAnswers: false,
+        answeringTimerSeconds: 30,
       },
       hostScript: {
         anchorScript: [
@@ -1406,7 +1405,7 @@ export const demoBundle: PublishedGame = {
     '01a106cd-06b3-7270-bcb5-23a9e256ec07': {
       id: '01a106cd-06b3-7270-bcb5-23a9e256ec07',
       type: 'quiz',
-      title: 'Level 3A: Keaslian',
+      title: 'Level 3: Keaslian, Keunikan, Kehadiran',
       syncMode: 'lockstep',
       teamMode: 'team_collaborative',
       roles: {
@@ -1425,7 +1424,7 @@ export const demoBundle: PublishedGame = {
       },
       scoring: {
         mode: 'participation',
-        maxPoints: 100,
+        maxPoints: 300,
       },
       content: {
         type: 'quiz',
@@ -1453,67 +1452,6 @@ export const demoBundle: PublishedGame = {
               },
             ],
           },
-        ],
-        revealAnswers: false,
-        answeringTimerSeconds: 300,
-      },
-      durationMin: 10,
-      hostScript: {
-        anchorScript: [
-          {
-            kind: 'text',
-            markdown:
-              'Kemarin kita sudah lihat: AI membuat tulisan dengan cepat dan rapi. Tapi kalau dibaca lagi, rasanya bisa punya siapa saja. Hari ini kita cari tahu kenapa. AI tidak tahu apa yang bikin usahamu istimewa, kecuali kamu yang memberi tahu. AI belajar dari jutaan tulisan orang lain. Jadi kalau kamu minta seadanya, hasilnya biasa saja, seperti rata-rata semua orang. Yang membuatnya jadi kamu — resepmu, caramu, ceritamu — hanya ada di kepalamu. Jadi keaslian tidak hilang karena AI. Keaslian hilang kalau kamu berhenti memegang kendali dan menerima hasil AI apa adanya.\n',
-          },
-          {
-            kind: 'text',
-            markdown:
-              'Bayangkan AI itu seperti bumbu instan. Praktis dan cepat. Tapi kalau kamu cuma buka bungkus dan langsung sajikan, rasanya sama dengan warung sebelah yang pakai bumbu yang sama. Masakanmu jadi masakanmu saat kamu menambahkan racikan sendiri: resep dari ibumu, sentuhan yang cuma kamu tahu. Bumbu instan mempercepat. Tapi tanganmulah yang membuatnya jadi punyamu.\n',
-          },
-          {
-            kind: 'text',
-            markdown:
-              'Bacakan setelah semua tim mengirim jawaban. Tadi kalian memilih A atau B. Tapi siapa bilang pilihannya cuma dua? Orang yang memegang kendali bisa membuat pilihan sendiri. Kirim versi AI dulu supaya kesempatannya aman. Lalu susulkan sentuhan pribadi saat bertemu langsung, atau kirim contoh produk. Memegang kendali bukan soal menurut pada dua pilihan yang diberikan, tapi berani mencari pilihan ketiga.\n',
-          },
-        ],
-        sharingPrompts: [
-          {
-            kind: 'text',
-            markdown:
-              'Tadi ada yang pilih A, ada yang pilih B. Dua-duanya masuk akal. Sekarang jujur: di usaha kalian sehari-hari, lebih sering yang mana? Pernah nggak, karena buru-buru, kalian mengirim sesuatu yang sebenarnya “bukan kalian banget”?\n',
-          },
-        ],
-        improvMarker: true,
-      },
-    },
-    '01a106cd-06b3-7270-bcb5-2537cf5b2375': {
-      id: '01a106cd-06b3-7270-bcb5-2537cf5b2375',
-      type: 'quiz',
-      title: 'Level 3B: Keunikan',
-      syncMode: 'lockstep',
-      teamMode: 'team_collaborative',
-      roles: {
-        player: {
-          enabled: true,
-          showTimer: false,
-        },
-        central: {
-          enabled: true,
-          showTimer: false,
-          showResults: false,
-        },
-        host: {
-          monitor: ['answers'],
-        },
-      },
-      scoring: {
-        mode: 'participation',
-        maxPoints: 100,
-      },
-      content: {
-        type: 'quiz',
-        mode: 'central_prompt',
-        questions: [
           {
             qType: 'single_choice',
             prompt: [
@@ -1536,66 +1474,6 @@ export const demoBundle: PublishedGame = {
               },
             ],
           },
-        ],
-        revealAnswers: false,
-        answeringTimerSeconds: 300,
-      },
-      hostScript: {
-        anchorScript: [
-          {
-            kind: 'text',
-            markdown:
-              'Ada rasa takut baru: kalau semua orang bisa pakai AI untuk membuat tampilan keren dan tulisan bagus, apa yang membuat aku berbeda? Dulu kemampuan itu langka. Sekarang AI membuat semua orang terlihat profesional. Tapi coba balik cara berpikirnya. Kalau semua pakai alat yang sama dan meminta hal yang sama, hasilnya jadi sama saja. Di situ, yang punya sesuatu yang tidak bisa ditiru — ceritamu, caramu — justru paling menonjol. Dorongan untuk “ikut yang lain” akan terus datang, kadang dari pesaing, kadang dari orang yang sayang padamu. Yang menang bukan yang paling ikut tren, tapi yang tahu mana yang boleh disamakan dan mana yang harus tetap miliknya.\n',
-          },
-          {
-            kind: 'text',
-            markdown:
-              'Bayangkan semua warung diberi bumbu instan gratis yang sama. Semua soto jadi mirip: enak, tapi sama saja. Lalu orang yang kamu percaya bilang, “Pakai bumbu instan itu saja, semua warung sukses pakai itu. Punyamu kelamaan direbus.” Dia tulus. Tapi kalau kamu ikut, sotomu jadi sama seperti yang lain. Yang bikin orang antre justru kaldu rebusanmu sendiri. Saat semua warung memakai bumbu yang sama, warung yang punya kaldu sendiri paling dicari, walau ada yang tulus menyuruhmu berhenti merebus.\n',
-          },
-          {
-            kind: 'text',
-            markdown:
-              'Bacakan setelah semua tim mengirim jawaban. Tadi kalian harus memilih: ikuti Bu Rina atau menolak. Tapi apa Bu Rina bilang “buang ceritamu”? Tidak. Dia bilang “orang langsung geser”. Itu masalah yang berbeda. Mungkin jawabannya bukan membuang cerita, bukan juga bertahan mati-matian, tapi membuat ceritamu lebih mudah dilirik tanpa menghapusnya. Fotonya lebih terang tapi tetap foto buatan tanganmu. Ceritanya lebih pendek tapi tetap ceritamu. Memegang kendali bukan menolak semua masukan, tapi mengambil yang benar dari masukan tanpa kehilangan dirimu.\n',
-          },
-        ],
-        sharingPrompts: [
-          {
-            kind: 'text',
-            markdown:
-              'Pernah nggak, ada orang yang kalian percaya — pelanggan, keluarga, teman — menyarankan “ubah saja biar seperti yang lain, biar laku”? Gimana rasanya? Kalian ikut atau bertahan? Sekarang, menyesal nggak?\n',
-          },
-        ],
-        improvMarker: true,
-      },
-    },
-    '01a106cd-06b3-7270-bcb5-2abffc597315': {
-      id: '01a106cd-06b3-7270-bcb5-2abffc597315',
-      type: 'quiz',
-      title: 'Level 3C: Kehadiran',
-      syncMode: 'lockstep',
-      teamMode: 'team_collaborative',
-      roles: {
-        player: {
-          enabled: true,
-          showTimer: false,
-        },
-        central: {
-          enabled: true,
-          showTimer: false,
-          showResults: false,
-        },
-        host: {
-          monitor: ['answers'],
-        },
-      },
-      scoring: {
-        mode: 'participation',
-        maxPoints: 100,
-      },
-      content: {
-        type: 'quiz',
-        mode: 'central_prompt',
-        questions: [
           {
             qType: 'single_choice',
             prompt: [
@@ -1622,8 +1500,51 @@ export const demoBundle: PublishedGame = {
         revealAnswers: false,
         answeringTimerSeconds: 300,
       },
+      durationMin: 10,
       hostScript: {
         anchorScript: [
+          {
+            kind: 'text',
+            markdown: '**Soal 1 — Keaslian**\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Kemarin kita sudah lihat: AI membuat tulisan dengan cepat dan rapi. Tapi kalau dibaca lagi, rasanya bisa punya siapa saja. Hari ini kita cari tahu kenapa. AI tidak tahu apa yang bikin usahamu istimewa, kecuali kamu yang memberi tahu. AI belajar dari jutaan tulisan orang lain. Jadi kalau kamu minta seadanya, hasilnya biasa saja, seperti rata-rata semua orang. Yang membuatnya jadi kamu — resepmu, caramu, ceritamu — hanya ada di kepalamu. Jadi keaslian tidak hilang karena AI. Keaslian hilang kalau kamu berhenti memegang kendali dan menerima hasil AI apa adanya.\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Bayangkan AI itu seperti bumbu instan. Praktis dan cepat. Tapi kalau kamu cuma buka bungkus dan langsung sajikan, rasanya sama dengan warung sebelah yang pakai bumbu yang sama. Masakanmu jadi masakanmu saat kamu menambahkan racikan sendiri: resep dari ibumu, sentuhan yang cuma kamu tahu. Bumbu instan mempercepat. Tapi tanganmulah yang membuatnya jadi punyamu.\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Bacakan setelah semua tim mengirim jawaban. Tadi kalian memilih A atau B. Tapi siapa bilang pilihannya cuma dua? Orang yang memegang kendali bisa membuat pilihan sendiri. Kirim versi AI dulu supaya kesempatannya aman. Lalu susulkan sentuhan pribadi saat bertemu langsung, atau kirim contoh produk. Memegang kendali bukan soal menurut pada dua pilihan yang diberikan, tapi berani mencari pilihan ketiga.\n',
+          },
+          {
+            kind: 'text',
+            markdown: '**Soal 2 — Keunikan**\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Ada rasa takut baru: kalau semua orang bisa pakai AI untuk membuat tampilan keren dan tulisan bagus, apa yang membuat aku berbeda? Dulu kemampuan itu langka. Sekarang AI membuat semua orang terlihat profesional. Tapi coba balik cara berpikirnya. Kalau semua pakai alat yang sama dan meminta hal yang sama, hasilnya jadi sama saja. Di situ, yang punya sesuatu yang tidak bisa ditiru — ceritamu, caramu — justru paling menonjol. Dorongan untuk “ikut yang lain” akan terus datang, kadang dari pesaing, kadang dari orang yang sayang padamu. Yang menang bukan yang paling ikut tren, tapi yang tahu mana yang boleh disamakan dan mana yang harus tetap miliknya.\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Bayangkan semua warung diberi bumbu instan gratis yang sama. Semua soto jadi mirip: enak, tapi sama saja. Lalu orang yang kamu percaya bilang, “Pakai bumbu instan itu saja, semua warung sukses pakai itu. Punyamu kelamaan direbus.” Dia tulus. Tapi kalau kamu ikut, sotomu jadi sama seperti yang lain. Yang bikin orang antre justru kaldu rebusanmu sendiri. Saat semua warung memakai bumbu yang sama, warung yang punya kaldu sendiri paling dicari, walau ada yang tulus menyuruhmu berhenti merebus.\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Bacakan setelah semua tim mengirim jawaban. Tadi kalian harus memilih: ikuti Bu Rina atau menolak. Tapi apa Bu Rina bilang “buang ceritamu”? Tidak. Dia bilang “orang langsung geser”. Itu masalah yang berbeda. Mungkin jawabannya bukan membuang cerita, bukan juga bertahan mati-matian, tapi membuat ceritamu lebih mudah dilirik tanpa menghapusnya. Fotonya lebih terang tapi tetap foto buatan tanganmu. Ceritanya lebih pendek tapi tetap ceritamu. Memegang kendali bukan menolak semua masukan, tapi mengambil yang benar dari masukan tanpa kehilangan dirimu.\n',
+          },
+          {
+            kind: 'text',
+            markdown: '**Soal 3 — Kehadiran**\n',
+          },
           {
             kind: 'text',
             markdown:
@@ -1641,6 +1562,28 @@ export const demoBundle: PublishedGame = {
           },
         ],
         sharingPrompts: [
+          {
+            kind: 'text',
+            markdown: '**Soal 1 — Keaslian**\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Tadi ada yang pilih A, ada yang pilih B. Dua-duanya masuk akal. Sekarang jujur: di usaha kalian sehari-hari, lebih sering yang mana? Pernah nggak, karena buru-buru, kalian mengirim sesuatu yang sebenarnya “bukan kalian banget”?\n',
+          },
+          {
+            kind: 'text',
+            markdown: '**Soal 2 — Keunikan**\n',
+          },
+          {
+            kind: 'text',
+            markdown:
+              'Pernah nggak, ada orang yang kalian percaya — pelanggan, keluarga, teman — menyarankan “ubah saja biar seperti yang lain, biar laku”? Gimana rasanya? Kalian ikut atau bertahan? Sekarang, menyesal nggak?\n',
+          },
+          {
+            kind: 'text',
+            markdown: '**Soal 3 — Kehadiran**\n',
+          },
           {
             kind: 'text',
             markdown:

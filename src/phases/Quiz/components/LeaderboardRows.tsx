@@ -8,6 +8,7 @@ import { type BundleBlock, bundleOutcomes } from '../bundleGroup'
 import {
   type QuizContent,
   useAnswerTally,
+  useIsTeamScored,
   usePlayerRoster,
   useQuestionOutcomes,
   useQuestionScores,
@@ -65,7 +66,7 @@ export function LeaderboardRows({
   // scored yet stay grey.
   bundle?: BundleBlock[] | null
 }) {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const isTeam = useIsTeamScored(sessionId, phase)
   const scores = useScoresMap(sessionId, phase)
   const roster = usePlayerRoster(sessionId)
   const teams = useTeams(sessionId)

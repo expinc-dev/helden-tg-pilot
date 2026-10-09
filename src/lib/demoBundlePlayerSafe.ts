@@ -21,8 +21,6 @@ export const demoBundlePlayerSafe: PublishedGame = {
     '01a106cd-06b3-7270-bcb5-1b66193460fe',
     '01a106cd-06b3-7270-bcb5-1dd735ea21bd',
     '01a106cd-06b3-7270-bcb5-23a9e256ec07',
-    '01a106cd-06b3-7270-bcb5-2537cf5b2375',
-    '01a106cd-06b3-7270-bcb5-2abffc597315',
     '01a106cd-06b3-7270-bcb5-2dd5f2331f8e',
     '01a106cd-06b3-7270-bcb5-331dc6560ba1',
     '01a106cd-06b3-7270-bcb5-3441947dbbb3',
@@ -137,6 +135,7 @@ export const demoBundlePlayerSafe: PublishedGame = {
           },
         ],
         revealAnswers: false,
+        answeringTimerSeconds: 30,
       },
     },
     '01a106cd-06b3-7270-bcb4-f0ff27d89cdc': {
@@ -1148,7 +1147,7 @@ export const demoBundlePlayerSafe: PublishedGame = {
     '01a106cd-06b3-7270-bcb5-23a9e256ec07': {
       id: '01a106cd-06b3-7270-bcb5-23a9e256ec07',
       type: 'quiz',
-      title: 'Level 3A: Keaslian',
+      title: 'Level 3: Keaslian, Keunikan, Kehadiran',
       syncMode: 'lockstep',
       teamMode: 'team_collaborative',
       roles: {
@@ -1167,7 +1166,7 @@ export const demoBundlePlayerSafe: PublishedGame = {
       },
       scoring: {
         mode: 'participation',
-        maxPoints: 100,
+        maxPoints: 300,
       },
       content: {
         type: 'quiz',
@@ -1195,40 +1194,6 @@ export const demoBundlePlayerSafe: PublishedGame = {
               },
             ],
           },
-        ],
-        revealAnswers: false,
-        answeringTimerSeconds: 300,
-      },
-      durationMin: 10,
-    },
-    '01a106cd-06b3-7270-bcb5-2537cf5b2375': {
-      id: '01a106cd-06b3-7270-bcb5-2537cf5b2375',
-      type: 'quiz',
-      title: 'Level 3B: Keunikan',
-      syncMode: 'lockstep',
-      teamMode: 'team_collaborative',
-      roles: {
-        player: {
-          enabled: true,
-          showTimer: false,
-        },
-        central: {
-          enabled: true,
-          showTimer: false,
-          showResults: false,
-        },
-        host: {
-          monitor: ['answers'],
-        },
-      },
-      scoring: {
-        mode: 'participation',
-        maxPoints: 100,
-      },
-      content: {
-        type: 'quiz',
-        mode: 'central_prompt',
-        questions: [
           {
             qType: 'single_choice',
             prompt: [
@@ -1251,39 +1216,6 @@ export const demoBundlePlayerSafe: PublishedGame = {
               },
             ],
           },
-        ],
-        revealAnswers: false,
-        answeringTimerSeconds: 300,
-      },
-    },
-    '01a106cd-06b3-7270-bcb5-2abffc597315': {
-      id: '01a106cd-06b3-7270-bcb5-2abffc597315',
-      type: 'quiz',
-      title: 'Level 3C: Kehadiran',
-      syncMode: 'lockstep',
-      teamMode: 'team_collaborative',
-      roles: {
-        player: {
-          enabled: true,
-          showTimer: false,
-        },
-        central: {
-          enabled: true,
-          showTimer: false,
-          showResults: false,
-        },
-        host: {
-          monitor: ['answers'],
-        },
-      },
-      scoring: {
-        mode: 'participation',
-        maxPoints: 100,
-      },
-      content: {
-        type: 'quiz',
-        mode: 'central_prompt',
-        questions: [
           {
             qType: 'single_choice',
             prompt: [
@@ -1310,6 +1242,7 @@ export const demoBundlePlayerSafe: PublishedGame = {
         revealAnswers: false,
         answeringTimerSeconds: 300,
       },
+      durationMin: 10,
     },
     '01a106cd-06b3-7270-bcb5-2dd5f2331f8e': {
       id: '01a106cd-06b3-7270-bcb5-2dd5f2331f8e',

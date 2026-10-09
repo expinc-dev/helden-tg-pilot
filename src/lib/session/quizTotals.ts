@@ -15,6 +15,14 @@ export type Outcome = 'correct' | 'wrong'
 
 export type QuestionResult = { score: number; outcome: Outcome }
 
+// A quiz is scored per team only when the phase is authored for teams AND the
+// session actually has teams. A Single Player session plays a team-authored
+// phase with zero teams: it must fall back to per-player scoring, otherwise the
+// team branch has nobody to score and the leaderboard stays empty.
+export function isTeamScored(teamMode: string | undefined, teamCount: number): boolean {
+  return (teamMode === 'team_leader_only' || teamMode === 'team_collaborative') && teamCount > 0
+}
+
 export function applyQuestionResults(opts: {
   results: Record<string, QuestionResult>
   prevScores: Record<string, number>

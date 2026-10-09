@@ -5,7 +5,7 @@ import { demoBundle } from '@/lib/demoBundle'
 
 import { levelBundleOf } from '../../bundleGroup'
 import { LeaderboardRows } from '../../components/LeaderboardRows'
-import { type QuizContent } from '../../lib'
+import { type QuizContent, useIsTeamScored } from '../../lib'
 
 // Full-bleed screen shown on central when the quiz's centralStep enters the
 // 'leaderboard' stage — its own dedicated step, not an overlay that can show
@@ -23,7 +23,7 @@ export function LeaderboardScreen({
   questionId?: string
   revealedCount: number
 }) {
-  const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
+  const isTeam = useIsTeamScored(sessionId, phase)
   // Level 3A–3C: one combined bar per team, one block per lettered phase.
   const bundle = levelBundleOf(demoBundle.phaseOrder, demoBundle.phases, phase)
   return (

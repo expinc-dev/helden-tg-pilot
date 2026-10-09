@@ -5,6 +5,7 @@ import {
   type Outcome,
   type QuestionResult,
   applyQuestionResults,
+  isTeamScored,
 } from '../../../src/lib/session/quizTotals'
 
 function eq(actual: unknown, expected: unknown, label: string) {
@@ -88,5 +89,14 @@ const q2 = pass(
 eq(q2.totals, { a: 1000, b: 900, c: 800 }, 'question 2 totals accumulate')
 eq(q2.correctCount, { a: 1, b: 1, c: 1 }, 'question 2 correct accumulate')
 eq(q2.wrongCount, { a: 1, b: 1, c: 1 }, 'question 2 wrong accumulate')
+
+// Scoring key: per team only when the phase is team-authored AND teams exist.
+// Single Player (zero teams) plays a team-authored phase per player.
+eq(isTeamScored(undefined, 3), false, 'no teamMode, teams present')
+eq(isTeamScored('team_collaborative', 0), false, 'solo plays a team phase per player')
+eq(isTeamScored('team_leader_only', 0), false, 'solo plays a leader-only phase per player')
+eq(isTeamScored('team_collaborative', 2), true, 'team collaborative with teams')
+eq(isTeamScored('team_leader_only', 1), true, 'team leader only with teams')
+eq(isTeamScored('individual', 2), false, 'other mode value')
 
 console.log('quizTotals.selfcheck: OK')

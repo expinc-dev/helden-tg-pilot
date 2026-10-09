@@ -9,7 +9,7 @@ import { ActionButton } from '@/phases/Microlearning/PlayerPane/shared'
 import { renderPromptBlocks } from '@/lib/richText'
 
 import { TimerRing } from '../../TimerRing'
-import type { ScaleQuestion } from '../../scale'
+import { type ScaleQuestion, scaleLabels } from '../../scale'
 
 // HLN-012. A scale statement is private and ungraded: the player taps one point
 // and the answer is sealed immediately — no reveal, no right/wrong, no score,
@@ -43,20 +43,14 @@ export function ScaleStage({
   // The authored per-statement limit, used as the ring's full scale.
   totalSec?: number
 }) {
-  const [minLabel, maxLabel] = question.labels ?? []
   const [picked, setPicked] = useState<number | null>(null)
 
   if (submitted !== null) return <AnswerSavedScreen />
 
-  // Figma Question-5: lettered rows, A = the strongest agreement. Only the two
-  // ends carry authored labels; the points between show their number.
+  // Figma Question-5: lettered rows, A = the strongest agreement.
   const ordered = [...points].reverse()
-  const labelFor = (value: number) =>
-    value === points[points.length - 1] && maxLabel
-      ? maxLabel
-      : value === points[0] && minLabel
-        ? minLabel
-        : `Poin ${value}`
+  const labels = scaleLabels(points, question.labels)
+  const labelFor = (value: number) => labels[points.indexOf(value)]
 
   return (
     <PlayerScreenFrame
