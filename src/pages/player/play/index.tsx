@@ -9,7 +9,7 @@ import { TimerBar } from '@/phases/TimerBar'
 
 import { demoBundlePlayerSafe as demoBundle } from '@/lib/demoBundlePlayerSafe'
 import { saveLastSession } from '@/lib/identity'
-import { joinPresence } from '@/lib/session/presence'
+import { joinPresence, keepPresenceAlive } from '@/lib/session/presence'
 import { joinTeam } from '@/lib/session/teams'
 import { usePhasePointer } from '@/lib/sync/usePhasePointer'
 import { useSessionConfig, useSessionMeta } from '@/lib/sync/useSession'
@@ -49,6 +49,7 @@ export function PlayerView() {
   useEffect(() => {
     if (!sessionId || !identity) return
     let leave = () => {}
+    let stopKeepAlive = () => {}
     let cancelled = false
     joinPresence(sessionId, 'player', identity.id, {
       isNew: identity.isNew,
@@ -66,6 +67,7 @@ export function PlayerView() {
         return
       }
       leave = r.leave
+      stopKeepAlive = keepPresenceAlive(sessionId, 'player', identity.id)
       // Bind to the scanned team AFTER presence is written, so joinTeam's
       // teamId update isn't clobbered by the presence set (they used to race).
       if (teamParam) {
@@ -75,6 +77,7 @@ export function PlayerView() {
     })
     return () => {
       cancelled = true
+      stopKeepAlive()
       leave()
     }
   }, [sessionId, teamParam, identity])

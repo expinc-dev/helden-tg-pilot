@@ -10,6 +10,7 @@ import { useTimer } from '@/lib/sync/useTimer'
 
 import {
   type QuizContent,
+  onDeviceTimerSeconds,
   questionOptions,
   resolveTimers,
   usePlayerScore,
@@ -129,6 +130,8 @@ export function PlayerQuiz({
         selectedValue={selectedValue}
         canAnswer={canAnswer}
         onAnswer={handleScaleAnswer}
+        timer={timer}
+        totalSec={onDeviceTimerSeconds(content)}
       />
     )
   }

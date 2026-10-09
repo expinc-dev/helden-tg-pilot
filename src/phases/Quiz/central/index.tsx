@@ -29,7 +29,8 @@ export function CentralQuiz({
   const distribution = useDistribution(sessionId, `${phaseId}_q${quizStep.step}`)
 
   // HLN-012: on_device quizzes are ungraded and single-stage — no leaderboard,
-  // no timer, no reveal. Scale questions show the per-point vote count once
+  // no reveal, and a timer only when the author set a per-statement limit.
+  // Scale questions show the per-point vote count once
   // anyone has voted (counts only, never who voted what).
   const onDevice = content.mode === 'on_device'
 

@@ -14,7 +14,13 @@ import { useTimer } from '@/lib/sync/useTimer'
 
 import { TimerRing } from '../TimerRing'
 import { LeaderboardRows } from '../components/LeaderboardRows'
-import { type QuizContent, questionOptions, resolveTimers, useAnswerProgress } from '../lib'
+import {
+  type QuizContent,
+  onDeviceTimerSeconds,
+  questionOptions,
+  resolveTimers,
+  useAnswerProgress,
+} from '../lib'
 import { isScaleQuestion } from '../scale'
 import { AnswerOptionsList } from './components/AnswerOptionsList'
 import {
@@ -54,12 +60,14 @@ export function HostQuiz({
 
   // Question and answer choices show together from the start — no separate
   // "Bersiap!"/reading-only step, straight into the answering timer. on_device
-  // skips the timer: an attitude statement is not a race, and there is no
-  // "time's up" state to advance to.
+  // only times a statement when the author set a limit: an attitude statement is
+  // not a race by default, and "time's up" there just locks answering — the host
+  // still moves on by hand (no reveal to advance to).
   const handleStartQuestion = useCallback(
     async (step: number) => {
       scoredRef.current = null
-      if (!onDevice) await startTimer(phaseId, timers.answering)
+      const seconds = onDevice ? onDeviceTimerSeconds(content) : timers.answering
+      if (seconds !== undefined) await startTimer(phaseId, seconds)
       const offset = await serverOffsetOnce()
       await write({
         step,
@@ -68,7 +76,7 @@ export function HostQuiz({
         startedAt: Date.now() + offset,
       })
     },
-    [write, startTimer, phaseId, timers.answering, onDevice]
+    [write, startTimer, phaseId, timers.answering, onDevice, content]
   )
 
   const handleReveal = useCallback(async () => {
@@ -155,8 +163,10 @@ export function HostQuiz({
 
   useEffect(() => {
     if (!timer.active || !timer.expired) return
-    if (quizStep.stage === 'answering') handleReveal()
-  }, [quizStep.stage, timer.active, timer.expired, handleReveal])
+    // on_device has no reveal stage (and no correctId to score against), so an
+    // expired statement timer must not trigger one.
+    if (!onDevice && quizStep.stage === 'answering') handleReveal()
+  }, [onDevice, quizStep.stage, timer.active, timer.expired, handleReveal])
 
   // Bootstrap question 0: centralStep is unset right after openPhase() opens
   // this quiz, so kick off the first question instead of waiting on a step
