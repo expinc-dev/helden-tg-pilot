@@ -1,6 +1,15 @@
-import { get, onDisconnect, runTransaction, serverTimestamp, set, update } from 'firebase/database'
+import {
+  get,
+  onDisconnect,
+  onValue,
+  ref,
+  runTransaction,
+  serverTimestamp,
+  set,
+  update,
+} from 'firebase/database'
 
-import { auth, eref } from '@/lib/firebase'
+import { auth, eref, rtdb } from '@/lib/firebase'
 
 import { type Member, reserveSlot } from './capacity'
 
@@ -115,10 +124,30 @@ export async function joinPresence(
     await update(node, base)
   }
 
-  onDisconnect(node).update({ connected: false, lastSeen: serverTimestamp() })
+  // onDisconnect is consumed the moment the server runs it (screen asleep, wifi
+  // blip), and nothing re-arms it — so after the phone woke up and the SDK
+  // reconnected, `connected` stayed false until a full refresh. That made active
+  // players look offline and fell them out of every "n dari m" denominator.
+  // Re-assert presence on every (re)connect and whenever the tab becomes visible.
+  const assertOnline = () => {
+    onDisconnect(node)
+      .update({ connected: false, lastSeen: serverTimestamp() })
+      .catch(() => undefined)
+    update(node, { connected: true, lastSeen: serverTimestamp() }).catch(() => undefined)
+  }
+  assertOnline()
+  const offInfo = onValue(ref(rtdb, '.info/connected'), (s) => {
+    if (s.val() === true) assertOnline()
+  })
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') assertOnline()
+  }
+  document.addEventListener('visibilitychange', onVisible)
   return {
     ok: true,
     leave: () => {
+      offInfo()
+      document.removeEventListener('visibilitychange', onVisible)
       void update(node, { connected: false, lastSeen: serverTimestamp() })
     },
   }

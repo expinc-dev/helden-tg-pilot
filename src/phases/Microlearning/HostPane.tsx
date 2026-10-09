@@ -11,6 +11,8 @@ import { readSelfStep } from '@/lib/sync/usePlayerStep'
 import { usePresence } from '@/lib/sync/useSession'
 import { useTeams } from '@/lib/sync/useTeams'
 
+import { type TeamMemberProgress, teamProgress } from './progress'
+
 // ─── Host: real-time roster, grouped by team when Team Mode is on ───────────
 //
 // Individual sessions: one row per player. Team Mode: one row per TEAM,
@@ -32,20 +34,25 @@ type TeamRowData = {
   name: string
   memberCount: number
   pct: number
-  members: { id: string; name: string; step: number }[]
+  members: { id: string; name: string; step: number | null; role: TeamMemberProgress['role'] }[]
   total: number
+  // Only the leader works (members watch): the modal says so instead of
+  // showing them the leader's step.
+  leaderOnly: boolean
 }
 
 export function MonitorPane({
   content,
   sessionId,
   phaseId,
+  teamMode,
   onAdvance,
 }: {
   content: MicrolearningContent
   title?: string
   sessionId: string
   phaseId: string
+  teamMode?: string
   onAdvance?: () => void
 }) {
   const { players } = usePresence(sessionId)
@@ -60,21 +67,24 @@ export function MonitorPane({
 
   const teamRows: TeamRowData[] = teams.map((t) => {
     const members = entries.filter(([, p]) => p.teamId === t.id)
-    const leaderStep = readSelfStep(
-      members.find(([id]) => id === t.ownerPlayerId)?.[1].selfStep,
-      phaseId
-    )
+    // Leader-only: the leader's step is the team's. Otherwise every member's OWN
+    // step counts and the team is their average — a finished leader must not mark
+    // teammates who have not worked as done.
+    const prog = teamProgress({
+      teamMode,
+      total,
+      leaderId: t.ownerPlayerId,
+      members: members.map(([id, p]) => ({ id, selfStep: readSelfStep(p.selfStep, phaseId) })),
+    })
+    const nameOf = new Map(members.map(([id, p]) => [id, p.name]))
     return {
       id: t.id,
       name: t.teamName ?? t.id,
       memberCount: t.memberCount,
-      pct: progressPct(leaderStep, total),
-      members: members.map(([id, p]) => ({
-        id,
-        name: p.name,
-        step: Math.min(Math.max(leaderStep, 0), total),
-      })),
+      pct: prog.pct,
+      members: prog.members.map((m) => ({ ...m, name: nameOf.get(m.id) ?? m.id })),
       total,
+      leaderOnly: teamMode === 'team_leader_only',
     }
   })
   const openTeam = teamRows.find((t) => t.id === openTeamId)
@@ -174,7 +184,9 @@ function TeamDetailModal({ team, onClose }: { team: TeamRowData; onClose: () => 
                 {m.name}
               </span>
               <span className="text-xs text-white/50">
-                Tahap {m.step} dari {team.total}
+                {m.step === null
+                  ? 'Menyimak'
+                  : `${m.role === 'leader' && team.leaderOnly ? 'Pemimpin · ' : ''}Tahap ${m.step} dari ${team.total}`}
               </span>
             </div>
           ))}

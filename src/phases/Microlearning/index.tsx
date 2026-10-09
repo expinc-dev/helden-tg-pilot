@@ -37,6 +37,7 @@ export function MicrolearningRenderer({
       title={title}
       sessionId={sessionId}
       phaseId={phase.id}
+      teamMode={phase.teamMode}
       onAdvance={onAdvance}
     />
   )

@@ -1,6 +1,6 @@
 import type { Phase } from '@helden-inc/tg-schema'
 
-import { useAnsweredCount, useTotalPlayers } from '@/phases/Quiz/lib'
+import { useAnswerProgress } from '@/phases/Quiz/lib'
 
 import type { FormToPromptConfig } from './score'
 
@@ -29,8 +29,7 @@ export function FormToPromptCentral({
   phase: Phase
   config: FormToPromptConfig
 }) {
-  const answered = useAnsweredCount(sessionId, phase.id)
-  const total = useTotalPlayers(sessionId)
+  const { answered, total } = useAnswerProgress(sessionId, phase, phase.id)
 
   return (
     <div className="bg-helden-base flex min-h-dvh flex-col items-center justify-center p-10 text-center text-white">

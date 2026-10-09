@@ -2,12 +2,14 @@ import { CentralOverallProgress } from '@/components/CentralOverallProgress'
 import { CentralQuestionWall } from '@/components/CentralQuestionWall'
 import type { MicrolearningContent, Phase } from '@helden-inc/tg-schema'
 
-import { useAnsweredCount } from '@/phases/Quiz/lib'
+import { useAnsweredCount, useTotalPlayers } from '@/phases/Quiz/lib'
 
 import { renderPromptBlocks } from '@/lib/richText'
 import { usePlayerBoard } from '@/lib/sync/usePlayerStep'
-import { usePresenceCounts } from '@/lib/sync/useSession'
+import { useTeams } from '@/lib/sync/useTeams'
 import { useTimer } from '@/lib/sync/useTimer'
+
+import { pickCentralStep, roomProgress } from './progress'
 
 // ─── Central: the question the room is on + how many have answered ──────────
 // Self-paced phase, so players sit on different steps; the wall follows the
@@ -25,24 +27,21 @@ export function CentralProgressPane({
   phase: Phase
 }) {
   const rows = usePlayerBoard(sessionId, phase.id)
-  const { players: connectedPlayers } = usePresenceCounts(sessionId)
+  const joinedPlayers = useTotalPlayers(sessionId)
+  const leaderIds = useTeams(sessionId).map((t) => t.ownerPlayerId)
   const timer = useTimer(sessionId, phase)
 
   const total = content.steps.length
-  const counts = new Map<number, number>()
-  for (const r of rows) {
-    if (!r.connected) continue
-    const s = Math.min(Math.max(r.selfStep, 0), total - 1)
-    counts.set(s, (counts.get(s) ?? 0) + 1)
-  }
-  let stepIndex = 0
-  let best = -1
-  for (const [s, n] of [...counts.entries()].sort((a, b) => a[0] - b[0])) {
-    if (n > best) {
-      best = n
-      stepIndex = s
-    }
-  }
+  // The wall follows where the WORKING players are (leaders only in leader-only
+  // phases), counts every joined player — online or not — and breaks a tie toward
+  // the later step so a question never hides behind the intro while someone is
+  // already answering it.
+  const stepIndex = pickCentralStep({
+    players: rows,
+    total,
+    teamMode: phase.teamMode,
+    leaderIds,
+  })
 
   const step = content.steps[stepIndex]
   const questionIndex = step.blocks.findIndex((b) => b.kind === 'question')
@@ -59,11 +58,17 @@ export function CentralProgressPane({
 
   const timerVisible = timer.active && (phase.timer?.visibleTo ?? []).includes('central')
 
-  // Late in the phase (≥76% of the room done — Figma "76–102") the wall gives
+  // Late in the phase (>=76% of the room done — Figma "76–102") the wall gives
   // way to the overall-progress screen.
-  const finished = rows.filter((r) => r.connected && r.selfStep >= total).length
-  if (connectedPlayers > 0 && (finished / connectedPlayers) * 100 >= 76) {
-    return <CentralOverallProgress finished={finished} total={connectedPlayers} />
+  const { finished, roomSize } = roomProgress({
+    players: rows,
+    total,
+    joined: joinedPlayers,
+    teamMode: phase.teamMode,
+    leaderIds,
+  })
+  if (roomSize > 0 && (finished / roomSize) * 100 >= 76) {
+    return <CentralOverallProgress finished={finished} total={roomSize} />
   }
 
   return (
@@ -71,7 +76,7 @@ export function CentralProgressPane({
       prompt={prompt}
       timer={{ ...timer, active: timerVisible }}
       answered={questionIndex >= 0 ? answered : undefined}
-      total={connectedPlayers}
+      total={Math.max(joinedPlayers, answered)}
     />
   )
 }

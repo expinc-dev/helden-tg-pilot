@@ -21,13 +21,21 @@ export function QuestionCounter({ step, total }: { step: number; total: number }
   )
 }
 
-export function AnsweredStrip({ answered, total }: { answered: number; total: number }) {
+export function AnsweredStrip({
+  answered,
+  total,
+  unit = 'pemain',
+}: {
+  answered: number
+  total: number
+  unit?: string
+}) {
   return (
     <div className="flex w-full shrink-0 items-center justify-center bg-[rgba(253,219,0,0.08)] p-6 text-lg text-white">
       <p>
         <span className="font-bold text-[#fddb00]">{answered} </span>dari
         <span className="font-bold text-[#fddb00]"> {total} </span>
-        pemain telah menjawab
+        {unit} telah menjawab
       </p>
     </div>
   )

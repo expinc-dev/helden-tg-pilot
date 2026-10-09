@@ -17,11 +17,14 @@ export function ResultsBoard({
   rows,
   answered,
   total,
+  unit = 'pemain',
 }: {
   prompt: React.ReactNode
   rows: ResultRow[]
   answered: number
   total: number
+  // What is being counted ("pemain" / "tim").
+  unit?: string
 }) {
   const pct = (n: number) => (total > 0 ? Math.min(100, (n / total) * 100) : 0)
 
@@ -91,7 +94,7 @@ export function ResultsBoard({
         </div>
         <p className="shrink-0 pr-4 text-2xl text-white">
           <span className="text-helden-yellow font-semibold">{answered}</span> dari{' '}
-          <span className="text-helden-yellow font-semibold">{total}</span> pemain telah menjawab
+          <span className="text-helden-yellow font-semibold">{total}</span> {unit} telah menjawab
         </p>
       </div>
     </div>

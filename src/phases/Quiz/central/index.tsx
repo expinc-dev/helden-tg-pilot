@@ -5,13 +5,7 @@ import { renderPromptBlocks } from '@/lib/richText'
 import { useQuizStep } from '@/lib/sync/useQuizStep'
 import { useTimer } from '@/lib/sync/useTimer'
 
-import {
-  type QuizContent,
-  questionOptions,
-  useAnsweredCount,
-  useDistribution,
-  useTotalPlayers,
-} from '../lib'
+import { type QuizContent, questionOptions, useAnswerProgress, useDistribution } from '../lib'
 import { isScaleQuestion, scaleOptionId, scalePoints } from '../scale'
 import { KahootOptions } from './components/KahootOptions'
 import { LeaderboardScreen } from './components/LeaderboardScreen'
@@ -31,8 +25,7 @@ export function CentralQuiz({
   const { quizStep } = useQuizStep(sessionId)
   const timer = useTimer(sessionId, phase)
   const q = content.questions[quizStep.step]
-  const answeredCount = useAnsweredCount(sessionId, `${phaseId}_q${quizStep.step}`)
-  const totalPlayers = useTotalPlayers(sessionId)
+  const progress = useAnswerProgress(sessionId, phase, `${phaseId}_q${quizStep.step}`)
   const distribution = useDistribution(sessionId, `${phaseId}_q${quizStep.step}`)
 
   // HLN-012: on_device quizzes are ungraded and single-stage — no leaderboard,
@@ -59,7 +52,7 @@ export function CentralQuiz({
   // Scale statement: question wall until the first vote, then one row per
   // point (circle = the number, endpoint labels on the first/last point).
   if (onDevice) {
-    if (isScaleQuestion(q) && answeredCount > 0) {
+    if (isScaleQuestion(q) && progress.answered > 0) {
       // A = strongest agreement, matching the player's lettered rows.
       const points = scalePoints(q).reverse()
       const counts = points.map((v) => distribution[scaleOptionId(v)] ?? 0)
@@ -67,8 +60,9 @@ export function CentralQuiz({
       return (
         <ResultsBoard
           prompt={text}
-          answered={answeredCount}
-          total={totalPlayers}
+          answered={progress.answered}
+          total={progress.total}
+          unit={progress.unit}
           rows={points.map((v, i) => ({
             id: String(v),
             letter: String.fromCharCode(65 + i),
@@ -88,8 +82,9 @@ export function CentralQuiz({
       <CentralQuestionWall
         prompt={text}
         timer={timer}
-        answered={answeredCount}
-        total={totalPlayers}
+        answered={progress.answered}
+        total={progress.total}
+        unit={progress.unit}
       />
     )
   }
@@ -101,8 +96,9 @@ export function CentralQuiz({
       compact
       prompt={text}
       timer={timer}
-      answered={answeredCount}
-      total={totalPlayers}
+      answered={progress.answered}
+      total={progress.total}
+      unit={progress.unit}
     >
       <KahootOptions
         options={questionOptions(q)}

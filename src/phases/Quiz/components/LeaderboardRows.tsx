@@ -4,10 +4,12 @@ import type { Phase } from '@helden-inc/tg-schema'
 
 import { useTeams } from '@/lib/sync/useTeams'
 
+import { type BundleBlock, bundleOutcomes } from '../bundleGroup'
 import {
   type QuizContent,
   useAnswerTally,
   usePlayerRoster,
+  useQuestionOutcomes,
   useQuestionScores,
   useScoresMap,
 } from '../lib'
@@ -43,6 +45,7 @@ export function LeaderboardRows({
   questionId,
   revealedCount,
   variant = 'bar',
+  bundle,
 }: {
   sessionId: string
   phase: Phase
@@ -57,6 +60,10 @@ export function LeaderboardRows({
   // 'segments' = central "Kemajuan" board: one segment per question. Default
   // 'bar' keeps the host panel's single bar.
   variant?: 'bar' | 'segments'
+  // 'segments' only: one block per phase of a lettered level (3A/3B/3C) instead
+  // of one per question, so the whole level reads as a single bar. Phases not
+  // scored yet stay grey.
+  bundle?: BundleBlock[] | null
 }) {
   const isTeam = phase.teamMode === 'team_leader_only' || phase.teamMode === 'team_collaborative'
   const scores = useScoresMap(sessionId, phase)
@@ -65,6 +72,8 @@ export function LeaderboardRows({
   const tally = useAnswerTally(sessionId, phase)
   const questionScores = useQuestionScores(sessionId, questionId ?? '_none')
   const totalQuestions = content.questions.length
+  const bundled = variant === 'segments' && bundle ? bundle : null
+  const bundleOutcomeMap = useQuestionOutcomes(sessionId, !!bundled)
 
   const rows = useMemo(() => {
     type Row = {
@@ -75,7 +84,20 @@ export function LeaderboardRows({
       outcomes: QuestionOutcome[]
     }
     let list: Row[]
-    if (isTeam) {
+    if (bundled) {
+      // Team or individual: aggregates/questionOutcome is keyed by the same id
+      // as the score map (teamId in team modes, playerId otherwise).
+      const names = isTeam
+        ? Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id]))
+        : Object.fromEntries(roster.map((p) => [p.id, p.name]))
+      list = Object.entries(scores).map(([id, score]) => ({
+        id,
+        name: names[id] ?? id.slice(0, 6),
+        score,
+        gained: questionScores[id] ?? 0,
+        outcomes: bundleOutcomes(bundled, id, bundleOutcomeMap),
+      }))
+    } else if (isTeam) {
       const names = Object.fromEntries(teams.map((t) => [t.id, t.teamName ?? t.id]))
       list = Object.entries(scores).map(([id, score]) => {
         const correct = tally.correct[id] ?? 0
@@ -118,6 +140,8 @@ export function LeaderboardRows({
     phase.id,
     revealedCount,
     totalQuestions,
+    bundled,
+    bundleOutcomeMap,
   ])
 
   if (rows.length === 0) {
@@ -137,11 +161,17 @@ export function LeaderboardRows({
               <span className="w-72 shrink-0 truncate text-3xl text-white">{row.name}</span>
               <div className="flex flex-1 items-center gap-5">
                 {row.outcomes.map((o, k) => (
-                  <div
-                    key={k}
-                    className="h-6 flex-1 rounded transition-colors duration-300"
-                    style={{ background: SEGMENT_COLOR[o] }}
-                  />
+                  <div key={k} className="flex flex-1 flex-col gap-1">
+                    {bundled && (
+                      <span className="text-center text-sm font-medium text-white/60">
+                        {bundled[k]?.label}
+                      </span>
+                    )}
+                    <div
+                      className="h-6 rounded transition-colors duration-300"
+                      style={{ background: SEGMENT_COLOR[o] }}
+                    />
+                  </div>
                 ))}
               </div>
               <div className="flex w-56 shrink-0 items-baseline justify-end gap-4">

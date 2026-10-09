@@ -14,13 +14,7 @@ import { useTimer } from '@/lib/sync/useTimer'
 
 import { TimerRing } from '../TimerRing'
 import { LeaderboardRows } from '../components/LeaderboardRows'
-import {
-  type QuizContent,
-  questionOptions,
-  resolveTimers,
-  useAnsweredCount,
-  useTotalPlayers,
-} from '../lib'
+import { type QuizContent, questionOptions, resolveTimers, useAnswerProgress } from '../lib'
 import { isScaleQuestion } from '../scale'
 import { AnswerOptionsList } from './components/AnswerOptionsList'
 import {
@@ -47,8 +41,7 @@ export function HostQuiz({
   const { quizStep, started, write, startTimer, clearTimer } = useQuizStep(sessionId)
   const timer = useTimer(sessionId, phase)
   const q = content.questions[quizStep.step]
-  const answeredCount = useAnsweredCount(sessionId, `${phaseId}_q${quizStep.step}`)
-  const totalPlayers = useTotalPlayers(sessionId)
+  const progress = useAnswerProgress(sessionId, phase, `${phaseId}_q${quizStep.step}`)
   const [confirmReveal, setConfirmReveal] = useState(false)
   const scoredRef = useRef<string | null>(null)
 
@@ -209,7 +202,11 @@ export function HostQuiz({
             />
           )}
           <div className="mt-auto">
-            <AnsweredStrip answered={answeredCount} total={totalPlayers} />
+            <AnsweredStrip
+              answered={progress.answered}
+              total={progress.total}
+              unit={progress.unit}
+            />
           </div>
         </div>
       </QuizHostShell>
@@ -261,7 +258,7 @@ export function HostQuiz({
             options={questionOptions(q)}
             revealed={false}
           />
-          <AnsweredStrip answered={answeredCount} total={totalPlayers} />
+          <AnsweredStrip answered={progress.answered} total={progress.total} unit={progress.unit} />
         </div>
       )}
 
@@ -276,7 +273,7 @@ export function HostQuiz({
             revealed
             correctId={quizStep.correctId}
           />
-          <AnsweredStrip answered={answeredCount} total={totalPlayers} />
+          <AnsweredStrip answered={progress.answered} total={progress.total} unit={progress.unit} />
         </div>
       )}
 
