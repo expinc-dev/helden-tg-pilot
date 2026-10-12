@@ -47,6 +47,7 @@ export function LeaderboardRows({
   revealedCount,
   variant = 'bar',
   bundle,
+  showScores = true,
 }: {
   sessionId: string
   phase: Phase
@@ -65,6 +66,9 @@ export function LeaderboardRows({
   // of one per question, so the whole level reads as a single bar. Phases not
   // scored yet stay grey.
   bundle?: BundleBlock[] | null
+  // 'bar' only: set false to drop the "+N" and total-score columns (host quiz
+  // leaderboard stage follows a design that shows the bar alone).
+  showScores?: boolean
 }) {
   const isTeam = useIsTeamScored(sessionId, phase)
   const scores = useScoresMap(sessionId, phase)
@@ -204,14 +208,16 @@ export function LeaderboardRows({
               <div className="h-full bg-[#34D399]" style={{ width: `${correctPct}%` }} />
               <div className="h-full bg-[#E21B3C]" style={{ width: `${wrongPct}%` }} />
             </div>
-            {questionId && (
+            {showScores && questionId && (
               <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#34D399]">
                 +{Math.round(row.gained)}
               </span>
             )}
-            <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">
-              {Math.round(row.score)}
-            </span>
+            {showScores && (
+              <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">
+                {Math.round(row.score)}
+              </span>
+            )}
           </div>
         )
       })}

@@ -78,6 +78,12 @@ export function StepBody({
       ? (rest[heroHeadingIndex] as Extract<Block, { kind: 'heading' }>)
       : undefined
 
+  // A projected slide that is only the hero image has nothing left for the
+  // padded column below it, and an empty one still claims its p-4/sm:p-6
+  // padding as a black strip under the image. Scoped to fullBleed: the
+  // Microlearning card relies on that padding as its bottom margin.
+  const nothingBelowHero = fullBleed && !header && rest.every((_, i) => i === heroHeadingIndex)
+
   return (
     <>
       {hero &&
@@ -86,30 +92,32 @@ export function StepBody({
         ) : (
           <HeroImage block={hero} heading={heroHeading?.text} fullBleed={fullBleed} />
         ))}
-      <div className="flex flex-col gap-5 p-4 sm:p-6">
-        {header}
-        {rest.map((block, i) => {
-          if (i === heroHeadingIndex) return null
-          return (
-            <BlockView
-              // Keyed by step id, not just position — forces a remount when the
-              // step changes even if a different block type lands at the same
-              // index, which is what keeps QuestionView's internal draft state
-              // (single_choice vs. multi_choice, etc.) from leaking across steps.
-              key={`${stepId}-${restOffset + i}`}
-              block={block}
-              answer={answers[restOffset + i] ?? null}
-              draft={drafts[restOffset + i]}
-              onDraftChange={(value) => onDraftChange(restOffset + i, value)}
-              disabled={disabled}
-              qId={`${phase.id}_${microStepId}_${restOffset + i}`}
-              sessionId={sessionId}
-              phase={phase}
-              playerId={playerId}
-            />
-          )
-        })}
-      </div>
+      {!nothingBelowHero && (
+        <div className="flex flex-col gap-5 p-4 sm:p-6">
+          {header}
+          {rest.map((block, i) => {
+            if (i === heroHeadingIndex) return null
+            return (
+              <BlockView
+                // Keyed by step id, not just position — forces a remount when the
+                // step changes even if a different block type lands at the same
+                // index, which is what keeps QuestionView's internal draft state
+                // (single_choice vs. multi_choice, etc.) from leaking across steps.
+                key={`${stepId}-${restOffset + i}`}
+                block={block}
+                answer={answers[restOffset + i] ?? null}
+                draft={drafts[restOffset + i]}
+                onDraftChange={(value) => onDraftChange(restOffset + i, value)}
+                disabled={disabled}
+                qId={`${phase.id}_${microStepId}_${restOffset + i}`}
+                sessionId={sessionId}
+                phase={phase}
+                playerId={playerId}
+              />
+            )
+          })}
+        </div>
+      )}
     </>
   )
 }

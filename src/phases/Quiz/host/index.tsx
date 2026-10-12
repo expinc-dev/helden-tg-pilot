@@ -297,6 +297,7 @@ export function HostQuiz({
               content={content}
               questionId={`${phaseId}_q${quizStep.step}`}
               revealedCount={quizStep.step + 1}
+              showScores={false}
             />
           </div>
         </div>
