@@ -78,6 +78,7 @@ export function VimeoPlayer({
   onEnded,
   onTimeUpdate,
   onDuration,
+  onReady,
 }: {
   url: string
   state: VideoPlayback['state']
@@ -88,6 +89,9 @@ export function VimeoPlayer({
   onEnded?: () => void
   onTimeUpdate?: (sec: number) => void
   onDuration?: (sec: number) => void
+  // Fired once the embed itself says it is ready — the host uses its absence
+  // to tell "still loading" from "never going to load" (blocked network).
+  onReady?: () => void
 }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
@@ -147,6 +151,7 @@ export function VimeoPlayer({
         if (!msg || typeof msg !== 'object') return
         if (msg.event === 'ready') {
           readyRef.current = true
+          onReady?.()
           send('addEventListener', VIMEO_TIME_UPDATE_EVENT)
           send('addEventListener', VIMEO_END_EVENT)
           send('setCurrentTime', latestRef.current.positionSec)
@@ -234,6 +239,7 @@ export function YoutubePlayer({
   onEnded,
   onTimeUpdate,
   onDuration,
+  onReady,
 }: {
   url: string
   state: VideoPlayback['state']
@@ -244,6 +250,8 @@ export function YoutubePlayer({
   onEnded?: () => void
   onTimeUpdate?: (sec: number) => void
   onDuration?: (sec: number) => void
+  // See VimeoPlayer.
+  onReady?: () => void
 }) {
   const ref = useRef<HTMLIFrameElement>(null)
   const readyRef = useRef(false)
@@ -279,6 +287,7 @@ export function YoutubePlayer({
         }
         if (msg.event === 'onReady') {
           readyRef.current = true
+          onReady?.()
           send('seekTo', [latestRef.current.positionSec, true])
           send(latestRef.current.muted ? 'mute' : 'unMute')
           if (latestRef.current.state === 'playing') send('playVideo')
