@@ -81,6 +81,12 @@ export function HostQuiz({
 
   const handleReveal = useCallback(async () => {
     await clearTimer()
+    // on_device is ungraded: reveal only opens the vote-count board on central
+    // and closes answering. No correctId, no scoring pass.
+    if (onDevice) {
+      await write({ step: quizStep.step, stage: 'reveal' })
+      return
+    }
     // correctId comes from the (full) bundle question — the host has it; the
     // player-safe bundle strips it, so players only learn it via this reveal write.
     const revealQuestion = content.questions[quizStep.step]
@@ -103,6 +109,7 @@ export function HostQuiz({
   }, [
     clearTimer,
     write,
+    onDevice,
     sessionId,
     phaseId,
     quizStep.step,
@@ -185,14 +192,34 @@ export function HostQuiz({
     <HostNextPhaseButton onConfirm={onAdvance} className={nextButtonClass} />
   )
 
+  const revealDialog = confirmReveal && (
+    <ConfirmDialog
+      title="Perlihatkan jawaban?"
+      message="Waktu level masih panjang, apakah kamu yakin memperlihatkan jawaban?"
+      confirmLabel="Perlihatkan"
+      cancelLabel="Kembali"
+      onCancel={() => setConfirmReveal(false)}
+      onConfirm={() => {
+        setConfirmReveal(false)
+        void handleReveal()
+      }}
+    />
+  )
+
   // ── on_device (attitude quiz, HLN-012) ────────────────────────────────────
   // The statement is on the player's own device, but the host (Figma H8) also
-  // sees it with the live per-point vote counts, A = strongest agreement.
+  // sees it with the live per-point vote counts, A = strongest agreement. The
+  // central wall keeps showing the question and the answered counter until the
+  // host reveals; the vote-count board only opens on that click.
   if (onDevice) {
     return (
       <QuizHostShell
         footer={
-          isLastQuestion ? (
+          quizStep.stage === 'answering' ? (
+            <GradientButton onClick={handleRevealClick} className={nextButtonClass}>
+              Perlihatkan Jawaban
+            </GradientButton>
+          ) : isLastQuestion ? (
             leaveButton
           ) : (
             <GradientButton onClick={handleNext} className={nextButtonClass}>
@@ -219,6 +246,7 @@ export function HostQuiz({
             />
           </div>
         </div>
+        {revealDialog}
       </QuizHostShell>
     )
   }
@@ -298,24 +326,13 @@ export function HostQuiz({
               questionId={`${phaseId}_q${quizStep.step}`}
               revealedCount={quizStep.step + 1}
               showScores={false}
+              showGained={false}
             />
           </div>
         </div>
       )}
 
-      {confirmReveal && (
-        <ConfirmDialog
-          title="Perlihatkan jawaban?"
-          message="Waktu level masih panjang, apakah kamu yakin memperlihatkan jawaban?"
-          confirmLabel="Perlihatkan"
-          cancelLabel="Kembali"
-          onCancel={() => setConfirmReveal(false)}
-          onConfirm={() => {
-            setConfirmReveal(false)
-            void handleReveal()
-          }}
-        />
-      )}
+      {revealDialog}
     </QuizHostShell>
   )
 }

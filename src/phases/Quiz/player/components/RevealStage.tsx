@@ -1,40 +1,33 @@
 import { AnswerSavedScreen } from '@/components/AnswerSavedScreen'
 
 // Kahoot reveal on the player's phone — Figma "Success": the same centred
-// result screen as "Jawaban Tersimpan!", titled with the verdict. The subtitle
-// carries the points: "+N poin" for this question (once the host's scoring
-// pass has written it) and the running total.
+// result screen as "Jawaban Tersimpan!", titled with the verdict. No points
+// here (the design drops "+N poin · Total N poin"): the subtitle only says the
+// player is waiting on the room.
 export function RevealStage({
   submitted,
   isCorrect,
   graded = true,
-  gained,
-  total,
 }: {
   submitted: string | null
   isCorrect: boolean
   // false for an opinion question (no answer key): no right/wrong verdict.
   graded?: boolean
-  gained?: number
-  total?: number
 }) {
-  const points =
-    gained === undefined
-      ? 'Menghitung poin...'
-      : `+${Math.round(gained)} poin · Total ${Math.round(total ?? 0)} poin`
+  const waiting = 'Menunggu pemain lainnya...'
   if (!submitted) {
     return (
       <AnswerSavedScreen
         tone="neutral"
         title="Tidak Menjawab"
-        subtitle={gained === undefined ? 'Menunggu soal berikutnya...' : points}
+        subtitle="Menunggu soal berikutnya..."
       />
     )
   }
-  if (!graded) return <AnswerSavedScreen title="Jawaban Tersimpan!" subtitle={points} />
+  if (!graded) return <AnswerSavedScreen title="Jawaban Tersimpan!" subtitle={waiting} />
   return isCorrect ? (
-    <AnswerSavedScreen title="Jawaban Benar!" subtitle={points} />
+    <AnswerSavedScreen title="Jawaban Benar!" subtitle={waiting} />
   ) : (
-    <AnswerSavedScreen tone="error" title="Jawaban Salah!" subtitle={points} />
+    <AnswerSavedScreen tone="error" title="Jawaban Salah!" subtitle={waiting} />
   )
 }

@@ -28,10 +28,11 @@ export function CentralQuiz({
   const progress = useAnswerProgress(sessionId, phase, `${phaseId}_q${quizStep.step}`)
   const distribution = useDistribution(sessionId, `${phaseId}_q${quizStep.step}`)
 
-  // HLN-012: on_device quizzes are ungraded and single-stage — no leaderboard,
-  // no reveal, and a timer only when the author set a per-statement limit.
-  // Scale questions show the per-point vote count once
-  // anyone has voted (counts only, never who voted what).
+  // HLN-012: on_device quizzes are ungraded — no leaderboard, no scoring, and a
+  // timer only when the author set a per-statement limit. The host's "Perlihatkan
+  // Jawaban" click is the one reveal: scale questions show the per-point vote
+  // count then (counts only, never who voted what), and the question wall with
+  // its answered counter until that click.
   const onDevice = content.mode === 'on_device'
 
   if (!onDevice && quizStep.stage === 'leaderboard') {
@@ -50,10 +51,10 @@ export function CentralQuiz({
 
   const text = renderPromptBlocks(q.prompt)
 
-  // Scale statement: question wall until the first vote, then one row per
+  // Scale statement: question wall until the host reveals, then one row per
   // point (circle = the number, endpoint labels on the first/last point).
   if (onDevice) {
-    if (isScaleQuestion(q) && progress.answered > 0) {
+    if (isScaleQuestion(q) && quizStep.stage === 'reveal') {
       // A = strongest agreement, matching the player's lettered rows.
       const asc = scalePoints(q)
       const labels = scaleLabels(asc, q.labels)

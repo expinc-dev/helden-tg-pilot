@@ -51,6 +51,8 @@ export function LeaderboardScreen({
           revealedCount={revealedCount}
           variant="segments"
           bundle={bundle}
+          showScores={false}
+          showGained={false}
         />
       </div>
     </div>
