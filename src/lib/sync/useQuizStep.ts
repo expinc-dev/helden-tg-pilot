@@ -27,10 +27,16 @@ export function useQuizStep(sessionId: string | undefined) {
   // from "legitimately sitting at step 0 answering" (both look like DEFAULT).
   // The host uses this to bootstrap question 0 without a dedicated stage.
   const [started, setStarted] = useState(false)
+  // Whether the FIRST snapshot has arrived. Before it, `started` is false only
+  // because nothing has loaded yet — not because the node is empty. The host's
+  // bootstrap must wait for this, or a reload (or a second host tab) mid-quiz
+  // sees started=false, "bootstraps" question 0 and overwrites the live step.
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
     return onValue(eref(`sessions/${sessionId}/centralStep`), (s) => {
+      setLoaded(true)
       const val = s.val()
       if (!val) {
         setQuizStep(DEFAULT)
@@ -74,5 +80,5 @@ export function useQuizStep(sessionId: string | undefined) {
     return remove(eref(`sessions/${sessionId}/timer`))
   }, [sessionId])
 
-  return { quizStep, started, write, startTimer, clearTimer }
+  return { quizStep, started, loaded, write, startTimer, clearTimer }
 }

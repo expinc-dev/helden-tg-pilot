@@ -128,7 +128,12 @@ async function openPhaseRoundState(sessionId: string, phase: Phase | undefined) 
   if (!phase) return
   const isSortOrder = phase.content.type === 'minigame' && phase.content.templateId === 'sort_order'
   if (!isSortOrder) return
-  await set(eref(`sessions/${sessionId}/roundState/${phase.id}`), { round: 1 })
+  // Write the `round` CHILD, not the {round} object: database.rules.json grants
+  // write on roundState/$phaseId/round (host passes its .validate) but defines no
+  // .write on roundState/$phaseId itself, so setting the parent is denied under
+  // those rules (PERMISSION_DENIED on every advance into a sort_order phase). The
+  // stored value is the same { round: 1 }.
+  await set(eref(`sessions/${sessionId}/roundState/${phase.id}/round`), 1)
 }
 
 // Host-only. Advances sessions/{id}/roundState/{phaseId}.round by one and
@@ -307,8 +312,51 @@ export async function startSession(sessionId: string) {
   await openPhase(sessionId, bundle().phases[firstPhase])
 }
 
-export async function nextPhase(sessionId: string, currentPhaseId: string | undefined) {
+// What nextPhase did: ended the session, moved the pointer, or refused because
+// the pointer is no longer on the phase the caller advanced from (see the guards
+// below). `openFailed`: the pointer DID move, but setting the new phase up (timer,
+// secrets, …) failed — not the same as the advance failing, and the host should
+// be told which.
+export type NextPhaseResult =
+  | { done: true }
+  | { done: false; activePhaseId: string; openFailed?: true }
+  | { done: false; stale: true }
+
+// Per host tab: when the last advance finished, for the [advance] trace below.
+let lastAdvanceAt = 0
+
+// Is the RTDB pointer still on `phaseId`? Answers from the host's own pointer
+// listener cache (no round trip, see the note in nextPhase).
+async function isLivePhase(sessionId: string, phaseId: string): Promise<boolean> {
+  const live = (await get(eref(`sessions/${sessionId}/phasePointer`))).val() as PhasePointer | null
+  return live?.activePhaseId === phaseId
+}
+
+export async function nextPhase(
+  sessionId: string,
+  currentPhaseId: string | undefined
+): Promise<NextPhaseResult> {
   const hostUid = requireHostUid()
+  const startedAt = Date.now()
+  const previousAdvanceAt = lastAdvanceAt
+  // Only advance from the phase the pointer is REALLY on. The caller's id comes
+  // from its own (possibly stale) screen — a second host tab, or a tap that
+  // outlived its phase — and trusting it would run flush/played for a phase the
+  // session already left, or advance past a phase the host never saw.
+  //
+  // get() on a location this client already listens to (the host always does, via
+  // usePhasePointer) answers from the listener's cache instead of the network (SDK
+  // repoGetValue), so this costs no round trip. That cache is the last value the
+  // SERVER pushed: it catches a screen that is behind, and another host tab as soon
+  // as its write has been pushed back, but not two writes in flight at the same
+  // instant. A transaction would close that, but its update function must cope with
+  // a null first value (Firebase docs: the location may simply not be cached yet),
+  // and a lone host plus the UI advance gate (advanceGate.ts) make a true
+  // simultaneous race implausible, so the simpler read is used.
+  if (currentPhaseId && !(await isLivePhase(sessionId, currentPhaseId))) {
+    console.warn('[advance] refused: caller is not on the live phase', { from: currentPhaseId })
+    return { done: false, stale: true }
+  }
   const order = demoBundle.phaseOrder
   const idx = currentPhaseId ? order.indexOf(currentPhaseId) : -1
   const next = order[idx + 1]
@@ -330,6 +378,17 @@ export async function nextPhase(sessionId: string, currentPhaseId: string | unde
     // and nothing (e.g. the CMS dashboard's completion %) can ever see progress.
     await set(eref(`sessions/${sessionId}/played/${outgoing.id}`), true)
   }
+  // Check again right before committing. Flush + played can take many seconds on
+  // a slow link, and meanwhile ANOTHER advance may have moved the pointer — a retry
+  // after a stuck advance finally completing, or a second host tab. Committing now
+  // would write the pointer again and re-open a phase the session already left
+  // (for a quiz, wiping its step). The flush above already ran; this stops the rest.
+  if (currentPhaseId && !(await isLivePhase(sessionId, currentPhaseId))) {
+    console.warn('[advance] refused at commit: the pointer moved while this advance ran', {
+      from: currentPhaseId,
+    })
+    return { done: false, stale: true }
+  }
   if (!next) {
     // Last phase done → end the session. Flush already ran above; timer cleared
     // so useTimer doesn't show a stale phase deadline on the end screen.
@@ -341,8 +400,31 @@ export async function nextPhase(sessionId: string, currentPhaseId: string | unde
   }
   const pointer: PhasePointer = { activePhaseId: next, changedAt: Date.now(), changedBy: hostUid }
   await update(eref(`sessions/${sessionId}`), { phasePointer: pointer })
-  await openPhase(sessionId, demoBundle.phases[next])
-  return { done: false as const, activePhaseId: next }
+  const pointerMovedAt = Date.now()
+  // The pointer has moved, so a failure here is NOT "the advance failed": the
+  // session is on `next`, only its set-up (timer, secrets, round state) may be
+  // missing. Report it as such instead of throwing.
+  let openFailed = false
+  try {
+    await openPhase(sessionId, demoBundle.phases[next])
+  } catch (e) {
+    openFailed = true
+    console.error('[advance] pointer moved to', next, 'but openPhase failed', e)
+  }
+  // Trace for the next "a phase got skipped" report: a short sinceLastAdvanceMs
+  // on the skipped phase's line means the host tapped through it.
+  console.info('[advance]', {
+    from: currentPhaseId,
+    to: next,
+    toPointerMs: pointerMovedAt - startedAt,
+    openPhaseMs: Date.now() - pointerMovedAt,
+    sinceLastAdvanceMs: previousAdvanceAt ? startedAt - previousAdvanceAt : null,
+    openFailed,
+  })
+  lastAdvanceAt = Date.now()
+  return openFailed
+    ? { done: false as const, activePhaseId: next, openFailed: true as const }
+    : { done: false as const, activePhaseId: next }
 }
 
 // ─── Modular flow ───────────────────────────────────────────────────────────

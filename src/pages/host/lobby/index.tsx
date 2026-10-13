@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { assets } from '@/assets'
@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 import { Modal } from '@/components/Modal'
 import { EndScreen } from '@/pages/extra/end-screen'
+import { AdvanceGateProvider } from '@/pages/host/_shared/AdvanceGateProvider'
 import { Header } from '@/pages/host/_shared/Header'
 import { HostNextPhaseButton } from '@/pages/host/_shared/HostNextPhaseButton'
 import { HostPresenceSpread } from '@/pages/host/_shared/HostPresenceSpread'
@@ -14,6 +15,7 @@ import { LevelIntro } from '@/pages/host/_shared/LevelIntro'
 import { PhaseStartList } from '@/pages/host/_shared/PhaseStartList'
 import { PickerGrid } from '@/pages/host/_shared/PickerGrid'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
+import { useAdvanceGate, useAdvanceLocked } from '@/pages/host/_shared/advanceGateContext'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 
 import { useCodeInputAllSolved } from '@/phases/CodeInput/lib'
@@ -42,6 +44,14 @@ import { type TimerState, useTimer } from '@/lib/sync/useTimer'
 import { HostBadge } from '../_shared/HostBadge'
 
 export function HostView() {
+  return (
+    <AdvanceGateProvider>
+      <HostViewBody />
+    </AdvanceGateProvider>
+  )
+}
+
+function HostViewBody() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const meta = useSessionMeta(sessionId)
   const config = useSessionConfig(sessionId)
@@ -76,25 +86,22 @@ export function HostView() {
       .finally(() => setEnding(false))
   }, [ending, sessionId])
 
-  // One advance per phase. Every advance path on this route — both auto-advance
-  // effects below and every manual control rendered further down — funnels
-  // through runAdvance, so a double tap (the video confirm is never disabled by
-  // design) or a manual click landing in the same tick as an auto-advance cannot
-  // fire nextPhase/endLevel twice for one phase. flushPhaseResults assumes
-  // exactly that: its live aggregate map is a read-modify-write that is safe
-  // only once per transition (lib/session/flush.ts:208-219). Keyed by phase id,
-  // so it re-arms on the next phase with no explicit reset.
-  const advanceLockRef = useRef<string | null>(null)
-  const runAdvance = useCallback((phaseId: string | undefined, fn: () => Promise<unknown>) => {
-    if (!phaseId || advanceLockRef.current === phaseId) return
-    advanceLockRef.current = phaseId
-    // Re-arm on failure, otherwise a single RTDB error would leave the host
-    // unable to advance off this phase at all.
-    void fn().catch((e) => {
-      advanceLockRef.current = null
-      console.error('advance failed for', phaseId, e)
-    })
-  }, [])
+  // One advance at a time, host-wide. Every advance path on this route — both
+  // auto-advance effects below and every manual control rendered further down —
+  // funnels through runAdvance (the AdvanceGateProvider's gate, see
+  // lib/session/advanceGate.ts). It refuses a second advance while one is
+  // running and drops manual taps for a moment after the phase changes: on a slow
+  // link nextPhase takes seconds to move the pointer, and the advance button sits
+  // in the same place on consecutive phases, so a repeat tap would otherwise
+  // advance the NEXT phase (QA: 1D skipped). It also keeps flushPhaseResults to
+  // once per transition — its live aggregate map is a read-modify-write that is
+  // safe only once (lib/session/flush.ts:208-219).
+  const { run: runAdvance, observe: observePhase, locked: advanceLocked } = useAdvanceGate()
+  // Declared BEFORE the auto-advance effects: effects of one commit run in order,
+  // and the gate must know the new phase before they ask it to start an advance.
+  useEffect(() => {
+    observePhase(pointer?.activePhaseId)
+  }, [pointer?.activePhaseId, observePhase])
 
   useEffect(() => {
     if (!sessionId || !phase) return
@@ -106,22 +113,26 @@ export function HostView() {
     ) {
       // Modular: timer-expiry auto-advance means "end this level → back to picker",
       // not "next phase in order". Sequence: original nextPhase behaviour.
-      runAdvance(phase.id, () =>
-        isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)
+      runAdvance(
+        phase.id,
+        () => (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)),
+        'auto'
       )
     }
   }, [sessionId, phase, timer.active, timer.expired, pointer?.activePhaseId, isModular, runAdvance])
 
-  // codeinput's onSuccess.advance — shares runAdvance's per-phase lock with the
-  // timer effect above, so the two auto-advance triggers cannot race each other
-  // into double-advancing the same phase.
+  // codeinput's onSuccess.advance — goes through the same gate as the timer
+  // effect above, so the two auto-advance triggers cannot race each other into
+  // double-advancing the same phase.
   const teamIds = teams.map((t) => t.id)
   const codeInputAllSolved = useCodeInputAllSolved(sessionId, phase, teamIds, !!config?.allowTeams)
   useEffect(() => {
     if (!sessionId || !phase) return
     if (codeInputAllSolved && pointer?.activePhaseId === phase.id) {
-      runAdvance(phase.id, () =>
-        isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)
+      runAdvance(
+        phase.id,
+        () => (isModular ? endLevel(sessionId, phase.id) : nextPhase(sessionId, phase.id)),
+        'auto'
       )
     }
   }, [sessionId, phase, codeInputAllSolved, pointer?.activePhaseId, isModular, runAdvance])
@@ -437,14 +448,18 @@ export function HostView() {
             />
           ) : (
             <button
+              disabled={advanceLocked}
               onClick={() => runAdvance(phase.id, () => endLevel(sessionId, phase.id))}
-              className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+              className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white disabled:opacity-50"
             >
               Akhiri Level
             </button>
           )
         ) : (
+          // Keyed by phase: this branch's shell outlives phase changes, and an
+          // open confirm (its state) must not carry over to the next phase.
           <HostNextPhaseButton
+            key={phase.id}
             isLast={isLastPhase}
             onConfirm={() =>
               runAdvance(pointer?.activePhaseId, () => nextPhase(sessionId, pointer?.activePhaseId))
@@ -486,12 +501,14 @@ function MinigameHostAction({
   onEndLevel: () => void
 }) {
   const [confirmReveal, setConfirmReveal] = useState(false)
+  const locked = useAdvanceLocked()
 
   if (!timer.active || timer.expired) {
     return (
       <button
+        disabled={locked}
         onClick={onEndLevel}
-        className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white"
+        className="w-full rounded-lg border border-white/10 py-3 text-sm font-semibold text-white/70 hover:text-white disabled:opacity-50"
       >
         Akhiri Level
       </button>

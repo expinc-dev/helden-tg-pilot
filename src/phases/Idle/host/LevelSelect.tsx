@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { assets } from '@/assets'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { FullscreenButton } from '@/components/FullscreenToggle'
+import { useAdvanceLocked } from '@/pages/host/_shared/advanceGateContext'
 
 import { type LevelGroup, type LevelStatus, levelProgressPct } from '../levels'
 
@@ -20,6 +21,10 @@ export function LevelSelect({
   onPick: (firstPhaseId: string) => void
 }) {
   const [pending, setPending] = useState<LevelGroup | null>(null)
+  const locked = useAdvanceLocked()
+  // A confirm must not outlive the screen it was opened on (an advance started
+  // or just landed): drop it instead of letting a late confirm be silently refused.
+  if (locked && pending) setPending(null)
   const pct = levelProgressPct(groups)
 
   return (
@@ -53,7 +58,13 @@ export function LevelSelect({
           <div className="min-h-0 w-[calc(100%+0.5rem)] flex-1 [scrollbar-width:thin] [scrollbar-color:#353535_transparent] overflow-y-auto px-1 py-1">
             <div className="grid grid-cols-2 gap-4">
               {groups.map((g, i) => (
-                <LevelTile key={g.id} group={g} index={i} onPick={() => setPending(g)} />
+                <LevelTile
+                  key={g.id}
+                  group={g}
+                  index={i}
+                  locked={locked}
+                  onPick={() => setPending(g)}
+                />
               ))}
             </div>
           </div>
@@ -138,10 +149,12 @@ const STATUS_LABEL: Record<LevelStatus, string> = {
 function LevelTile({
   group,
   index,
+  locked,
   onPick,
 }: {
   group: LevelGroup
   index: number
+  locked: boolean
   onPick: () => void
 }) {
   const { status } = group
@@ -150,7 +163,7 @@ function LevelTile({
   return (
     <button
       type="button"
-      disabled={status !== 'available'}
+      disabled={status !== 'available' || locked}
       onClick={onPick}
       aria-label={`${group.label}, ${STATUS_LABEL[status]}`}
       className={`relative flex aspect-[147/248] w-full flex-col items-end justify-end overflow-clip rounded-lg border-[0.5px] text-left shadow-[0px_0px_12px_0px_rgba(253,164,0,0.2)] ${

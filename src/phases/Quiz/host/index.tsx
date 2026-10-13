@@ -44,7 +44,7 @@ export function HostQuiz({
   phase: Phase
   onAdvance?: () => void
 }) {
-  const { quizStep, started, write, startTimer, clearTimer } = useQuizStep(sessionId)
+  const { quizStep, started, loaded, write, startTimer, clearTimer } = useQuizStep(sessionId)
   const timer = useTimer(sessionId, phase)
   const q = content.questions[quizStep.step]
   const progress = useAnswerProgress(sessionId, phase, `${phaseId}_q${quizStep.step}`)
@@ -177,10 +177,13 @@ export function HostQuiz({
 
   // Bootstrap question 0: centralStep is unset right after openPhase() opens
   // this quiz, so kick off the first question instead of waiting on a step
-  // the host never explicitly takes.
+  // the host never explicitly takes. Only once the first snapshot has loaded:
+  // before that `started` is false merely because nothing has arrived yet, and
+  // bootstrapping then would reset a quiz already in progress whenever the host
+  // page is reloaded or a second host tab opens.
   useEffect(() => {
-    if (!started) void handleStartQuestion(0)
-  }, [started, handleStartQuestion])
+    if (loaded && !started) void handleStartQuestion(0)
+  }, [loaded, started, handleStartQuestion])
 
   if (!q) return null
 

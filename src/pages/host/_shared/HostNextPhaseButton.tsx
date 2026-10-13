@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { GradientButton } from '@/components/GradientButton'
 
+import { useAdvanceLocked } from './advanceGateContext'
 import { NEXT_PHASE_CONFIRM } from './confirmCopy'
 
 // The one "go to next phase" control on the host. Every advance path renders
@@ -17,9 +18,24 @@ export function HostNextPhaseButton({
   className?: string
 }) {
   const [open, setOpen] = useState(false)
+  // Disabled while an advance is running or just landed (see advanceGate.ts):
+  // this button sits in the same spot on consecutive phases, so a tap still
+  // aimed at the old screen must not open the confirm for the new one.
+  const locked = useAdvanceLocked()
+  // An open confirm must not outlive the screen it was opened on: once an advance
+  // starts or has just landed (auto-advance, a second host tab), close it —
+  // confirming it later would advance a phase the host never saw. Set during
+  // render (React's way to reset state from a changed value) so it never flashes.
+  if (locked && open) setOpen(false)
   return (
     <>
-      <GradientButton type="button" onClick={() => setOpen(true)} className={className}>
+      <GradientButton
+        type="button"
+        disabled={locked}
+        aria-busy={locked}
+        onClick={() => setOpen(true)}
+        className={className}
+      >
         {isLast ? 'Akhiri Sesi' : 'Tahap Selanjutnya'}
       </GradientButton>
       {open && (
