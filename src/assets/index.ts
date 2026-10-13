@@ -7,6 +7,10 @@ import eldercareVideoCall from './images/games/microlearning/eldercareVideoCall.
 import eldercareWalkEvent from './images/games/microlearning/eldercareWalkEvent.png'
 import industrialSafetyTeam from './images/games/microlearning/industrialSafetyTeam.png'
 import trophyIcon from './images/icons/trophy.png'
+import levelCardPhoto from './images/levelSelect/levelCard.png'
+import levelDoneBadge from './images/levelSelect/levelDone.svg'
+import levelProgressTip from './images/levelSelect/progressTip.svg'
+import levelTrophy from './images/levelSelect/trophy.svg'
 import heldenLogoSm from './images/logos/heldenLogoSm.png'
 import classroomExample from './images/presentation/classroomExample.png'
 import classroomExampleFramed from './images/presentation/classroomExampleFramed.png'
@@ -33,6 +37,14 @@ export const assets = {
         eldercareWalkEvent,
         industrialSafetyTeam,
       },
+    },
+    // Host "Pilih Level" screen (Figma Level Selection). The photo is a
+    // placeholder shared by every card until phases carry their own thumbnail.
+    levelSelect: {
+      cardPhoto: levelCardPhoto,
+      doneBadge: levelDoneBadge,
+      progressTip: levelProgressTip,
+      trophy: levelTrophy,
     },
     logos: {
       helden: {

@@ -17,6 +17,8 @@ import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 
 import { useCodeInputAllSolved } from '@/phases/CodeInput/lib'
+import { LevelSelect } from '@/phases/Idle/host/LevelSelect'
+import { levelSelectGroups } from '@/phases/Idle/levels'
 import { PhaseRouter } from '@/phases/PhaseRouter'
 import { VideoHostScreen } from '@/phases/Video'
 
@@ -221,6 +223,16 @@ export function HostView() {
   // no-op when called on the idle phase itself (nothing to flush), so wiring
   // this screen up there would make its button silently do nothing.
   if (meta.status === 'live' && phase && phase.content.type === 'idle' && !isModular) {
+    // A mid-game idle with a level still to play is the Select Level screen: the
+    // host starts the next level. Otherwise (first-position idle, or every level
+    // already done — nothing tappable) it stays the plain roster idle screen so
+    // the host always has a way to advance.
+    const levelGroups = levelSelectGroups(
+      demoBundle.phaseOrder,
+      demoBundle.phases,
+      phase.id,
+      played
+    )
     return (
       // `relative` + the frame height: HostScriptPanel is absolute, so it needs
       // this wrapper to be its containing block — these branches bypass the
@@ -230,14 +242,25 @@ export function HostView() {
         data-host-phase={phase.id}
         className="relative flex h-dvh w-full flex-col lg:h-full"
       >
-        <PhaseRouter
-          phase={phase}
-          phaseStartMs={pointer?.changedAt}
-          role="host"
-          sessionId={sessionId}
-          allowTeams={config.allowTeams}
-          onAdvance={() => runAdvance(phase.id, () => nextPhase(sessionId, pointer?.activePhaseId))}
-        />
+        {levelGroups.some((g) => g.status === 'available') ? (
+          <LevelSelect
+            groups={levelGroups}
+            onPick={(firstPhaseId) =>
+              runAdvance(phase.id, () => jumpToPhase(sessionId, firstPhaseId))
+            }
+          />
+        ) : (
+          <PhaseRouter
+            phase={phase}
+            phaseStartMs={pointer?.changedAt}
+            role="host"
+            sessionId={sessionId}
+            allowTeams={config.allowTeams}
+            onAdvance={() =>
+              runAdvance(phase.id, () => nextPhase(sessionId, pointer?.activePhaseId))
+            }
+          />
+        )}
         {scriptPanel}
       </div>
     )
