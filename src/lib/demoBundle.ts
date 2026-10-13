@@ -1,7 +1,7 @@
 import type { PublishedGame } from '@helden-inc/tg-schema'
 
 export const demoBundle: PublishedGame = {
-  id: '01a13339-fd5c-72ee-9f54-9d115c7a0e37',
+  id: '01a13431-5bcf-74e6-a788-7a7d7cc68f77',
   gameId: '01a106cc-9363-7478-abbb-56297c994c60',
   schemaVersion: '5.2.0',
   title: 'TestFull-V2',
@@ -11,6 +11,7 @@ export const demoBundle: PublishedGame = {
     '01a106cd-06b3-7270-bcb4-f0ff27d89cdc',
     '01a106cd-06b3-7270-bcb4-f5d55173ce7c',
     '01a106cd-06b3-7270-bcb4-f8273e7e6ad5',
+    '01a1340a-466c-705b-ad63-175bcc05bc6f',
     '01a106cd-06b3-7270-bcb4-fd6627919ab6',
     '01a106cd-06b3-7270-bcb5-026d5583caa3',
     '01a106cd-06b3-7270-bcb5-055ba23b5687',
@@ -563,6 +564,31 @@ export const demoBundle: PublishedGame = {
         ],
       },
     },
+    '01a1340a-466c-705b-ad63-175bcc05bc6f': {
+      id: '01a1340a-466c-705b-ad63-175bcc05bc6f',
+      type: 'idle',
+      title: 'Pilih Level',
+      syncMode: 'lockstep',
+      roles: {
+        player: {
+          enabled: true,
+        },
+        central: {
+          enabled: true,
+        },
+        host: {
+          monitor: ['presence'],
+        },
+      },
+      scoring: {
+        mode: 'none',
+      },
+      content: {
+        type: 'idle',
+        lottieMediaId: '01a1340d-9b4d-7401-a2d9-3729a3243ba0',
+        caption: 'Pilih level berikutnya',
+      },
+    },
     '01a106cd-06b3-7270-bcb4-fd6627919ab6': {
       id: '01a106cd-06b3-7270-bcb4-fd6627919ab6',
       type: 'video',
@@ -798,16 +824,14 @@ export const demoBundle: PublishedGame = {
               col: 'Kam',
             },
             {
-              col: 'Sel',
               row: 'D',
+              col: 'Sel',
             },
             {
-              row: 'D',
               col: 'Jum',
+              row: 'D',
             },
           ],
-          successMessage: 'Betul. Tiga kotak yang tetap kosong: B–Kamis, D–Selasa, D–Jumat.',
-          rowLabels: ['A', 'B', 'C', 'D'],
           analysisQuestions: [
             {
               options: [
@@ -828,8 +852,6 @@ export const demoBundle: PublishedGame = {
                   label: 'D',
                 },
               ],
-              correctId: '01a0ca09-27c7-76b3-8645-2a5a81899d1b',
-              qType: 'single_choice',
               prompt: [
                 {
                   kind: 'text',
@@ -837,6 +859,8 @@ export const demoBundle: PublishedGame = {
                     'Berdasarkan data penjualan yang tersedia, produk mana yang paling laku?',
                 },
               ],
+              correctId: '01a0ca09-27c7-76b3-8645-2a5a81899d1b',
+              qType: 'single_choice',
             },
             {
               options: [
@@ -849,28 +873,29 @@ export const demoBundle: PublishedGame = {
                   label: 'Selasa',
                 },
                 {
-                  id: '01a0ca0a-0a5b-7199-8110-ef21e4116526',
                   label: 'Tidak bisa dipastikan',
-                },
-              ],
-              correctId: '01a0ca0a-0a5b-7199-8110-ef21e4116526',
-              prompt: [
-                {
-                  markdown: 'Bisa pastikan hari paling sepi? Kenapa?',
-                  kind: 'text',
+                  id: '01a0ca0a-0a5b-7199-8110-ef21e4116526',
                 },
               ],
               qType: 'single_choice',
+              correctId: '01a0ca0a-0a5b-7199-8110-ef21e4116526',
+              prompt: [
+                {
+                  kind: 'text',
+                  markdown: 'Bisa pastikan hari paling sepi? Kenapa?',
+                },
+              ],
             },
             {
+              correctId: '01a0ca0c-964c-773a-a05e-b1d7ca09919c',
               options: [
                 {
                   id: '01a0ca0c-8273-76f7-8d52-3d50bfb4c8af',
                   label: 'Apakah Produk A laku atau tidak',
                 },
                 {
-                  label: 'Apakah Produk B laku atau tidak',
                   id: '01a0ca0c-8967-736b-8b07-4f1dfb115aad',
+                  label: 'Apakah Produk B laku atau tidak',
                 },
                 {
                   label: 'Apakah Produk C laku atau tidak',
@@ -881,30 +906,31 @@ export const demoBundle: PublishedGame = {
                   label: 'Apakah Produk D laku atau tidak',
                 },
               ],
+              qType: 'single_choice',
               prompt: [
                 {
-                  markdown: 'Karena data hilang, apa yang TIDAK bisa dipastikan?',
                   kind: 'text',
+                  markdown: 'Karena data hilang, apa yang TIDAK bisa dipastikan?',
                 },
               ],
-              qType: 'single_choice',
-              correctId: '01a0ca0c-964c-773a-a05e-b1d7ca09919c',
             },
           ],
-          gridCols: 6,
+          gridRows: 4,
+          rowLabels: ['A', 'B', 'C', 'D'],
           colLabels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+          successMessage: 'Betul. Tiga kotak yang tetap kosong: B–Kamis, D–Selasa, D–Jumat.',
+          title: 'Synchronize Physical Matrix',
           intro: {
-            title: 'Tantangan 1: Analisis',
+            imageUrl:
+              'https://expinc-cdn.azureedge.net/lexibe/1791055905038-foto-instruction-figma.webp',
             steps: [
               'Susun 21 potongan data penjualan di papan.',
               'Tandai 3 kotak yang tetap kosong.',
               'Jawab pertanyaan analisis.',
             ],
-            imageUrl:
-              'https://expinc-cdn.azureedge.net/lexibe/1791055905038-foto-instruction-figma.webp',
+            title: 'Tantangan 1: Analisis',
           },
-          title: 'Synchronize Physical Matrix',
-          gridRows: 4,
+          gridCols: 6,
         },
       },
       hostScript: {
@@ -960,31 +986,30 @@ export const demoBundle: PublishedGame = {
         config: {
           rounds: [
             {
+              caseSensitive: false,
               correctOrder: [
                 '01a0ca0f-b31f-7357-9716-742a071f9c97',
                 '01a0ca0f-8e7a-773f-a718-bd2522b4cfaf',
                 '01a0ca0f-b96e-7448-8a57-502bcdef2ce0',
                 '01a0ca0f-be5a-75ba-9725-f4d523422b1d',
               ],
+              triggerCode: 'RONDE2',
+              timerSeconds: 60,
               diff: {
                 add: [],
                 remove: [],
               },
-              triggerCode: 'RONDE2',
-              timerSeconds: 60,
-              caseSensitive: false,
             },
             {
-              caseSensitive: false,
               diff: {
-                remove: ['01a0ca0f-b96e-7448-8a57-502bcdef2ce0'],
                 add: [
                   {
-                    id: '01a0ca11-6e0e-73b1-a65d-fafbee02d824',
                     insertAt: 1,
                     label: 'E',
+                    id: '01a0ca11-6e0e-73b1-a65d-fafbee02d824',
                   },
                 ],
+                remove: ['01a0ca0f-b96e-7448-8a57-502bcdef2ce0'],
               },
               timerSeconds: 120,
               triggerCode: 'RONDE3',
@@ -994,6 +1019,7 @@ export const demoBundle: PublishedGame = {
                 '01a0ca0f-8e7a-773f-a718-bd2522b4cfaf',
                 '01a0ca0f-be5a-75ba-9725-f4d523422b1d',
               ],
+              caseSensitive: false,
             },
           ],
           correctOrder: [
@@ -1250,34 +1276,10 @@ export const demoBundle: PublishedGame = {
         type: 'minigame',
         templateId: 'doubt_seed',
         config: {
-          distractorCards: [
-            {
-              text: 'Harga terjangkau',
-              id: '01a0ca1f-ddb6-73c0-96a3-1ab4f41ea9dd',
-            },
-            {
-              text: 'Pelayanan ramah',
-              id: '01a0ca1f-faaa-77e2-a705-b87d82fa2b68',
-            },
-            {
-              text: 'Kualitas terbaik',
-              id: '01a0ca1f-ff1e-7480-89d2-6fca0c172f96',
-            },
-            {
-              id: '01a0ca20-03ea-7089-abc1-d53c6a61dfb8',
-              text: 'Bahan berkualitas',
-            },
-            {
-              id: '01a0ca20-085a-704b-98cd-fcf7bf889a5b',
-              text: 'Kepuasan pelanggan',
-            },
-          ],
-          instructions:
-            'Pilih kartu yang membawa ciri khas usaha Bu Sari — masukkan ke tempatnya. Kartu yang bisa dipakai usaha mana saja: biarkan di luar.',
           soulCards: [
             {
-              id: '01a0ca1f-40e2-726d-a6eb-58ad2a5c4721',
               text: 'Resep warisan nenek',
+              id: '01a0ca1f-40e2-726d-a6eb-58ad2a5c4721',
             },
             {
               text: 'Tiga generasi',
@@ -1288,8 +1290,8 @@ export const demoBundle: PublishedGame = {
               text: 'Masakan rumahan',
             },
             {
-              id: '01a0ca1f-5253-70dd-91c9-d9ed647f177b',
               text: 'Rasa yang Khas',
+              id: '01a0ca1f-5253-70dd-91c9-d9ed647f177b',
             },
             {
               text: 'Dimasak sepenuh hati',
@@ -1297,6 +1299,30 @@ export const demoBundle: PublishedGame = {
             },
           ],
           dropZones: 5,
+          distractorCards: [
+            {
+              text: 'Harga terjangkau',
+              id: '01a0ca1f-ddb6-73c0-96a3-1ab4f41ea9dd',
+            },
+            {
+              id: '01a0ca1f-faaa-77e2-a705-b87d82fa2b68',
+              text: 'Pelayanan ramah',
+            },
+            {
+              text: 'Kualitas terbaik',
+              id: '01a0ca1f-ff1e-7480-89d2-6fca0c172f96',
+            },
+            {
+              text: 'Bahan berkualitas',
+              id: '01a0ca20-03ea-7089-abc1-d53c6a61dfb8',
+            },
+            {
+              text: 'Kepuasan pelanggan',
+              id: '01a0ca20-085a-704b-98cd-fcf7bf889a5b',
+            },
+          ],
+          instructions:
+            'Pilih kartu yang membawa ciri khas usaha Bu Sari — masukkan ke tempatnya. Kartu yang bisa dipakai usaha mana saja: biarkan di luar.',
         },
       },
       hostScript: {
@@ -1712,164 +1738,164 @@ export const demoBundle: PublishedGame = {
         type: 'minigame',
         templateId: 'form_to_prompt',
         config: {
-          paths: [
-            {
-              fields: [
-                {
-                  label: 'Nama usaha',
-                  required: true,
-                  placeholderExample: 'Warung Berkah',
-                  key: 'nama',
-                },
-                {
-                  key: 'produk',
-                  required: true,
-                  label: 'Produk yang mau dipromosikan',
-                  placeholderExample: 'nasi kotak untuk acara',
-                },
-                {
-                  placeholderExample: 'porsinya lebih banyak dari yang lain',
-                  label: 'Apa yang bikin usahamu beda',
-                  seedSource: 'L2_reflection',
-                  key: 'beda',
-                  required: true,
-                },
-                {
-                  key: 'target',
-                  required: true,
-                  placeholderExample: 'ibu-ibu yang mau pesan untuk arisan',
-                  label: 'Siapa pembeli yang kamu tuju',
-                },
-                {
-                  label: 'Tulisan promo lama (boleh kosong)',
-                  key: 'lama',
-                  placeholderExample: 'Terima pesanan nasi kotak, harga bersahabat',
-                  required: false,
-                },
-              ],
-              promptTemplate:
-                "Kamu adalah asisten yang membantu pemilik usaha kecil di Indonesia memperkuat tulisan promosi. Bahasamu sederhana, hangat, tidak bertele-tele — seperti ngobrol, bukan seperti buku. Ini usaha saya: Nama: {{nama}}. Produk: {{produk}}. Yang bikin beda: {{beda}}. Pembeli dituju: {{target}}. Tulisan lama: {{lama}}. Tugasmu: bantu saya bikin tulisan promo yang terdengar benar-benar SAYA — bukan seperti toko lain.\n\nAturan penting: (1) JANGAN langsung bikin tulisan jadi. Mulai dengan satu contoh kasar, lalu tanya: 'bagian mana yang paling kamu, mana yang masih generik?' (2) Pancing saya menambahkan cerita/cara/detail khas yang cuma saya tahu — jangan kamu karang. (3) Kalau saya minta 'bikinin aja semua', TOLAK dengan ramah: 'bagian ini harus dari kamu, karena ini yang bikin usahamu beda — coba ceritakan sedikit.' Tugasmu memancing, bukan menggantikan. (4) Jawab singkat tiap kali. Ini obrolan, bukan ceramah. Mulai sekarang.",
-              label: 'Perkuat Suaramu',
-              id: 'path-a',
-              description: 'perbaiki tulisan/promo biar terdengar benar-benar kamu.',
-            },
-            {
-              promptTemplate:
-                "Kamu asisten yang membantu pemilik usaha kecil di Indonesia menghemat waktu dengan AI. Bahasamu sederhana, hangat, tidak bertele-tele. Ini usaha saya: Nama: {{nama}}. Pekerjaan paling makan waktu: {{kerja}}. Susahnya: {{kenapa}}. Seberapa sering: {{frekuensi}}. Tugasmu: bantu saya cari cara agar AI meringankan pekerjaan ini — TAPI saya tetap yang pegang kendali.\n\nAturan penting: (1) JANGAN langsung kasih solusi jadi. Tanya dulu 2-3 pertanyaan untuk paham betul pekerjaan saya. (2) Setelah paham, tunjukkan bagaimana AI bisa bantu — tapi ingatkan bagian mana yang TETAP harus saya putuskan sendiri. (3) Kalau saya minta 'otomatiskan semua', jelaskan dengan ramah kenapa itu bahaya — bagian mana yang kalau diserahkan penuh ke AI bisa merugikan usaha saya. (4) Jawab singkat, langkah per langkah. Mulai sekarang.",
-              label: 'Selesaikan yang Makan Waktu',
-              fields: [
-                {
-                  placeholderExample: 'Warung Berkah',
-                  key: 'nama',
-                  label: 'Nama usaha',
-                  required: true,
-                },
-                {
-                  seedSource: 'L1_seed',
-                  required: true,
-                  placeholderExample: 'balas chat yang nanya harga dan ongkir',
-                  label: 'Pekerjaan yang paling makan waktu',
-                  key: 'kerja',
-                },
-                {
-                  key: 'kenapa',
-                  required: true,
-                  placeholderExample: 'harus ketik ulang jawaban yang sama tiap ada yang nanya',
-                  label: 'Kenapa itu makan waktu / susahnya di mana',
-                },
-                {
-                  placeholderExample: 'tiap hari, puluhan kali',
-                  required: true,
-                  key: 'frekuensi',
-                  label: 'Seberapa sering kamu melakukannya',
-                },
-              ],
-              id: 'path-b',
-              description: 'ambil satu pekerjaan berulang, minta AI bantu.',
-            },
-            {
-              id: 'path-c',
-              fields: [
-                {
-                  required: true,
-                  placeholderExample: 'Warung Berkah',
-                  key: 'nama',
-                  label: 'Nama usaha',
-                },
-                {
-                  key: 'produk',
-                  label: 'Produk/jasa kamu',
-                  required: true,
-                  placeholderExample: 'nasi kotak untuk acara',
-                },
-                {
-                  label: 'Apa yang bikin usahamu beda',
-                  required: true,
-                  key: 'beda',
-                  seedSource: 'L2_reflection',
-                  placeholderExample: 'porsinya lebih banyak dari yang lain',
-                },
-                {
-                  placeholderExample: 'mau nambah menu tapi bingung apa yang cocok',
-                  key: 'buntu',
-                  label: 'Kamu lagi buntu soal apa?',
-                  required: true,
-                },
-              ],
-              label: 'Cari Ide Baru',
-              promptTemplate:
-                "Kamu asisten yang membantu pemilik usaha kecil di Indonesia mencari ide baru. Bahasamu sederhana, hangat, tidak bertele-tele. Ini usaha saya: Nama: {{nama}}. Produk: {{produk}}. Yang bikin beda: {{beda}}. Saya lagi buntu soal: {{buntu}}. Tugasmu: bantu saya cari ide yang COCOK dengan usaha saya — bukan ide umum yang bisa dipakai siapa saja.\n\nAturan penting: (1) JANGAN langsung kasih daftar ide. Tanya dulu beberapa hal supaya idenya nyambung dengan keadaan usaha saya yang sebenarnya. (2) Kasih ide yang memanfaatkan apa yang bikin usaha saya BEDA — bukan ide generik 'bikin diskon'/'posting rutin' yang semua orang tahu. (3) Untuk tiap ide, tanya: 'ini cocok nggak sama kamu? kenapa?' — biar saya yang menilai. (4) Jawab singkat. Maksimal 2-3 ide dulu. Mulai sekarang.",
-              description: 'buntu mau ke mana? Ajak AI cari ide untuk usahamu.',
-            },
-            {
-              promptTemplate:
-                'Kamu asisten yang membantu pemilik usaha kecil di Indonesia. Bahasamu sederhana, hangat, tidak bertele-tele. Ini usaha saya: Nama: {{nama}}. Produk: {{produk}}. Pertanyaan saya: {{pertanyaan}}. Tugasmu: bantu jawab dengan langkah KONKRET yang bisa saya coba minggu ini — bukan nasihat umum.\n\nAturan penting: (1) Kalau pertanyaan saya terlalu umum, tanya balik dulu supaya kamu paham situasi saya sebelum menjawab. (2) Kasih 3 langkah konkret, contoh nyata, untuk minggu ini — bukan teori. (3) Kalau ada bagian yang cuma saya yang bisa putuskan, katakan terus terang & kembalikan ke saya. (4) Jawab singkat, langsung ke inti. Mulai sekarang.',
-              id: 'path-d',
-              fields: [
-                {
-                  required: true,
-                  placeholderExample: 'Warung Berkah',
-                  key: 'nama',
-                  label: 'Nama usaha',
-                },
-                {
-                  required: true,
-                  key: 'produk',
-                  label: 'Produk/jasa kamu',
-                  placeholderExample: 'nasi kotak untuk acara',
-                },
-                {
-                  key: 'pertanyaan',
-                  placeholderExample: 'gimana caranya biar pelanggan balik lagi?',
-                  required: true,
-                  label: 'Satu pertanyaan yang mengganjal soal usahamu',
-                },
-              ],
-              description:
-                'ada satu pertanyaan yang mengganjal soal usahamu? Tanyakan, minta langkah konkret.',
-              label: 'Tanya Bebas',
-            },
-          ],
+          bridge:
+            'Dua hal ini — yang makan waktumu, dan yang bikin usahamu kamu. Sekarang giliranmu pakai AI untuk usahamu sendiri. Pilih satu yang mau kamu kerjakan hari ini:',
           seeds: [
             {
-              phaseId: '01a106cd-06b3-7270-bcb4-f8273e7e6ad5',
-              cardLabel: 'Yang kamu tulis di awal tadi',
-              categoryStepId: '01a0c93c-3b96-7446-998b-29f6310d7928',
-              source: 'L1_seed',
-              stepId: '01a0c93e-4dd3-72b1-8d10-89aa24461e33',
               blockIndex: 1,
+              categoryStepId: '01a0c93c-3b96-7446-998b-29f6310d7928',
+              cardLabel: 'Yang kamu tulis di awal tadi',
               categoryBlockIndex: 1,
+              source: 'L1_seed',
+              phaseId: '01a106cd-06b3-7270-bcb4-f8273e7e6ad5',
+              stepId: '01a0c93e-4dd3-72b1-8d10-89aa24461e33',
             },
             {
-              cardLabel: 'Yang kamu tulis setelah “Suara Bu Sari”',
               phaseId: '01a106cd-06b3-7270-bcb5-1b66193460fe',
+              cardLabel: 'Yang kamu tulis setelah “Suara Bu Sari”',
               source: 'L2_reflection',
             },
           ],
           instructions:
             '1. Isi form singkat tentang usahamu.\n2. Salin prompt yang sudah jadi.\n3. Buka Gemini di tab baru, lalu tempel di sana.\n4. Ngobrol seperti biasa — kamu yang mengarahkan.\n5. Kalau sudah selesai, kembali ke sini dan tekan Kirim.',
-          bridge:
-            'Dua hal ini — yang makan waktumu, dan yang bikin usahamu kamu. Sekarang giliranmu pakai AI untuk usahamu sendiri. Pilih satu yang mau kamu kerjakan hari ini:',
+          paths: [
+            {
+              label: 'Perkuat Suaramu',
+              description: 'perbaiki tulisan/promo biar terdengar benar-benar kamu.',
+              fields: [
+                {
+                  required: true,
+                  placeholderExample: 'Warung Berkah',
+                  label: 'Nama usaha',
+                  key: 'nama',
+                },
+                {
+                  required: true,
+                  label: 'Produk yang mau dipromosikan',
+                  placeholderExample: 'nasi kotak untuk acara',
+                  key: 'produk',
+                },
+                {
+                  label: 'Apa yang bikin usahamu beda',
+                  seedSource: 'L2_reflection',
+                  key: 'beda',
+                  placeholderExample: 'porsinya lebih banyak dari yang lain',
+                  required: true,
+                },
+                {
+                  key: 'target',
+                  placeholderExample: 'ibu-ibu yang mau pesan untuk arisan',
+                  label: 'Siapa pembeli yang kamu tuju',
+                  required: true,
+                },
+                {
+                  label: 'Tulisan promo lama (boleh kosong)',
+                  required: false,
+                  key: 'lama',
+                  placeholderExample: 'Terima pesanan nasi kotak, harga bersahabat',
+                },
+              ],
+              promptTemplate:
+                "Kamu adalah asisten yang membantu pemilik usaha kecil di Indonesia memperkuat tulisan promosi. Bahasamu sederhana, hangat, tidak bertele-tele — seperti ngobrol, bukan seperti buku. Ini usaha saya: Nama: {{nama}}. Produk: {{produk}}. Yang bikin beda: {{beda}}. Pembeli dituju: {{target}}. Tulisan lama: {{lama}}. Tugasmu: bantu saya bikin tulisan promo yang terdengar benar-benar SAYA — bukan seperti toko lain.\n\nAturan penting: (1) JANGAN langsung bikin tulisan jadi. Mulai dengan satu contoh kasar, lalu tanya: 'bagian mana yang paling kamu, mana yang masih generik?' (2) Pancing saya menambahkan cerita/cara/detail khas yang cuma saya tahu — jangan kamu karang. (3) Kalau saya minta 'bikinin aja semua', TOLAK dengan ramah: 'bagian ini harus dari kamu, karena ini yang bikin usahamu beda — coba ceritakan sedikit.' Tugasmu memancing, bukan menggantikan. (4) Jawab singkat tiap kali. Ini obrolan, bukan ceramah. Mulai sekarang.",
+              id: 'path-a',
+            },
+            {
+              id: 'path-b',
+              promptTemplate:
+                "Kamu asisten yang membantu pemilik usaha kecil di Indonesia menghemat waktu dengan AI. Bahasamu sederhana, hangat, tidak bertele-tele. Ini usaha saya: Nama: {{nama}}. Pekerjaan paling makan waktu: {{kerja}}. Susahnya: {{kenapa}}. Seberapa sering: {{frekuensi}}. Tugasmu: bantu saya cari cara agar AI meringankan pekerjaan ini — TAPI saya tetap yang pegang kendali.\n\nAturan penting: (1) JANGAN langsung kasih solusi jadi. Tanya dulu 2-3 pertanyaan untuk paham betul pekerjaan saya. (2) Setelah paham, tunjukkan bagaimana AI bisa bantu — tapi ingatkan bagian mana yang TETAP harus saya putuskan sendiri. (3) Kalau saya minta 'otomatiskan semua', jelaskan dengan ramah kenapa itu bahaya — bagian mana yang kalau diserahkan penuh ke AI bisa merugikan usaha saya. (4) Jawab singkat, langkah per langkah. Mulai sekarang.",
+              label: 'Selesaikan yang Makan Waktu',
+              fields: [
+                {
+                  label: 'Nama usaha',
+                  key: 'nama',
+                  required: true,
+                  placeholderExample: 'Warung Berkah',
+                },
+                {
+                  seedSource: 'L1_seed',
+                  label: 'Pekerjaan yang paling makan waktu',
+                  placeholderExample: 'balas chat yang nanya harga dan ongkir',
+                  key: 'kerja',
+                  required: true,
+                },
+                {
+                  placeholderExample: 'harus ketik ulang jawaban yang sama tiap ada yang nanya',
+                  label: 'Kenapa itu makan waktu / susahnya di mana',
+                  key: 'kenapa',
+                  required: true,
+                },
+                {
+                  label: 'Seberapa sering kamu melakukannya',
+                  key: 'frekuensi',
+                  placeholderExample: 'tiap hari, puluhan kali',
+                  required: true,
+                },
+              ],
+              description: 'ambil satu pekerjaan berulang, minta AI bantu.',
+            },
+            {
+              promptTemplate:
+                "Kamu asisten yang membantu pemilik usaha kecil di Indonesia mencari ide baru. Bahasamu sederhana, hangat, tidak bertele-tele. Ini usaha saya: Nama: {{nama}}. Produk: {{produk}}. Yang bikin beda: {{beda}}. Saya lagi buntu soal: {{buntu}}. Tugasmu: bantu saya cari ide yang COCOK dengan usaha saya — bukan ide umum yang bisa dipakai siapa saja.\n\nAturan penting: (1) JANGAN langsung kasih daftar ide. Tanya dulu beberapa hal supaya idenya nyambung dengan keadaan usaha saya yang sebenarnya. (2) Kasih ide yang memanfaatkan apa yang bikin usaha saya BEDA — bukan ide generik 'bikin diskon'/'posting rutin' yang semua orang tahu. (3) Untuk tiap ide, tanya: 'ini cocok nggak sama kamu? kenapa?' — biar saya yang menilai. (4) Jawab singkat. Maksimal 2-3 ide dulu. Mulai sekarang.",
+              fields: [
+                {
+                  label: 'Nama usaha',
+                  key: 'nama',
+                  required: true,
+                  placeholderExample: 'Warung Berkah',
+                },
+                {
+                  key: 'produk',
+                  label: 'Produk/jasa kamu',
+                  placeholderExample: 'nasi kotak untuk acara',
+                  required: true,
+                },
+                {
+                  placeholderExample: 'porsinya lebih banyak dari yang lain',
+                  required: true,
+                  key: 'beda',
+                  label: 'Apa yang bikin usahamu beda',
+                  seedSource: 'L2_reflection',
+                },
+                {
+                  required: true,
+                  label: 'Kamu lagi buntu soal apa?',
+                  placeholderExample: 'mau nambah menu tapi bingung apa yang cocok',
+                  key: 'buntu',
+                },
+              ],
+              label: 'Cari Ide Baru',
+              id: 'path-c',
+              description: 'buntu mau ke mana? Ajak AI cari ide untuk usahamu.',
+            },
+            {
+              fields: [
+                {
+                  label: 'Nama usaha',
+                  placeholderExample: 'Warung Berkah',
+                  required: true,
+                  key: 'nama',
+                },
+                {
+                  key: 'produk',
+                  label: 'Produk/jasa kamu',
+                  placeholderExample: 'nasi kotak untuk acara',
+                  required: true,
+                },
+                {
+                  placeholderExample: 'gimana caranya biar pelanggan balik lagi?',
+                  label: 'Satu pertanyaan yang mengganjal soal usahamu',
+                  key: 'pertanyaan',
+                  required: true,
+                },
+              ],
+              description:
+                'ada satu pertanyaan yang mengganjal soal usahamu? Tanyakan, minta langkah konkret.',
+              label: 'Tanya Bebas',
+              id: 'path-d',
+              promptTemplate:
+                'Kamu asisten yang membantu pemilik usaha kecil di Indonesia. Bahasamu sederhana, hangat, tidak bertele-tele. Ini usaha saya: Nama: {{nama}}. Produk: {{produk}}. Pertanyaan saya: {{pertanyaan}}. Tugasmu: bantu jawab dengan langkah KONKRET yang bisa saya coba minggu ini — bukan nasihat umum.\n\nAturan penting: (1) Kalau pertanyaan saya terlalu umum, tanya balik dulu supaya kamu paham situasi saya sebelum menjawab. (2) Kasih 3 langkah konkret, contoh nyata, untuk minggu ini — bukan teori. (3) Kalau ada bagian yang cuma saya yang bisa putuskan, katakan terus terang & kembalikan ke saya. (4) Jawab singkat, langsung ke inti. Mulai sekarang.',
+            },
+          ],
         },
       },
       hostScript: {
@@ -2004,14 +2030,14 @@ export const demoBundle: PublishedGame = {
         type: 'minigame',
         templateId: 'commitment',
         config: {
-          actionPlaceholder: 'satu langkah konkret untuk minggu depan',
-          sentenceTemplate: 'Saya akan {{action}}, supaya {{reason}}',
-          reasonPlaceholder: 'kenapa itu penting buat usahamu',
-          actionLabel: 'Saya akan…',
           reasonLabel: '…supaya…',
-          doneCopy: 'Ini milikmu — bawa pulang. Buka lagi Senin depan.',
+          actionLabel: 'Saya akan…',
           instructions:
             'Satu langkah. Senin depan.\n\nSatu hal konkret yang mau kamu lakukan untuk usahamu minggu depan, pakai yang kamu pelajari hari ini. Lengkapi kalimat di bawah.',
+          sentenceTemplate: 'Saya akan {{action}}, supaya {{reason}}',
+          reasonPlaceholder: 'kenapa itu penting buat usahamu',
+          actionPlaceholder: 'satu langkah konkret untuk minggu depan',
+          doneCopy: 'Ini milikmu — bawa pulang. Buka lagi Senin depan.',
         },
       },
       hostScript: {
@@ -2098,29 +2124,29 @@ export const demoBundle: PublishedGame = {
         type: 'minigame',
         templateId: 'journey',
         config: {
+          formToPromptPhaseId: '01a106cd-06b3-7270-bcb5-331dc6560ba1',
+          seedsHeading: 'Yang kamu tulis di awal',
+          promptHeading: 'Yang kamu bikin tadi',
+          instructions: 'Ini yang kamu bawa pulang hari ini.',
+          closingLine: 'Alatnya boleh sama. Kamu yang bikin beda.',
+          commitmentHeading: 'Yang kamu janjikan ke dirimu',
+          commitmentPhaseId: '01a106cd-06b3-7270-bcb5-3860750aaa04',
           seedBindings: [
             {
               blockIndex: 1,
-              phaseId: '01a106cd-06b3-7270-bcb4-f8273e7e6ad5',
-              stepId: '01a0c93e-4dd3-72b1-8d10-89aa24461e33',
               categoryStepId: '01a0c93c-3b96-7446-998b-29f6310d7928',
-              cardLabel: 'Yang kamu tulis di awal tadi',
-              source: 'L1_seed',
               categoryBlockIndex: 1,
+              phaseId: '01a106cd-06b3-7270-bcb4-f8273e7e6ad5',
+              source: 'L1_seed',
+              stepId: '01a0c93e-4dd3-72b1-8d10-89aa24461e33',
+              cardLabel: 'Yang kamu tulis di awal tadi',
             },
             {
-              cardLabel: 'Yang kamu tulis setelah “Suara Bu Sari”',
-              phaseId: '01a106cd-06b3-7270-bcb5-1b66193460fe',
               source: 'L2_reflection',
+              phaseId: '01a106cd-06b3-7270-bcb5-1b66193460fe',
+              cardLabel: 'Yang kamu tulis setelah “Suara Bu Sari”',
             },
           ],
-          promptHeading: 'Yang kamu bikin tadi',
-          closingLine: 'Alatnya boleh sama. Kamu yang bikin beda.',
-          commitmentPhaseId: '01a106cd-06b3-7270-bcb5-3860750aaa04',
-          formToPromptPhaseId: '01a106cd-06b3-7270-bcb5-331dc6560ba1',
-          instructions: 'Ini yang kamu bawa pulang hari ini.',
-          seedsHeading: 'Yang kamu tulis di awal',
-          commitmentHeading: 'Yang kamu janjikan ke dirimu',
         },
       },
       hostScript: {
@@ -2158,10 +2184,10 @@ export const demoBundle: PublishedGame = {
         type: 'minigame',
         templateId: 'team_selfie',
         config: {
-          finalLine: 'Alatnya boleh sama. Kamu yang bikin beda.',
-          caption: 'Terima kasih sudah membuat hari ini.',
           retakeAllowed: true,
           jpegQuality: 0.6,
+          caption: 'Terima kasih sudah membuat hari ini.',
+          finalLine: 'Alatnya boleh sama. Kamu yang bikin beda.',
           maxImagePx: 800,
         },
       },
@@ -2201,6 +2227,6 @@ export const demoBundle: PublishedGame = {
       },
     },
   },
-  publishedAt: 1791860800871,
+  publishedAt: 1791877012446,
   publishedBy: 'yosuasurianto72@gmail.com',
 }
