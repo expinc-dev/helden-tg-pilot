@@ -81,6 +81,10 @@ export function LeaderboardRows({
   const questionScores = useQuestionScores(sessionId, questionId ?? '_none')
   const totalQuestions = content.questions.length
   const bundled = variant === 'segments' && bundle ? bundle : null
+  // A phase without scoring has no points to show: no total, no "+N", no 0.
+  const scored = !!phase.scoring && phase.scoring.mode !== 'none'
+  const scoreShown = showScores && scored
+  const gainedShown = showGained && scored
   const bundleOutcomeMap = useQuestionOutcomes(sessionId, !!bundled)
 
   const rows = useMemo(() => {
@@ -153,7 +157,11 @@ export function LeaderboardRows({
   ])
 
   if (rows.length === 0) {
-    return <p className="p-8 text-center text-white/40">Belum ada skor</p>
+    return (
+      <p className="p-8 text-center text-white/40">
+        {scored ? 'Belum ada skor' : 'Belum ada jawaban'}
+      </p>
+    )
   }
 
   return (
@@ -182,14 +190,14 @@ export function LeaderboardRows({
                   </div>
                 ))}
               </div>
-              {(showScores || (showGained && questionId)) && (
+              {(scoreShown || (gainedShown && questionId)) && (
                 <div className="flex w-56 shrink-0 items-baseline justify-end gap-4">
-                  {showGained && questionId && (
+                  {gainedShown && questionId && (
                     <span className="text-xl font-semibold text-[#4FD18B]">
                       +{Math.round(row.gained)}
                     </span>
                   )}
-                  {showScores && (
+                  {scoreShown && (
                     <span className="text-3xl font-bold text-[#FFB800]">
                       {Math.round(row.score)}
                     </span>
@@ -217,12 +225,12 @@ export function LeaderboardRows({
               <div className="h-full bg-[#34D399]" style={{ width: `${correctPct}%` }} />
               <div className="h-full bg-[#E21B3C]" style={{ width: `${wrongPct}%` }} />
             </div>
-            {showGained && questionId && (
+            {gainedShown && questionId && (
               <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#34D399]">
                 +{Math.round(row.gained)}
               </span>
             )}
-            {showScores && (
+            {scoreShown && (
               <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">
                 {Math.round(row.score)}
               </span>
