@@ -16,6 +16,22 @@ import { auth } from './firebase'
 // ownership check pass without any extra code.
 export type AuthState = { uid: string | null; error: string | null }
 
+// One anonymous sign-in at a time. The "already signed in → same uid" guarantee
+// above only holds AFTER the first sign-in has resolved. React StrictMode (dev)
+// runs the effect below twice back to back; at the second run auth.currentUser is
+// still null, so a second signInAnonymously() would mint a SECOND anonymous user.
+// The page then claims ownership with the first uid while the RTDB connection ends
+// up authenticated as the second, so the claim (and every owner-only write after
+// it) is denied — the ownership map stays empty and the device looks "joined" but
+// can write nothing. Sharing one in-flight promise keeps it to a single user.
+let pendingSignIn: Promise<unknown> | null = null
+function signInOnce(): Promise<unknown> {
+  pendingSignIn ??= signInAnonymously(auth).finally(() => {
+    pendingSignIn = null
+  })
+  return pendingSignIn
+}
+
 export function useAuthUid(): AuthState {
   const [state, setState] = useState<AuthState>({
     uid: auth.currentUser?.uid ?? null,
@@ -27,7 +43,7 @@ export function useAuthUid(): AuthState {
       setState((s) => ({ uid: user?.uid ?? null, error: user ? null : s.error }))
     })
     if (!auth.currentUser) {
-      void signInAnonymously(auth).catch((e) => {
+      void signInOnce().catch((e) => {
         // Most likely cause: Anonymous sign-in isn't enabled for this project —
         // Firebase Console → Authentication → Sign-in method → Anonymous → Enable.
         // Surfaced in the UI (App.tsx) instead of only devtools, so this doesn't

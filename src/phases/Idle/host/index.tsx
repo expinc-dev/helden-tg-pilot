@@ -2,6 +2,7 @@ import { assets } from '@/assets'
 import { FullscreenToggle } from '@/components/FullscreenToggle'
 import { HeldenLogoLotties } from '@/components/HeldenLogoLotties'
 import { PlayerRows, StatTile, TeamList } from '@/pages/host/_shared/Roster'
+import { useAdvanceLocked } from '@/pages/host/_shared/advanceGateContext'
 import type { PlayerPresence } from '@helden-inc/tg-schema'
 
 import { usePresence } from '@/lib/sync/useSession'
@@ -21,6 +22,8 @@ export function HostIdleScreen({
   onAdvance: (() => void) | undefined
 }) {
   const { players } = usePresence(sessionId)
+  // Same lock as every other advance control (see lib/session/advanceGate.ts).
+  const locked = useAdvanceLocked()
   const teams = useTeams(sessionId)
   const playerEntries = Object.entries(players) as [string, PlayerPresence][]
   const connected = playerEntries.filter(([, p]) => p.connected).length
@@ -65,8 +68,9 @@ export function HostIdleScreen({
 
       <button
         type="button"
+        disabled={locked}
         onClick={onAdvance}
-        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black sm:py-[18px] sm:text-lg"
+        className="w-full rounded-lg bg-[#FFB800] py-4 text-center text-base font-bold text-black disabled:opacity-50 sm:py-[18px] sm:text-lg"
       >
         Mulai Permainan
       </button>

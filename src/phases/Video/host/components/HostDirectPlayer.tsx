@@ -4,6 +4,7 @@ import type { VideoPlayback } from '@helden-inc/tg-schema'
 import { Icon } from '@iconify/react'
 
 import { pauseVideo, playVideo, setVideoPlayback } from '@/lib/session/videoControl'
+import { estimatePositionSec } from '@/lib/sync/videoPosition'
 
 import { fmtTime } from '../../lib'
 
@@ -11,6 +12,7 @@ export function HostDirectPlayer({
   url,
   state,
   positionSec,
+  playback,
   title,
   sessionId,
   ended,
@@ -22,6 +24,8 @@ export function HostDirectPlayer({
   url: string
   state: VideoPlayback['state']
   positionSec: number
+  // The raw node, for estimatePositionSec — see play/pause/seekBy below.
+  playback: VideoPlayback | null
   title: string
   sessionId: string
   ended: boolean
@@ -84,16 +88,24 @@ export function HostDirectPlayer({
   const isPlaying = state === 'playing'
   const neverPlayed = positionSec < 0.1 && !isPlaying && !ended && currentTime < 0.1
 
+  // Where the room is, not this <video>'s own currentTime: the host's element
+  // lags (or sits at 0) while it buffers, and writing that to the node rewound
+  // central on pause. Same estimate VideoHostScreen uses for the embeds.
+  const currentPositionSec = () => estimatePositionSec(playback, Date.now(), duration)
+
   const play = () => {
-    playVideo(sessionId, currentTime)
+    playVideo(sessionId, currentPositionSec())
   }
 
   const pause = () => {
-    pauseVideo(sessionId, currentTime)
+    pauseVideo(sessionId, currentPositionSec())
   }
 
   const seekBy = (delta: number) => {
-    const next = Math.max(0, Math.min(duration || 0, currentTime + delta))
+    // Unknown duration (0 until loadedmetadata) must not clamp: min(0, …) wrote 0
+    // for every seek made before the metadata arrived.
+    const base = currentPositionSec()
+    const next = Math.max(0, duration > 0 ? Math.min(duration, base + delta) : base + delta)
     setVideoPlayback(sessionId, state, next)
   }
 

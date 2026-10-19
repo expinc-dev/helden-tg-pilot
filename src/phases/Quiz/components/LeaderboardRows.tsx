@@ -47,6 +47,8 @@ export function LeaderboardRows({
   revealedCount,
   variant = 'bar',
   bundle,
+  showScores = true,
+  showGained = true,
 }: {
   sessionId: string
   phase: Phase
@@ -65,6 +67,11 @@ export function LeaderboardRows({
   // of one per question, so the whole level reads as a single bar. Phases not
   // scored yet stay grey.
   bundle?: BundleBlock[] | null
+  // Set false to drop the total-score column (host quiz leaderboard stage
+  // follows a design that shows the bar alone).
+  showScores?: boolean
+  // Set false to drop the per-question "+N" even when `questionId` is given.
+  showGained?: boolean
 }) {
   const isTeam = useIsTeamScored(sessionId, phase)
   const scores = useScoresMap(sessionId, phase)
@@ -74,6 +81,10 @@ export function LeaderboardRows({
   const questionScores = useQuestionScores(sessionId, questionId ?? '_none')
   const totalQuestions = content.questions.length
   const bundled = variant === 'segments' && bundle ? bundle : null
+  // A phase without scoring has no points to show: no total, no "+N", no 0.
+  const scored = !!phase.scoring && phase.scoring.mode !== 'none'
+  const scoreShown = showScores && scored
+  const gainedShown = showGained && scored
   const bundleOutcomeMap = useQuestionOutcomes(sessionId, !!bundled)
 
   const rows = useMemo(() => {
@@ -146,7 +157,11 @@ export function LeaderboardRows({
   ])
 
   if (rows.length === 0) {
-    return <p className="p-8 text-center text-white/40">Belum ada skor</p>
+    return (
+      <p className="p-8 text-center text-white/40">
+        {scored ? 'Belum ada skor' : 'Belum ada jawaban'}
+      </p>
+    )
   }
 
   return (
@@ -175,14 +190,20 @@ export function LeaderboardRows({
                   </div>
                 ))}
               </div>
-              <div className="flex w-56 shrink-0 items-baseline justify-end gap-4">
-                {questionId && (
-                  <span className="text-xl font-semibold text-[#4FD18B]">
-                    +{Math.round(row.gained)}
-                  </span>
-                )}
-                <span className="text-3xl font-bold text-[#FFB800]">{Math.round(row.score)}</span>
-              </div>
+              {(scoreShown || (gainedShown && questionId)) && (
+                <div className="flex w-56 shrink-0 items-baseline justify-end gap-4">
+                  {gainedShown && questionId && (
+                    <span className="text-xl font-semibold text-[#4FD18B]">
+                      +{Math.round(row.gained)}
+                    </span>
+                  )}
+                  {scoreShown && (
+                    <span className="text-3xl font-bold text-[#FFB800]">
+                      {Math.round(row.score)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )
         }
@@ -204,14 +225,16 @@ export function LeaderboardRows({
               <div className="h-full bg-[#34D399]" style={{ width: `${correctPct}%` }} />
               <div className="h-full bg-[#E21B3C]" style={{ width: `${wrongPct}%` }} />
             </div>
-            {questionId && (
+            {gainedShown && questionId && (
               <span className="w-14 shrink-0 text-right text-sm font-semibold text-[#34D399]">
                 +{Math.round(row.gained)}
               </span>
             )}
-            <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">
-              {Math.round(row.score)}
-            </span>
+            {scoreShown && (
+              <span className="w-16 shrink-0 text-right font-bold text-[#FFB800]">
+                {Math.round(row.score)}
+              </span>
+            )}
           </div>
         )
       })}
